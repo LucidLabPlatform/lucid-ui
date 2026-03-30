@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · LUCID</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-brand">LUCID</div>
+      <div class="login-subtitle">Central Command</div>
+      {% if error %}
+      <div class="login-error">{{ error }}</div>
+      {% endif %}
+      <form method="post" action="/login" class="login-form">
+        <input name="username" type="text" placeholder="Username" required autofocus
+               class="login-input" value="{{ username or '' }}">
+        <input name="password" type="password" placeholder="Password" required
+               class="login-input">
+        <button type="submit" class="btn-primary login-btn">Sign in</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

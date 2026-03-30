@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Topic Links · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Topic Links</h1>
+  <button class="btn-primary" onclick="showCreateModal()" style="margin-left:auto">+ Create Link</button>
+</div>
+
+<div class="table-wrap">
+  <table class="data-table" id="links-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Source → Target</th>
+        <th>Status</th>
+        <th>EMQX Rule ID</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="links-body">
+      <tr><td colspan="6" class="empty">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Create Link Modal -->
+<div class="modal-overlay" id="create-modal">
+  <div class="modal">
+    <div class="modal-title">Create Topic Link</div>
+    <div class="modal-subtitle">Route MQTT messages from a source topic to a target topic via an EMQX rule.</div>
+
+    <div class="modal-status err" id="create-error" style="text-align:left;display:none"></div>
+
+    <form id="create-form" onsubmit="submitCreate(event)">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-input" type="text" name="name" required placeholder="perception-to-led">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Source Topic
+          <span style="color:var(--muted);font-size:0.72rem;margin-left:0.3rem">MQTT wildcards supported</span>
+        </label>
+        <input class="form-input" type="text" name="source_topic" required
+               placeholder="lucid/agents/+/components/perception/evt/#">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Target Topic</label>
+        <input class="form-input" type="text" name="target_topic" required
+               placeholder="lucid/agents/led-01/components/led_strip/cmd/set-color">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Payload Template
+          <span style="color:var(--muted);font-size:0.72rem;margin-left:0.3rem">optional — leave blank to pass through</span>
+        </label>
+        <input class="form-input" type="text" name="payload_template"
+               placeholder='{"request_id":"${id}","color":{"r":${r},"g":${g},"b":${b}}}'>
+        <div class="form-hint">Use <code style="color:var(--accent)">${field}</code> to reference incoming payload fields.</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">QoS</label>
+        <select class="form-input" name="qos">
+          <option value="0">0 — At most once</option>
+          <option value="1">1 — At least once</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-sm" onclick="hideCreateModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="create-submit-btn">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadLinks() {
+  const resp = await fetch('/api/topic-links');
+  const links = await resp.json();
+  const tbody = document.getElementById('links-body');
+  if (!links.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No topic links yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = links.map(l => {
+    const badge = l.enabled
+      ? '<span class="status-badge status-online">enabled</span>'
+      : '<span class="status-badge status-offline">disabled</span>';
+    const ruleId = l.emqx_rule_id
+      ? `<code style="font-size:.75rem;font-family:var(--font-mono)">${esc(l.emqx_rule_id)}</code>`
+      : '<span style="color:var(--muted)">—</span>';
+    const created = l.created_at ? new Date(l.created_at).toLocaleString() : '—';
+    const toggleBtn = l.enabled
+      ? `<button class="btn-warn" onclick="deactivate('${l.id}')">Deactivate</button>`
+      : `<button class="btn-sm" onclick="activate('${l.id}')">Activate</button>`;
+    return `<tr>
+      <td><strong>${esc(l.name)}</strong></td>
+      <td style="font-family:var(--font-mono);font-size:.78rem">
+        ${esc(l.source_topic)}<br>
+        <span style="color:var(--muted)">→</span> ${esc(l.target_topic)}
+      </td>
+      <td>${badge}</td>
+      <td>${ruleId}</td>
+      <td style="font-size:.8rem;color:var(--muted)">${esc(created)}</td>
+      <td style="display:flex;gap:.4rem;flex-wrap:wrap">
+        ${toggleBtn}
+        <button class="btn-danger" onclick="deleteLink('${l.id}', '${esc(l.name)}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function activate(id) {
+  const r = await fetch(`/api/topic-links/${id}/activate`, {method:'PUT'});
+  if (!r.ok) { alert('Activate failed: ' + (await r.json()).detail); return; }
+  loadLinks();
+}
+
+async function deactivate(id) {
+  const r = await fetch(`/api/topic-links/${id}/deactivate`, {method:'PUT'});
+  if (!r.ok) { alert('Deactivate failed: ' + (await r.json()).detail); return; }
+  loadLinks();
+}
+
+async function deleteLink(id, name) {
+  if (!confirm(`Delete topic link "${name}"? This will also remove the EMQX rule.`)) return;
+  const r = await fetch(`/api/topic-links/${id}`, {method:'DELETE'});
+  if (!r.ok) { alert('Delete failed: ' + (await r.json()).detail); return; }
+  loadLinks();
+}
+
+function showCreateModal() {
+  document.getElementById('create-modal').classList.add('open');
+  document.getElementById('create-error').style.display = 'none';
+  document.getElementById('create-form').reset();
+}
+
+function hideCreateModal() {
+  document.getElementById('create-modal').classList.remove('open');
+}
+
+async function submitCreate(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = document.getElementById('create-submit-btn');
+  const errEl = document.getElementById('create-error');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+  errEl.style.display = 'none';
+
+  const body = {
+    name: form.name.value.trim(),
+    source_topic: form.source_topic.value.trim(),
+    target_topic: form.target_topic.value.trim(),
+    payload_template: form.payload_template.value.trim() || null,
+    qos: parseInt(form.qos.value),
+  };
+
+  try {
+    const r = await fetch('/api/topic-links', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const data = await r.json();
+      errEl.textContent = data.detail || 'Unknown error';
+      errEl.style.display = 'block';
+      return;
+    }
+    hideCreateModal();
+    loadLinks();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create';
+  }
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('create-modal').addEventListener('click', function(e) {
+  if (e.target === this) hideCreateModal();
+});
+
+onWsEvent(evt => {
+  if (evt.type === 'topic_link_created' || evt.type === 'topic_link_updated' || evt.type === 'topic_link_deleted') loadLinks();
+});
+
+loadLinks();
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Fleet Dashboard</h1>
+  <span class="subtitle" id="agent-count">Loading…</span>
+</div>
+<div id="agent-grid" class="agent-grid"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/dashboard.js"></script>
+{% endblock %}

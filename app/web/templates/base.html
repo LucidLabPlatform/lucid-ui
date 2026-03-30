@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}LUCID{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <nav class="topnav">
+    <a href="/" class="brand">LUCID</a>
+    <span class="nav-sep">Central Command</span>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Fleet</a>
+      {% if show_experiments %}<a href="/experiments/templates" class="nav-link">Experiments</a>{% endif %}
+      <a href="/topic-links" class="nav-link">Topic Links</a>
+      {% if show_ai %}<a href="/ai" class="nav-link">AI Assistant</a>{% endif %}
+      <a href="/users" class="nav-link">Users</a>
+      <a href="/auth-log" class="nav-link">Auth Log</a>
+      <a href="/schema" class="nav-link">Schema</a>
+    </div>
+    <div class="nav-user">
+      {% if user %}<span class="nav-username">{{ user }}</span>
+      <a href="/logout" class="nav-logout">Logout</a>{% endif %}
+      <span id="ws-status" class="ws-badge ws-disconnected">⬤ disconnected</span>
+    </div>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    // Shared WebSocket with auto-reconnect
+    let ws, wsReady = false;
+    const wsHandlers = [];
+
+    function wsConnect() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/api/ws`);
+      ws.onopen = () => {
+        wsReady = true;
+        document.getElementById('ws-status').className = 'ws-badge ws-connected';
+        document.getElementById('ws-status').textContent = '⬤ live';
+      };
+      ws.onclose = () => {
+        wsReady = false;
+        document.getElementById('ws-status').className = 'ws-badge ws-disconnected';
+        document.getElementById('ws-status').textContent = '⬤ disconnected';
+        setTimeout(wsConnect, 3000);
+      };
+      ws.onmessage = (e) => {
+        let evt;
+        try { evt = JSON.parse(e.data); } catch { return; }
+        wsHandlers.forEach(h => h(evt));
+      };
+    }
+
+    function onWsEvent(handler) { wsHandlers.push(handler); }
+
+    wsConnect();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

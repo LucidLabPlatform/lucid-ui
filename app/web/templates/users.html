@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Users · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Users</h1>
+</div>
+
+<div class="users-layout">
+  <!-- Add forms -->
+  <section class="panel add-panel">
+    <h2>Add Agent</h2>
+    <div class="form-body">
+      <input id="agent-id-input" placeholder="Agent ID (e.g. nikandros)" class="cmd-input">
+      <button id="btn-add-agent" class="btn-primary">Create Agent</button>
+    </div>
+
+    <h2 style="margin-top:1.5rem">Add Central Command</h2>
+    <div class="form-body">
+      <p class="form-note">Creates the configured Central Command MQTT user if it is missing.</p>
+      <button id="btn-add-cc" class="btn-primary">Create CC User</button>
+    </div>
+
+    <!-- Password reveal -->
+    <div id="password-reveal" class="password-reveal" style="display:none">
+      <div class="password-reveal-label">Password — copy now, shown only once</div>
+      <div class="password-reveal-row">
+        <code id="password-value" class="password-code"></code>
+        <button id="btn-copy-pw" class="btn-sm">Copy</button>
+      </div>
+      <div id="password-user" class="password-meta"></div>
+    </div>
+  </section>
+
+  <!-- User table -->
+  <section class="panel users-table-panel">
+    <h2>All Users</h2>
+    <div id="users-table-wrap">
+      <div class="empty">Loading…</div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/users.js"></script>
+{% endblock %}

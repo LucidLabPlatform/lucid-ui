@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ agent_id }} · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/" class="back-link">← Fleet</a>
+  <h1 id="agent-title">{{ agent_id }}</h1>
+  <span id="agent-badge" class="status-badge">…</span>
+</div>
+
+<div class="agent-layout">
+  <!-- Left: retained state -->
+  <section class="panel retained-panel">
+    <h2>State</h2>
+    <div class="state-blocks" id="state-blocks">
+      <div class="state-block">
+        <div class="state-block-label">status</div>
+        <pre id="blk-status" class="json-pre">—</pre>
+      </div>
+      <div class="state-block">
+        <div class="state-block-label">state</div>
+        <pre id="blk-state" class="json-pre">—</pre>
+      </div>
+      <div class="state-block">
+        <div class="state-block-label">metadata</div>
+        <pre id="blk-metadata" class="json-pre">—</pre>
+      </div>
+      <div class="state-block">
+        <div class="state-block-label">cfg</div>
+        <pre id="blk-cfg" class="json-pre">—</pre>
+      </div>
+    </div>
+
+    <h2 style="margin-top:1.5rem">Components</h2>
+    <div id="components-list" class="components-list"></div>
+  </section>
+
+  <!-- Middle: live log feed -->
+  <section class="panel log-panel">
+    <div class="panel-header">
+      <h2>Live Logs</h2>
+      <button id="btn-clear-logs" class="btn-sm">Clear</button>
+    </div>
+    <div id="log-feed" class="log-feed"></div>
+  </section>
+
+  <!-- Right: command panel -->
+  <section class="panel cmd-panel">
+    <h2>Commands</h2>
+    <div class="cmd-form">
+      <select id="cmd-target" class="cmd-select">
+        <option value="">Agent</option>
+      </select>
+      <input id="cmd-action" placeholder="action (e.g. ping)" class="cmd-input">
+      <textarea id="cmd-body" placeholder='{"key":"value"}  (optional)' class="cmd-textarea" rows="3"></textarea>
+      <button id="cmd-send" class="btn-primary">Send</button>
+      <div id="cmd-status" class="cmd-status"></div>
+    </div>
+
+    <h2 style="margin-top:1.5rem">History</h2>
+    <div id="cmd-history" class="cmd-history"></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.LUCID_AGENT_ID = {{ agent_id | tojson }};
+</script>
+<script src="/static/agent.js"></script>
+{% endblock %}

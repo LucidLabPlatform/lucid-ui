@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run_id[:8] }}… · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/experiments/runs" class="back-link">← Runs</a>
+  <h1>Run <span style="font-family:var(--font-mono);font-size:0.95rem;color:var(--muted)">{{ run_id }}</span></h1>
+  <button class="btn-sm" id="cancel-btn" onclick="cancelRun()" style="display:none;border-color:#450a0a;color:var(--red)">Cancel</button>
+</div>
+
+<!-- Run metadata bar -->
+<div class="run-meta" id="run-meta">
+  <div class="run-meta-item"><span class="run-meta-label">Template:</span><span class="run-meta-val" id="meta-template">…</span></div>
+  <div class="run-meta-item"><span class="run-meta-label">Status:</span><span id="meta-status">…</span></div>
+  <div class="run-meta-item"><span class="run-meta-label">Started:</span><span class="run-meta-val" id="meta-started">—</span></div>
+  <div class="run-meta-item"><span class="run-meta-label">Duration:</span><span class="run-meta-val" id="meta-duration">—</span></div>
+  <div class="run-meta-item" id="meta-error-row" style="display:none"><span class="run-meta-label" style="color:var(--red)">Error:</span><span style="font-size:0.8rem;color:var(--red)" id="meta-error"></span></div>
+</div>
+
+<!-- Step timeline -->
+<div style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:0.75rem">
+  Steps
+</div>
+<div class="step-timeline" id="step-timeline">
+  <div class="empty">Loading steps…</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>const RUN_ID = {{ run_id | tojson }};</script>
+<script src="/static/experiments_run_detail.js"></script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Experiment Templates · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Experiment Templates</h1>
+  <span class="subtitle" id="tpl-count"></span>
+  <button class="btn-primary" onclick="openEditorModal(null)" style="margin-left:auto">+ New Template</button>
+</div>
+
+<div id="tpl-grid" class="exp-grid">
+  <div class="empty">Loading templates…</div>
+</div>
+
+<!-- Run modal -->
+<div class="modal-overlay" id="run-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Run Experiment</div>
+    <div class="modal-subtitle" id="modal-subtitle"></div>
+    <div id="param-form"></div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal('run-modal')">Cancel</button>
+      <button class="btn-primary" id="modal-run-btn" onclick="submitRun()">Start Run</button>
+    </div>
+    <div class="modal-status" id="modal-status"></div>
+  </div>
+</div>
+
+<!-- Create / Edit template modal -->
+<div class="modal-overlay" id="editor-modal">
+  <div class="modal modal-wide">
+    <div class="modal-title" id="editor-title">New Template</div>
+    <div class="modal-subtitle">Paste or type a JSON template definition.</div>
+    <div class="form-group">
+      <label class="form-label">Template JSON</label>
+      <textarea class="form-textarea" id="editor-json" rows="16" spellcheck="false"
+        placeholder='{"id":"my-template","name":"My Template","version":"1.0.0","description":"...","parameters":{},"steps":[]}'></textarea>
+      <div class="form-hint">Must include <code style="color:var(--accent)">id</code>, <code style="color:var(--accent)">name</code>, <code style="color:var(--accent)">version</code>, and <code style="color:var(--accent)">steps</code>.</div>
+    </div>
+    <div class="modal-status err" id="editor-error" style="text-align:left;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="closeModal('editor-modal')">Cancel</button>
+      <button class="btn-primary" id="editor-submit-btn" onclick="submitTemplate()">Save Template</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/experiments_templates.js"></script>
+{% endblock %}
