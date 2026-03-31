@@ -23,7 +23,11 @@ SHOW_AI = os.environ.get("LUCID_UI_ENABLE_AI", "false").lower() == "true"
 def login_page(request: Request):
     if request.session.get(SESSION_USER_KEY):
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"request": request, "error": None},
+    )
 
 
 @router.post("/login", response_class=HTMLResponse)
@@ -32,8 +36,9 @@ def login_submit(request: Request, username: str = Form(...), password: str = Fo
         request.session[SESSION_USER_KEY] = username
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Invalid credentials", "username": username},
+        request=request,
+        name="login.html",
+        context={"request": request, "error": "Invalid credentials", "username": username},
     )
 
 
@@ -66,7 +71,7 @@ def dashboard(request: Request):
     ctx = _ctx(request)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("dashboard.html", ctx)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
 
 
 @router.get("/agent/{agent_id}", response_class=HTMLResponse)
@@ -74,7 +79,7 @@ def agent_detail(agent_id: str, request: Request):
     ctx = _ctx(request, agent_id=agent_id)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("agent.html", ctx)
+    return templates.TemplateResponse(request=request, name="agent.html", context=ctx)
 
 
 @router.get("/users", response_class=HTMLResponse)
@@ -82,7 +87,7 @@ def users_page(request: Request):
     ctx = _ctx(request)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("users.html", ctx)
+    return templates.TemplateResponse(request=request, name="users.html", context=ctx)
 
 
 @router.get("/auth-log", response_class=HTMLResponse)
@@ -90,7 +95,7 @@ def auth_log_page(request: Request):
     ctx = _ctx(request)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("auth_log.html", ctx)
+    return templates.TemplateResponse(request=request, name="auth_log.html", context=ctx)
 
 
 @router.get("/schema", response_class=HTMLResponse)
@@ -98,7 +103,7 @@ def schema_page(request: Request):
     ctx = _ctx(request)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("schema.html", ctx)
+    return templates.TemplateResponse(request=request, name="schema.html", context=ctx)
 
 
 if SHOW_EXPERIMENTS:
@@ -107,7 +112,11 @@ if SHOW_EXPERIMENTS:
         ctx = _ctx(request)
         if ctx is None:
             return require_login(request)
-        return templates.TemplateResponse("experiments_templates.html", ctx)
+        return templates.TemplateResponse(
+            request=request,
+            name="experiments_templates.html",
+            context=ctx,
+        )
 
 
     @router.get("/experiments/runs", response_class=HTMLResponse)
@@ -115,7 +124,11 @@ if SHOW_EXPERIMENTS:
         ctx = _ctx(request)
         if ctx is None:
             return require_login(request)
-        return templates.TemplateResponse("experiments_runs.html", ctx)
+        return templates.TemplateResponse(
+            request=request,
+            name="experiments_runs.html",
+            context=ctx,
+        )
 
 
     @router.get("/experiments/runs/{run_id}", response_class=HTMLResponse)
@@ -123,7 +136,11 @@ if SHOW_EXPERIMENTS:
         ctx = _ctx(request, run_id=run_id)
         if ctx is None:
             return require_login(request)
-        return templates.TemplateResponse("experiments_run_detail.html", ctx)
+        return templates.TemplateResponse(
+            request=request,
+            name="experiments_run_detail.html",
+            context=ctx,
+        )
 
 
 @router.get("/topic-links", response_class=HTMLResponse)
@@ -131,7 +148,7 @@ def topic_links_page(request: Request):
     ctx = _ctx(request)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse("topic_links.html", ctx)
+    return templates.TemplateResponse(request=request, name="topic_links.html", context=ctx)
 
 
 if SHOW_AI:
@@ -140,4 +157,4 @@ if SHOW_AI:
         ctx = _ctx(request)
         if ctx is None:
             return require_login(request)
-        return templates.TemplateResponse("ai_chat.html", ctx)
+        return templates.TemplateResponse(request=request, name="ai_chat.html", context=ctx)
