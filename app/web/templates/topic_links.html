@@ -7,6 +7,10 @@
   <button class="btn-primary" onclick="showCreateModal()" style="margin-left:auto">+ Create Link</button>
 </div>
 
+<div id="topic-links-sync-health" class="panel" style="margin-bottom:1rem;padding:0.9rem 1rem">
+  <div class="empty">Checking sync health…</div>
+</div>
+
 <div class="table-wrap">
   <table class="data-table" id="links-table">
     <thead>
@@ -14,13 +18,14 @@
         <th>Name</th>
         <th>Source → Target</th>
         <th>Status</th>
+        <th>Sync</th>
         <th>EMQX Rule ID</th>
         <th>Created</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody id="links-body">
-      <tr><td colspan="6" class="empty">Loading…</td></tr>
+      <tr><td colspan="7" class="empty">Loading…</td></tr>
     </tbody>
   </table>
 </div>
@@ -86,13 +91,16 @@ async function loadLinks() {
   const links = await resp.json();
   const tbody = document.getElementById('links-body');
   if (!links.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">No topic links yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No topic links yet.</td></tr>';
     return;
   }
   tbody.innerHTML = links.map(l => {
     const badge = l.enabled
       ? '<span class="status-badge status-online">enabled</span>'
       : '<span class="status-badge status-offline">disabled</span>';
+    const syncBadge = l.sync_status === 'synced'
+      ? '<span class="status-badge status-online">synced</span>'
+      : `<span class="status-badge status-offline">${esc(l.sync_status || 'pending')}</span>`;
     const ruleId = l.emqx_rule_id
       ? `<code style="font-size:.75rem;font-family:var(--font-mono)">${esc(l.emqx_rule_id)}</code>`
       : '<span style="color:var(--muted)">—</span>';
@@ -107,6 +115,10 @@ async function loadLinks() {
         <span style="color:var(--muted)">→</span> ${esc(l.target_topic)}
       </td>
       <td>${badge}</td>
+      <td>
+        ${syncBadge}
+        <div style="color:var(--muted);font-size:.72rem;margin-top:0.2rem">${esc(l.last_error || '')}</div>
+      </td>
       <td>${ruleId}</td>
       <td style="font-size:.8rem;color:var(--muted)">${esc(created)}</td>
       <td style="display:flex;gap:.4rem;flex-wrap:wrap">
@@ -117,16 +129,40 @@ async function loadLinks() {
   }).join('');
 }
 
+async function loadSyncHealth() {
+  const resp = await fetch('/api/sync-state');
+  const state = await resp.json();
+  const links = state['topic-links'];
+  const container = document.getElementById('topic-links-sync-health');
+  if (!links) {
+    container.innerHTML = '<div class="empty">No sync state yet</div>';
+    return;
+  }
+  const cls = links.status === 'synced' ? 'status-online' : 'status-offline';
+  const last = links.last_synced_at ? new Date(links.last_synced_at).toLocaleString() : '—';
+  const err = links.last_error ? `<div style="color:#ff8f8f;margin-top:0.35rem">${esc(links.last_error)}</div>` : '';
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+      <strong>Topic link sync</strong>
+      <span class="status-badge ${cls}">${esc(links.status || 'pending')}</span>
+      <span style="color:var(--muted)">Last sync: ${esc(last)}</span>
+    </div>
+    ${err}
+  `;
+}
+
 async function activate(id) {
   const r = await fetch(`/api/topic-links/${id}/activate`, {method:'PUT'});
   if (!r.ok) { alert('Activate failed: ' + (await r.json()).detail); return; }
   loadLinks();
+  loadSyncHealth();
 }
 
 async function deactivate(id) {
   const r = await fetch(`/api/topic-links/${id}/deactivate`, {method:'PUT'});
   if (!r.ok) { alert('Deactivate failed: ' + (await r.json()).detail); return; }
   loadLinks();
+  loadSyncHealth();
 }
 
 async function deleteLink(id, name) {
@@ -134,6 +170,7 @@ async function deleteLink(id, name) {
   const r = await fetch(`/api/topic-links/${id}`, {method:'DELETE'});
   if (!r.ok) { alert('Delete failed: ' + (await r.json()).detail); return; }
   loadLinks();
+  loadSyncHealth();
 }
 
 function showCreateModal() {
@@ -177,6 +214,7 @@ async function submitCreate(e) {
     }
     hideCreateModal();
     loadLinks();
+    loadSyncHealth();
   } finally {
     btn.disabled = false;
     btn.textContent = 'Create';
@@ -196,5 +234,6 @@ onWsEvent(evt => {
 });
 
 loadLinks();
+loadSyncHealth();
 </script>
 {% endblock %}

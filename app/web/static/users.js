@@ -9,6 +9,7 @@ const btnCopyPw   = document.getElementById('btn-copy-pw');
 const agentInput  = document.getElementById('agent-id-input');
 const btnAddAgent = document.getElementById('btn-add-agent');
 const btnAddCc    = document.getElementById('btn-add-cc');
+const syncHealth  = document.getElementById('users-sync-health');
 
 function fmtTs(ts) {
   return ts ? new Date(ts).toLocaleString([], { hour12: false }) : '—';
@@ -17,6 +18,12 @@ function fmtTs(ts) {
 function roleBadge(role) {
   const cls = role === 'central-command' ? 'badge-cc' : 'badge-agent';
   return `<span class="badge ${cls}">${role}</span>`;
+}
+
+function syncBadge(status) {
+  if (status === 'synced') return '<span class="status-badge status-online">synced</span>';
+  if (status === 'error') return '<span class="status-badge status-offline">error</span>';
+  return `<span class="status-badge status-offline">${status || 'pending'}</span>`;
 }
 
 function showPassword(username, password) {
@@ -41,16 +48,20 @@ async function loadUsers() {
     return;
   }
 
-  tableWrap.innerHTML = `
+    tableWrap.innerHTML = `
     <table class="data-table">
       <thead>
-        <tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr>
+        <tr><th>Username</th><th>Role</th><th>Sync</th><th>Created</th><th></th></tr>
       </thead>
       <tbody>
         ${users.map(u => `
           <tr>
             <td style="font-family:var(--font-mono);font-size:0.8rem">${u.username}</td>
             <td>${roleBadge(u.role)}</td>
+            <td>
+              ${syncBadge(u.sync_status)}
+              <div style="color:var(--muted);font-size:0.72rem;margin-top:0.2rem">${fmtTs(u.last_synced_at)}</div>
+            </td>
             <td style="color:var(--muted);font-size:0.75rem">${fmtTs(u.created_at)}</td>
             <td style="display:flex;gap:.4rem;justify-content:flex-end;flex-wrap:wrap">
               <button class="btn-sm" onclick="rotateUser('${u.username}')">
@@ -65,11 +76,33 @@ async function loadUsers() {
     </table>`;
 }
 
+async function loadSyncHealth() {
+  const res = await fetch('/api/sync-state');
+  const state = await res.json();
+  const users = state['mqtt-users'];
+  if (!users) {
+    syncHealth.innerHTML = '<div class="empty">No sync state yet</div>';
+    return;
+  }
+  const status = users.status || 'pending';
+  const cls = status === 'synced' ? 'status-online' : 'status-offline';
+  const err = users.last_error ? `<div style="color:#ff8f8f;margin-top:0.35rem">${users.last_error}</div>` : '';
+  syncHealth.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+      <strong>MQTT user mirror</strong>
+      <span class="status-badge ${cls}">${status}</span>
+      <span style="color:var(--muted)">Last sync: ${fmtTs(users.last_synced_at)}</span>
+    </div>
+    ${err}
+  `;
+}
+
 window.removeUser = async function(username) {
   if (!confirm(`Remove user "${username}"?`)) return;
   const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
   if (res.ok) {
     loadUsers();
+    loadSyncHealth();
   } else {
     const err = await res.json();
     alert(err.detail || 'Failed to remove user');
@@ -82,6 +115,7 @@ window.rotateUser = async function(username) {
     const data = await res.json();
     showPassword(data.username, data.password);
     loadUsers();
+    loadSyncHealth();
   } else {
     const err = await res.json();
     alert(err.detail || 'Failed to rotate password');
@@ -105,6 +139,7 @@ btnAddAgent.addEventListener('click', async () => {
     agentInput.value = '';
     showPassword(data.username, data.password);
     loadUsers();
+    loadSyncHealth();
   } else {
     const err = await res.json();
     alert(err.detail || 'Failed to create agent');
@@ -120,6 +155,7 @@ btnAddCc.addEventListener('click', async () => {
     const data = await res.json();
     showPassword(data.username, data.password);
     loadUsers();
+    loadSyncHealth();
   } else {
     const err = await res.json();
     alert(err.detail || 'Failed to create CC user');
@@ -127,3 +163,4 @@ btnAddCc.addEventListener('click', async () => {
 });
 
 loadUsers();
+loadSyncHealth();
