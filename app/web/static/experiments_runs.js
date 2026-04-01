@@ -70,7 +70,7 @@ async function loadRuns() {
       </tr>
     `).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">Failed to load: ${esc(String(err))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">Failed to load: ${esc(String(err))}</td></tr>`;
   }
 }
 

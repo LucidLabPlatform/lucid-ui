@@ -8,8 +8,6 @@ from fastapi import Request, Response, WebSocket, WebSocketDisconnect
 
 ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL", "").rstrip("/")
 FLEET_CORE_URL = os.environ.get("FLEET_CORE_URL", ORCHESTRATOR_URL).rstrip("/")
-AUTOMATION_URL = os.environ.get("AUTOMATION_URL", ORCHESTRATOR_URL).rstrip("/")
-AI_URL = os.environ.get("AI_URL", ORCHESTRATOR_URL).rstrip("/")
 
 _HOP_BY_HOP_HEADERS = {
     "connection",
@@ -26,13 +24,8 @@ _HOP_BY_HOP_HEADERS = {
 
 
 def select_api_base(path: str) -> str:
-    if ORCHESTRATOR_URL:
-        return ORCHESTRATOR_URL
-    if path.startswith("experiments") or path.startswith("topic-links"):
-        return AUTOMATION_URL
-    if path.startswith("ai/"):
-        return AI_URL
-    return FLEET_CORE_URL
+    _ = path
+    return ORCHESTRATOR_URL or FLEET_CORE_URL
 
 
 def _forward_headers(headers: Iterable[tuple[str, str]]) -> dict[str, str]:

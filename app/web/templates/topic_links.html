@@ -17,6 +17,7 @@
       <tr>
         <th>Name</th>
         <th>Source → Target</th>
+        <th>Owner</th>
         <th>Status</th>
         <th>Sync</th>
         <th>EMQX Rule ID</th>
@@ -25,7 +26,7 @@
       </tr>
     </thead>
     <tbody id="links-body">
-      <tr><td colspan="7" class="empty">Loading…</td></tr>
+      <tr><td colspan="8" class="empty">Loading…</td></tr>
     </tbody>
   </table>
 </div>
@@ -91,7 +92,7 @@ async function loadLinks() {
   const links = await resp.json();
   const tbody = document.getElementById('links-body');
   if (!links.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No topic links yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No topic links yet.</td></tr>';
     return;
   }
   tbody.innerHTML = links.map(l => {
@@ -105,15 +106,25 @@ async function loadLinks() {
       ? `<code style="font-size:.75rem;font-family:var(--font-mono)">${esc(l.emqx_rule_id)}</code>`
       : '<span style="color:var(--muted)">—</span>';
     const created = l.created_at ? new Date(l.created_at).toLocaleString() : '—';
+    const ownerLabel = l.owner_type === 'experiment-run'
+      ? `<strong>experiment</strong><div style="color:var(--muted);font-size:.72rem">${esc(l.owner_id || 'run')}</div>`
+      : '<strong>manual</strong>';
+    const lockNote = l.read_only
+      ? '<div style="color:var(--muted);font-size:.72rem;margin-top:.2rem">active run</div>'
+      : (l.owner_type === 'experiment-run' ? `<div style="color:var(--muted);font-size:.72rem;margin-top:.2rem">${esc(l.owner_run_status || 'run')}</div>` : '');
     const toggleBtn = l.enabled
       ? `<button class="btn-warn" onclick="deactivate('${l.id}')">Deactivate</button>`
       : `<button class="btn-sm" onclick="activate('${l.id}')">Activate</button>`;
+    const actions = l.read_only
+      ? '<span style="color:var(--muted);font-size:.75rem">managed by experiment</span>'
+      : `${toggleBtn}<button class="btn-danger" onclick="deleteLink('${l.id}', '${esc(l.name)}')">Delete</button>`;
     return `<tr>
       <td><strong>${esc(l.name)}</strong></td>
       <td style="font-family:var(--font-mono);font-size:.78rem">
         ${esc(l.source_topic)}<br>
         <span style="color:var(--muted)">→</span> ${esc(l.target_topic)}
       </td>
+      <td>${ownerLabel}${lockNote}</td>
       <td>${badge}</td>
       <td>
         ${syncBadge}
@@ -122,8 +133,7 @@ async function loadLinks() {
       <td>${ruleId}</td>
       <td style="font-size:.8rem;color:var(--muted)">${esc(created)}</td>
       <td style="display:flex;gap:.4rem;flex-wrap:wrap">
-        ${toggleBtn}
-        <button class="btn-danger" onclick="deleteLink('${l.id}', '${esc(l.name)}')">Delete</button>
+        ${actions}
       </td>
     </tr>`;
   }).join('');
