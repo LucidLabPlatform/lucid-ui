@@ -51,10 +51,14 @@
       <select id="cmd-target" class="cmd-select">
         <option value="">Agent</option>
       </select>
-      <input id="cmd-action" placeholder="action (e.g. ping)" class="cmd-input">
-      <textarea id="cmd-body" placeholder='{"key":"value"}  (optional)' class="cmd-textarea" rows="3"></textarea>
-      <button id="cmd-send" class="btn-primary">Send</button>
-      <div id="cmd-status" class="cmd-status"></div>
+      <div id="quick-cmds" class="quick-cmds"></div>
+      <input id="cmd-action" placeholder="action  (Enter to send)" class="cmd-input" autocomplete="off" list="cmd-datalist">
+      <datalist id="cmd-datalist"></datalist>
+      <textarea id="cmd-body" placeholder='{"key":"value"}  (optional · Ctrl+Enter to send)' class="cmd-textarea" rows="3"></textarea>
+      <div class="cmd-send-row">
+        <button id="cmd-send" class="btn-primary">Send</button>
+        <div id="cmd-status" class="cmd-status"></div>
+      </div>
     </div>
 
     <h2 style="margin-top:1.5rem">History</h2>

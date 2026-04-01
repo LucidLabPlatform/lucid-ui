@@ -79,11 +79,24 @@ main { padding: 1.5rem; }
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 .page-header h1 { font-size: 1.25rem; font-weight: 600; }
 .subtitle { color: var(--muted); font-size: 0.85rem; }
 .back-link { color: var(--muted); font-size: 0.85rem; }
 .back-link:hover { color: var(--text); text-decoration: none; }
+
+.dashboard-filters {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.filter-btn.is-active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: #172033;
+}
 
 /* ── Agent grid (dashboard) ────────────────────────────────────────── */
 .agent-grid {
@@ -962,3 +975,100 @@ main { padding: 1.5rem; }
   justify-content: flex-end;
   gap: 0.5rem;
 }
+
+/* ── Quick command chips ──────────────────────────────────────────── */
+.quick-cmds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.quick-cmd-btn {
+  background: #131720;
+  border: 1px solid var(--border);
+  color: var(--subtle);
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.quick-cmd-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #172033;
+}
+.quick-cmd-btn:active {
+  background: #1e3a5f;
+}
+
+/* ── Command send row ─────────────────────────────────────────────── */
+.cmd-send-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cmd-send-row .btn-primary {
+  flex-shrink: 0;
+}
+.cmd-send-row .cmd-status {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Component row click-to-expand ───────────────────────────────── */
+.comp-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+}
+
+.comp-row-clickable .comp-row-main {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0.3rem 0.3rem;
+  margin: 0 -0.3rem;
+  transition: background 0.12s;
+}
+.comp-row-clickable .comp-row-main:hover {
+  background: #1a2234;
+}
+.comp-row-clickable.comp-expanded .comp-row-main {
+  color: var(--text);
+}
+.comp-row-clickable.comp-expanded .comp-id {
+  color: var(--accent);
+}
+
+.comp-state-detail { }
+.comp-state-detail.hidden { display: none; }
+
+/* ── Command row result payload ───────────────────────────────────── */
+.cmd-row-payload .json-pre {
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+/* ── Command target chip in history ──────────────────────────────── */
+.cmd-target-id {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+/* ── Dashboard ping button ───────────────────────────────────────── */
+.btn-ping {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--subtle);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.btn-ping:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ping.ping-ok   { border-color: #14532d; color: var(--green); }
+.btn-ping.ping-fail { border-color: #450a0a; color: var(--red); }

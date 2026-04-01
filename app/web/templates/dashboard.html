@@ -5,6 +5,11 @@
 <div class="page-header">
   <h1>Fleet Dashboard</h1>
   <span class="subtitle" id="agent-count">Loading…</span>
+  <div class="dashboard-filters" role="group" aria-label="Fleet filter">
+    <button id="filter-all" class="btn-sm filter-btn is-active" type="button">All</button>
+    <button id="filter-online" class="btn-sm filter-btn" type="button">Online</button>
+    <button id="filter-offline" class="btn-sm filter-btn" type="button">Offline</button>
+  </div>
 </div>
 <div id="agent-grid" class="agent-grid"></div>
 {% endblock %}

@@ -2,8 +2,8 @@
 const agentId = window.LUCID_AGENT_ID;
 
 // ── DOM refs ────────────────────────────────────────────────────────
-const titleEl   = document.getElementById('agent-title');
-const badgeEl   = document.getElementById('agent-badge');
+const titleEl     = document.getElementById('agent-title');
+const badgeEl     = document.getElementById('agent-badge');
 const blkStatus   = document.getElementById('blk-status');
 const blkState    = document.getElementById('blk-state');
 const blkMetadata = document.getElementById('blk-metadata');
@@ -16,13 +16,38 @@ const cmdBody     = document.getElementById('cmd-body');
 const cmdSend     = document.getElementById('cmd-send');
 const cmdStatus   = document.getElementById('cmd-status');
 const cmdHistory  = document.getElementById('cmd-history');
+const quickCmdsEl = document.getElementById('quick-cmds');
+const cmdDatalist = document.getElementById('cmd-datalist');
 const btnClearLogs = document.getElementById('btn-clear-logs');
 
 const MAX_LOGS = 500;
 
 let agentData = null;
 
-// ── Helpers ─────────────────────────────────────────────────────────
+// ── Quick commands config ────────────────────────────────────────────
+const QUICK_CMDS = {
+  agent: [
+    { action: 'ping',       noBody: true },
+    { action: 'restart',    noBody: true },
+    { action: 'reload-cfg', noBody: true },
+    { action: 'update-cfg', noBody: false },
+  ],
+  component: [
+    { action: 'ping',       noBody: true },
+    { action: 'start',      noBody: true },
+    { action: 'stop',       noBody: true },
+    { action: 'enable',     noBody: true },
+    { action: 'disable',    noBody: true },
+    { action: 'reload-cfg', noBody: true },
+  ],
+};
+
+// ── Session state ────────────────────────────────────────────────────
+// Tracks commands sent this session so we can display result payloads
+const sessionCmds = new Map(); // request_id → {action, componentId, body, resultOk, resultPayload}
+let recentActions = [];        // MRU list, max 10
+
+// ── Helpers ──────────────────────────────────────────────────────────
 function fmtJson(obj) {
   if (obj === null || obj === undefined) return '—';
   return JSON.stringify(obj, null, 2);
@@ -33,14 +58,134 @@ function fmtTs(ts) {
   return new Date(ts).toLocaleTimeString([], { hour12: false });
 }
 
-function stateCls(state) {
-  return `status-${state || 'unknown'}`;
-}
-
 function setBadge(state) {
   badgeEl.className = `status-badge status-${state || 'unknown'}`;
   badgeEl.textContent = state || 'unknown';
 }
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// ── Quick commands ───────────────────────────────────────────────────
+function renderQuickCmds() {
+  const isComponent = !!cmdTarget.value;
+  const list = isComponent ? QUICK_CMDS.component : QUICK_CMDS.agent;
+  quickCmdsEl.innerHTML = list.map(c =>
+    `<button class="quick-cmd-btn" data-action="${c.action}" data-nobody="${c.noBody}">${c.action}</button>`
+  ).join('');
+}
+
+function updateDatalist() {
+  const isComponent = !!cmdTarget.value;
+  const known = (isComponent ? QUICK_CMDS.component : QUICK_CMDS.agent).map(c => c.action);
+  const all = [...new Set([...recentActions, ...known])];
+  cmdDatalist.innerHTML = all.map(a => `<option value="${a}">`).join('');
+}
+
+quickCmdsEl.addEventListener('click', e => {
+  const btn = e.target.closest('.quick-cmd-btn');
+  if (!btn) return;
+  const action = btn.dataset.action;
+  const noBody = btn.dataset.nobody === 'true';
+  if (noBody) {
+    doSend(action, {});
+  } else {
+    cmdAction.value = action;
+    cmdBody.focus();
+  }
+});
+
+cmdTarget.addEventListener('change', () => {
+  renderQuickCmds();
+  updateDatalist();
+  cmdAction.focus();
+});
+
+// ── Keyboard shortcuts ───────────────────────────────────────────────
+cmdAction.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+cmdBody.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+// ── Send logic ───────────────────────────────────────────────────────
+async function doSend(action, body) {
+  const cid = cmdTarget.value;
+  const url = cid
+    ? `/api/agents/${agentId}/components/${encodeURIComponent(cid)}/cmd/${encodeURIComponent(action)}`
+    : `/api/agents/${agentId}/cmd/${encodeURIComponent(action)}`;
+
+  cmdSend.disabled = true;
+  cmdStatus.textContent = 'Sending…';
+  cmdStatus.className = 'cmd-status';
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const rid = data.request_id;
+      sessionCmds.set(rid, { action, componentId: cid, body, resultOk: null, resultPayload: null });
+
+      recentActions = [action, ...recentActions.filter(a => a !== action)].slice(0, 10);
+      updateDatalist();
+
+      cmdStatus.textContent = `Sent · ${rid.slice(0, 8)}…`;
+      cmdStatus.className = 'cmd-status ok';
+      loadCommands();
+    } else {
+      const d = await res.json().catch(() => ({}));
+      cmdStatus.textContent = `Error ${res.status}${d.detail ? ': ' + d.detail : ''}`;
+      cmdStatus.className = 'cmd-status err';
+    }
+  } catch (e) {
+    cmdStatus.textContent = String(e);
+    cmdStatus.className = 'cmd-status err';
+  } finally {
+    cmdSend.disabled = false;
+  }
+}
+
+async function handleSend() {
+  const action = cmdAction.value.trim();
+  if (!action) {
+    cmdStatus.textContent = 'Enter an action';
+    cmdStatus.className = 'cmd-status err';
+    cmdAction.focus();
+    return;
+  }
+
+  let body = {};
+  const raw = cmdBody.value.trim();
+  if (raw) {
+    try { body = JSON.parse(raw); }
+    catch {
+      cmdStatus.textContent = 'Invalid JSON body';
+      cmdStatus.className = 'cmd-status err';
+      cmdBody.focus();
+      return;
+    }
+  }
+
+  await doSend(action, body);
+}
+
+cmdSend.addEventListener('click', handleSend);
 
 // ── State rendering ──────────────────────────────────────────────────
 function renderRetained(agent) {
@@ -50,18 +195,35 @@ function renderRetained(agent) {
   blkCfg.textContent      = fmtJson(agent.cfg);
   setBadge(agent.status?.state);
 
-  // Components
   const comps = Object.values(agent.components || {});
   if (!comps.length) {
     compsList.innerHTML = '<div class="empty" style="padding:.5rem 0;font-size:.75rem">No components</div>';
   } else {
-    compsList.innerHTML = comps.map(c => `
-      <div class="comp-row">
-        <span class="comp-id">${c.component_id}</span>
-        <span class="status-badge status-${c.status?.state || 'unknown'}" style="font-size:.65rem">
-          ${c.status?.state || '?'}
-        </span>
-      </div>`).join('');
+    // Preserve expanded state across re-renders
+    const expanded = new Set(
+      [...compsList.querySelectorAll('.comp-row.comp-expanded')].map(el => el.dataset.cid)
+    );
+
+    compsList.innerHTML = comps.map(c => {
+      const cid = c.component_id;
+      const hasState = c.state !== undefined && c.state !== null;
+      const isExpanded = expanded.has(cid);
+      const stateHtml = hasState
+        ? `<div class="comp-state-detail${isExpanded ? '' : ' hidden'}">
+             <pre class="json-pre" style="margin-top:.35rem;max-height:120px">${escHtml(fmtJson(c.state))}</pre>
+           </div>`
+        : '';
+      return `
+        <div class="comp-row comp-row-clickable${isExpanded ? ' comp-expanded' : ''}" data-cid="${escHtml(cid)}">
+          <div class="comp-row-main" onclick="handleCompClick('${escHtml(cid)}')">
+            <span class="comp-id">${escHtml(cid)}</span>
+            <span class="status-badge status-${c.status?.state || 'unknown'}" style="font-size:.65rem">
+              ${c.status?.state || '?'}
+            </span>
+          </div>
+          ${stateHtml}
+        </div>`;
+    }).join('');
 
     // Populate command target dropdown
     const current = cmdTarget.value;
@@ -76,7 +238,25 @@ function renderRetained(agent) {
   }
 }
 
-// ── Log feed ─────────────────────────────────────────────────────────
+// ── Component click handler ──────────────────────────────────────────
+window.handleCompClick = function(cid) {
+  const row = compsList.querySelector(`.comp-row[data-cid="${cid}"]`);
+  if (!row) return;
+
+  const detail = row.querySelector('.comp-state-detail');
+  if (detail) {
+    detail.classList.toggle('hidden');
+    row.classList.toggle('comp-expanded');
+  }
+
+  // Select this component as the command target
+  cmdTarget.value = cid;
+  renderQuickCmds();
+  updateDatalist();
+  cmdAction.focus();
+};
+
+// ── Log feed ──────────────────────────────────────────────────────────
 function appendLog(line) {
   const level = (line.level || 'INFO').toUpperCase();
   const ts = fmtTs(line.ts || line.received_ts);
@@ -88,37 +268,44 @@ function appendLog(line) {
     `<span>${escHtml(line.message || '')}</span>`;
   logFeed.appendChild(div);
 
-  // Trim old lines
   while (logFeed.children.length > MAX_LOGS) {
     logFeed.removeChild(logFeed.firstChild);
   }
-
-  // Auto-scroll
   logFeed.scrollTop = logFeed.scrollHeight;
-}
-
-function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Command history ───────────────────────────────────────────────────
 function renderCmdHistory(cmds) {
   if (!cmds.length) {
-    cmdHistory.innerHTML = '<div class="empty" style="padding:.5rem 0;font-size:.75rem">No commands</div>';
+    cmdHistory.innerHTML = '<div class="empty" style="padding:.5rem 0;font-size:.75rem">No commands yet</div>';
     return;
   }
+
   cmdHistory.innerHTML = cmds.map(c => {
-    let resultCls = 'cmd-result-pending', resultTxt = 'pending';
-    if (c.result_ok === true)  { resultCls = 'cmd-result-ok';   resultTxt = '✓ ok'; }
-    if (c.result_ok === false) { resultCls = 'cmd-result-fail'; resultTxt = '✗ fail'; }
-    const target = c.component_id ? `${c.component_id}/` : '';
+    const session = sessionCmds.get(c.request_id);
+    const resultOk = session?.resultOk ?? c.result_ok;
+    const payload  = session?.resultPayload;
+
+    let resultCls = 'cmd-result-pending', resultTxt = '…';
+    if (resultOk === true)  { resultCls = 'cmd-result-ok';   resultTxt = '✓ ok'; }
+    if (resultOk === false) { resultCls = 'cmd-result-fail'; resultTxt = '✗ fail'; }
+
+    const target = c.component_id ? `<span class="cmd-target-id">${escHtml(c.component_id)}/</span>` : '';
+
+    const payloadHtml = payload
+      ? `<div class="cmd-row-payload">
+           <pre class="json-pre" style="max-height:80px;margin-top:.3rem">${escHtml(fmtJson(payload))}</pre>
+         </div>`
+      : '';
+
     return `
-      <div class="cmd-row">
+      <div class="cmd-row" data-rid="${c.request_id}">
         <div class="cmd-row-header">
-          <span class="cmd-action">${target}${c.action}</span>
+          <span class="cmd-action">${target}${escHtml(c.action)}</span>
           <span class="${resultCls}">${resultTxt}</span>
         </div>
-        <div class="cmd-rid">${c.request_id.slice(0,8)}… · ${fmtTs(c.sent_ts)}</div>
+        <div class="cmd-rid">${c.request_id.slice(0, 8)}… · ${fmtTs(c.sent_ts)}</div>
+        ${payloadHtml}
       </div>`;
   }).join('');
 }
@@ -131,21 +318,20 @@ async function loadAgent() {
       agentData = await res.json();
       renderRetained(agentData);
     }
-  } catch (e) { /* not online yet */ }
+  } catch { /* not online yet */ }
 }
 
 async function loadCommands() {
   try {
     const res = await fetch(`/api/agents/${agentId}/commands?limit=20`);
     if (res.ok) renderCmdHistory(await res.json());
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 // ── WebSocket live updates ────────────────────────────────────────────
 onWsEvent(evt => {
   if (evt.type !== 'mqtt' || evt.agent_id !== agentId) return;
 
-  // Update in-memory snapshot
   if (!agentData) agentData = { agent_id: agentId, status: null, state: null,
                                 metadata: null, cfg: null, components: {}, last_seen_ts: evt.ts };
   agentData.last_seen_ts = evt.ts;
@@ -154,7 +340,6 @@ onWsEvent(evt => {
   const tt  = evt.topic_type;
 
   if (!cid) {
-    // Agent-level
     if (tt === 'status')   { agentData.status   = evt.payload; blkStatus.textContent   = fmtJson(evt.payload); setBadge(evt.payload?.state); }
     if (tt === 'state')    { agentData.state    = evt.payload; blkState.textContent    = fmtJson(evt.payload); }
     if (tt === 'metadata') { agentData.metadata = evt.payload; blkMetadata.textContent = fmtJson(evt.payload); }
@@ -166,7 +351,6 @@ onWsEvent(evt => {
       appendLog(evt.payload);
     }
   } else {
-    // Component-level
     if (!agentData.components[cid]) agentData.components[cid] = { component_id: cid };
     const comp = agentData.components[cid];
     if (tt === 'status')   comp.status   = evt.payload;
@@ -180,53 +364,22 @@ onWsEvent(evt => {
     }
   }
 
-  // Refresh cmd history on evt (result arrived)
-  if (tt.startsWith('evt/')) loadCommands();
-});
-
-// ── Send command ──────────────────────────────────────────────────────
-cmdSend.addEventListener('click', async () => {
-  const action = cmdAction.value.trim();
-  if (!action) { cmdStatus.textContent = 'Enter an action'; cmdStatus.className = 'cmd-status err'; return; }
-
-  let body = {};
-  const raw = cmdBody.value.trim();
-  if (raw) {
-    try { body = JSON.parse(raw); }
-    catch { cmdStatus.textContent = 'Invalid JSON body'; cmdStatus.className = 'cmd-status err'; return; }
-  }
-
-  const cid = cmdTarget.value;
-  const url = cid
-    ? `/api/agents/${agentId}/components/${cid}/cmd/${action}`
-    : `/api/agents/${agentId}/cmd/${action}`;
-
-  cmdSend.disabled = true;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      cmdStatus.textContent = `Sent · ${data.request_id.slice(0,8)}…`;
-      cmdStatus.className = 'cmd-status ok';
-      loadCommands();
-    } else {
-      cmdStatus.textContent = `Error ${res.status}`;
-      cmdStatus.className = 'cmd-status err';
+  // Capture result payload for session commands
+  if (tt.startsWith('evt/')) {
+    const rid = evt.payload?.request_id;
+    if (rid && sessionCmds.has(rid)) {
+      const session = sessionCmds.get(rid);
+      session.resultOk      = evt.payload?.ok;
+      session.resultPayload = evt.payload;
     }
-  } catch (e) {
-    cmdStatus.textContent = String(e);
-    cmdStatus.className = 'cmd-status err';
-  } finally {
-    cmdSend.disabled = false;
+    loadCommands();
   }
 });
 
 btnClearLogs.addEventListener('click', () => { logFeed.innerHTML = ''; });
 
 // ── Boot ───────────────────────────────────────────────────────────────
+renderQuickCmds();
+updateDatalist();
 loadAgent();
 loadCommands();

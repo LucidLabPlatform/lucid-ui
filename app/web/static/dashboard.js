@@ -1,11 +1,21 @@
 // Dashboard page JS — live fleet overview
 const grid = document.getElementById('agent-grid');
 const countEl = document.getElementById('agent-count');
+const filterButtons = {
+  all: document.getElementById('filter-all'),
+  online: document.getElementById('filter-online'),
+  offline: document.getElementById('filter-offline'),
+};
 
 let agents = {};  // agent_id → data
+let activeFilter = 'all';
+
+function agentState(agent) {
+  return agent.status?.state ?? 'unknown';
+}
 
 function stateBadge(agent) {
-  const state = agent.status?.state ?? 'unknown';
+  const state = agentState(agent);
   return `<span class="status-badge status-${state}">${state}</span>`;
 }
 
@@ -22,6 +32,10 @@ function fmtTs(ts) {
 function renderCard(agent) {
   const id = agent.agent_id;
   const compCount = Object.keys(agent.components || {}).length;
+  const isOnline = agentState(agent) === 'online';
+  const pingBtn = isOnline
+    ? `<button class="btn-ping" id="ping-${id}" onclick="quickPing(event,'${id}')">Ping</button>`
+    : '';
   return `
     <div class="agent-card" onclick="location.href='/agent/${id}'">
       <div class="agent-card-header">
@@ -33,9 +47,41 @@ function renderCard(agent) {
         · last seen ${fmtTs(agent.last_seen_ts)}
       </div>
       <div class="agent-card-actions">
+        ${pingBtn}
         <button class="btn-danger" onclick="deleteAgent(event, '${id}')">Delete</button>
       </div>
     </div>`;
+}
+
+async function quickPing(e, id) {
+  e.stopPropagation();
+  const btn = document.getElementById(`ping-${id}`);
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = '…';
+  btn.className = 'btn-ping';
+  try {
+    const res = await fetch(`/api/agents/${encodeURIComponent(id)}/cmd/ping`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (res.ok) {
+      btn.textContent = '✓';
+      btn.className = 'btn-ping ping-ok';
+    } else {
+      btn.textContent = '✗';
+      btn.className = 'btn-ping ping-fail';
+    }
+  } catch {
+    btn.textContent = '✗';
+    btn.className = 'btn-ping ping-fail';
+  }
+  setTimeout(() => {
+    btn.textContent = 'Ping';
+    btn.className = 'btn-ping';
+    btn.disabled = false;
+  }, 2000);
 }
 
 async function deleteAgent(e, id) {
@@ -52,14 +98,29 @@ async function deleteAgent(e, id) {
 }
 
 function renderGrid() {
-  const list = Object.values(agents);
+  const allAgents = Object.values(agents);
+  const list = allAgents.filter(agent => {
+    const state = agentState(agent);
+    if (activeFilter === 'online') return state === 'online';
+    if (activeFilter === 'offline') return state !== 'online';
+    return true;
+  });
   if (!list.length) {
-    grid.innerHTML = '<div class="empty">No agents seen yet</div>';
-    countEl.textContent = '0 agents';
+    grid.innerHTML = `<div class="empty">No ${activeFilter === 'all' ? '' : `${activeFilter} `}agents found</div>`;
+    countEl.textContent = `${list.length} of ${allAgents.length} agents`;
     return;
   }
   grid.innerHTML = list.map(renderCard).join('');
-  countEl.textContent = `${list.length} agent${list.length !== 1 ? 's' : ''}`;
+  countEl.textContent = `${list.length} of ${allAgents.length} agent${allAgents.length !== 1 ? 's' : ''}`;
+}
+
+function setFilter(filter) {
+  activeFilter = filter;
+  Object.entries(filterButtons).forEach(([name, button]) => {
+    if (!button) return;
+    button.classList.toggle('is-active', name === filter);
+  });
+  renderGrid();
 }
 
 async function loadAgents() {
@@ -93,3 +154,8 @@ onWsEvent(evt => {
 loadAgents();
 // Periodic refresh for last-seen timestamps
 setInterval(renderGrid, 30_000);
+
+Object.entries(filterButtons).forEach(([name, button]) => {
+  if (!button) return;
+  button.addEventListener('click', () => setFilter(name));
+});

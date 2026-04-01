@@ -33,8 +33,21 @@ function showPassword(username, password) {
   reveal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-btnCopyPw.addEventListener('click', () => {
-  navigator.clipboard.writeText(pwValue.textContent);
+btnCopyPw.addEventListener('click', async () => {
+  const text = pwValue.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Fallback for non-HTTPS contexts where the Clipboard API is unavailable
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
   btnCopyPw.textContent = 'Copied!';
   setTimeout(() => { btnCopyPw.textContent = 'Copy'; }, 2000);
 });
