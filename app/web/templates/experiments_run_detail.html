@@ -5,7 +5,14 @@
 <div class="page-header">
   <a href="/experiments/runs" class="back-link">← Runs</a>
   <h1>Run <span style="font-family:var(--font-mono);font-size:0.95rem;color:var(--muted)">{{ run_id }}</span></h1>
+  <button class="btn-sm" id="approve-btn" onclick="approveRun()" style="display:none;border-color:#14532d;color:var(--green)">Approve</button>
   <button class="btn-sm" id="cancel-btn" onclick="cancelRun()" style="display:none;border-color:#450a0a;color:var(--red)">Cancel</button>
+</div>
+
+<!-- Approval banner -->
+<div class="approval-banner" id="approval-banner" style="display:none;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem">
+  <span style="color:var(--green);font-weight:600">Approval required:</span>
+  <span id="approval-message" style="color:var(--text)"></span>
 </div>
 
 <!-- Run metadata bar -->

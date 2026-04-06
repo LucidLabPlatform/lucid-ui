@@ -45,7 +45,7 @@ function appendMessage(role, content, toolCalls) {
         for (const tc of toolCalls) {
             const item = document.createElement('div');
             item.className = 'tool-call';
-            item.textContent = `${tc.specialist}: ${tc.task}`;
+            item.textContent = formatToolCall(tc);
             details.appendChild(item);
         }
         div.appendChild(details);
@@ -53,6 +53,22 @@ function appendMessage(role, content, toolCalls) {
 
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function formatToolCall(tc) {
+    const name = tc.name || tc.specialist || 'tool';
+    let args = tc.args;
+    if (!args && tc.task) {
+        args = tc.task;
+    }
+    if (args && typeof args === 'object') {
+        try {
+            args = JSON.stringify(args);
+        } catch (_) {
+            args = String(args);
+        }
+    }
+    return args ? `${name}: ${args}` : name;
 }
 
 async function sendMessage() {

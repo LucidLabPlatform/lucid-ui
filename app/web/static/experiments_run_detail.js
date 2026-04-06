@@ -98,6 +98,12 @@ function updateMeta(run) {
   // Show cancel button only for active runs
   const cancelBtn = document.getElementById('cancel-btn');
   cancelBtn.style.display = (run.status === 'running' || run.status === 'pending') ? '' : 'none';
+
+  // Hide approve button when run completes/fails/cancels
+  if (['completed', 'failed', 'cancelled'].includes(run.status)) {
+    document.getElementById('approve-btn').style.display = 'none';
+    document.getElementById('approval-banner').style.display = 'none';
+  }
 }
 
 async function loadRun() {
@@ -174,8 +180,44 @@ onWsEvent(evt => {
     case 'step_failed':
       loadRun();
       break;
+
+    case 'approval_required':
+      document.getElementById('approve-btn').style.display = '';
+      document.getElementById('approval-banner').style.display = '';
+      document.getElementById('approval-message').textContent = evt.message || 'Waiting for approval…';
+      break;
+
+    case 'approval_granted':
+      document.getElementById('approve-btn').style.display = 'none';
+      document.getElementById('approval-banner').style.display = 'none';
+      break;
   }
 });
+
+async function approveRun() {
+  const btn = document.getElementById('approve-btn');
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+  try {
+    const res = await fetch(`/api/experiments/runs/${encodeURIComponent(RUN_ID)}/approve`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(`Approve failed: ${err.detail || res.statusText}`);
+      btn.disabled = false;
+      btn.textContent = 'Approve';
+      return;
+    }
+    // Hide immediately on success (WS event is a bonus, not required)
+    btn.style.display = 'none';
+    document.getElementById('approval-banner').style.display = 'none';
+  } catch (err) {
+    alert(`Approve error: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = 'Approve';
+  }
+}
 
 async function cancelRun() {
   const btn = document.getElementById('cancel-btn');

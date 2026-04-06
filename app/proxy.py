@@ -8,6 +8,7 @@ from fastapi import Request, Response, WebSocket, WebSocketDisconnect
 
 ORCHESTRATOR_URL = os.environ.get("ORCHESTRATOR_URL", "").rstrip("/")
 FLEET_CORE_URL = os.environ.get("FLEET_CORE_URL", ORCHESTRATOR_URL).rstrip("/")
+AI_URL = os.environ.get("AI_URL", "").rstrip("/")
 
 _HOP_BY_HOP_HEADERS = {
     "connection",
@@ -24,7 +25,8 @@ _HOP_BY_HOP_HEADERS = {
 
 
 def select_api_base(path: str) -> str:
-    _ = path
+    if path == "ai" or path.startswith("ai/"):
+        return AI_URL or ORCHESTRATOR_URL or FLEET_CORE_URL
     return ORCHESTRATOR_URL or FLEET_CORE_URL
 
 
