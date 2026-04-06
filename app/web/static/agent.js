@@ -75,8 +75,12 @@ function getCurrentCommands() {
 }
 
 // ── Quick commands (dynamic from catalog) ───────────────────────────
+// Store templates in a map since JSON in data attributes is fragile
+const templateMap = new Map();
+
 function renderQuickCmds() {
   const cmds = getCurrentCommands();
+  templateMap.clear();
   if (!cmds.length) {
     quickCmdsEl.innerHTML = '';
     return;
@@ -88,6 +92,7 @@ function renderQuickCmds() {
     const cat = cmd.category || 'other';
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(cmd);
+    if (cmd.template != null) templateMap.set(cmd.action, cmd.template);
   }
 
   let html = '';
@@ -96,8 +101,7 @@ function renderQuickCmds() {
     html += `<div class="cmd-category-label">${escHtml(category)}</div>`;
     html += `<div class="cmd-category-buttons">`;
     for (const cmd of items) {
-      const tpl = cmd.template != null ? JSON.stringify(cmd.template) : '';
-      html += `<button class="quick-cmd-btn" data-action="${escHtml(cmd.action)}" data-has-body="${cmd.has_body}" data-template="${escHtml(tpl)}">${escHtml(cmd.label || cmd.action)}</button>`;
+      html += `<button class="quick-cmd-btn" data-action="${escHtml(cmd.action)}" data-has-body="${cmd.has_body}">${escHtml(cmd.label || cmd.action)}</button>`;
     }
     html += `</div></div>`;
   }
@@ -119,10 +123,9 @@ quickCmdsEl.addEventListener('click', e => {
     doSend(action, {});
   } else {
     cmdAction.value = action;
-    const tpl = btn.dataset.template;
-    if (tpl) {
-      try { cmdBody.value = JSON.stringify(JSON.parse(tpl), null, 2); }
-      catch { cmdBody.value = tpl; }
+    const tpl = templateMap.get(action);
+    if (tpl != null) {
+      cmdBody.value = JSON.stringify(tpl, null, 2);
     } else {
       cmdBody.value = '';
     }
