@@ -1,10 +1,15 @@
+// UUID helper (works over plain HTTP, unlike crypto.randomUUID)
+function uuid() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+    );
+}
+
 // Session management
 const SESSION_KEY = 'lucid_ai_session';
 let sessionId = sessionStorage.getItem(SESSION_KEY);
 if (!sessionId) {
-    sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
-    );
+    sessionId = uuid();
     sessionStorage.setItem(SESSION_KEY, sessionId);
 }
 
@@ -15,6 +20,27 @@ const sessionLabelEl = document.getElementById('session-label');
 
 if (sessionLabelEl) {
     sessionLabelEl.textContent = `session: ${sessionId.slice(0, 8)}…`;
+}
+
+// Elapsed timer
+let timerInterval = null;
+const timerEl = document.getElementById('timer');
+
+function startTimer() {
+    const start = Date.now();
+    if (timerEl) {
+        timerEl.textContent = '0.0s';
+        timerEl.classList.remove('hidden');
+    }
+    timerInterval = setInterval(() => {
+        if (timerEl) timerEl.textContent = ((Date.now() - start) / 1000).toFixed(1) + 's';
+    }, 100);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    if (timerEl) timerEl.classList.add('hidden');
 }
 
 // Load history on page load
@@ -80,6 +106,7 @@ async function sendMessage() {
     inputEl.value = '';
     appendMessage('user', text, []);
     loadingEl.classList.remove('hidden');
+    startTimer();
 
     try {
         const resp = await fetch('/api/ai/chat', {
@@ -96,12 +123,13 @@ async function sendMessage() {
     } catch (e) {
         appendMessage('assistant', `Network error: ${e.message}`, []);
     } finally {
+        stopTimer();
         loadingEl.classList.add('hidden');
     }
 }
 
 function newChat() {
-    sessionId = crypto.randomUUID();
+    sessionId = uuid();
     sessionStorage.setItem(SESSION_KEY, sessionId);
     messagesEl.innerHTML = '';
     if (sessionLabelEl) {
