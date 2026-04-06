@@ -24,28 +24,12 @@ const MAX_LOGS = 500;
 
 let agentData = null;
 
-// ── Quick commands config ────────────────────────────────────────────
-const QUICK_CMDS = {
-  agent: [
-    { action: 'ping',       noBody: true },
-    { action: 'restart',    noBody: true },
-    { action: 'reload-cfg', noBody: true },
-    { action: 'update-cfg', noBody: false },
-  ],
-  component: [
-    { action: 'ping',       noBody: true },
-    { action: 'start',      noBody: true },
-    { action: 'stop',       noBody: true },
-    { action: 'enable',     noBody: true },
-    { action: 'disable',    noBody: true },
-    { action: 'reload-cfg', noBody: true },
-  ],
-};
+// ── Command catalog (fetched from API) ──────────────────────────────
+let commandCatalog = { agent: [], components: {} };
 
 // ── Session state ────────────────────────────────────────────────────
-// Tracks commands sent this session so we can display result payloads
-const sessionCmds = new Map(); // request_id → {action, componentId, body, resultOk, resultPayload}
-let recentActions = [];        // MRU list, max 10
+const sessionCmds = new Map();
+let recentActions = [];
 
 // ── Helpers ──────────────────────────────────────────────────────────
 function fmtJson(obj) {
@@ -70,19 +54,59 @@ function escHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
-// ── Quick commands ───────────────────────────────────────────────────
+// ── Command catalog ─────────────────────────────────────────────────
+let catalogDebounce = null;
+
+async function loadCommandCatalog() {
+  try {
+    const res = await fetch(`/api/agents/${agentId}/command-catalog`);
+    if (res.ok) commandCatalog = await res.json();
+  } catch { /* fallback: empty catalog, free-text still works */ }
+  renderQuickCmds();
+  updateDatalist();
+}
+
+function getCurrentCommands() {
+  const cid = cmdTarget.value;
+  if (cid && commandCatalog.components[cid]) {
+    return commandCatalog.components[cid];
+  }
+  return cid ? [] : commandCatalog.agent;
+}
+
+// ── Quick commands (dynamic from catalog) ───────────────────────────
 function renderQuickCmds() {
-  const isComponent = !!cmdTarget.value;
-  const list = isComponent ? QUICK_CMDS.component : QUICK_CMDS.agent;
-  quickCmdsEl.innerHTML = list.map(c =>
-    `<button class="quick-cmd-btn" data-action="${c.action}" data-nobody="${c.noBody}">${c.action}</button>`
-  ).join('');
+  const cmds = getCurrentCommands();
+  if (!cmds.length) {
+    quickCmdsEl.innerHTML = '';
+    return;
+  }
+
+  // Group by category
+  const groups = {};
+  for (const cmd of cmds) {
+    const cat = cmd.category || 'other';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(cmd);
+  }
+
+  let html = '';
+  for (const [category, items] of Object.entries(groups)) {
+    html += `<div class="cmd-category-group">`;
+    html += `<div class="cmd-category-label">${escHtml(category)}</div>`;
+    html += `<div class="cmd-category-buttons">`;
+    for (const cmd of items) {
+      const tpl = cmd.template != null ? JSON.stringify(cmd.template) : '';
+      html += `<button class="quick-cmd-btn" data-action="${escHtml(cmd.action)}" data-has-body="${cmd.has_body}" data-template="${escHtml(tpl)}">${escHtml(cmd.label || cmd.action)}</button>`;
+    }
+    html += `</div></div>`;
+  }
+  quickCmdsEl.innerHTML = html;
 }
 
 function updateDatalist() {
-  const isComponent = !!cmdTarget.value;
-  const known = (isComponent ? QUICK_CMDS.component : QUICK_CMDS.agent).map(c => c.action);
-  const all = [...new Set([...recentActions, ...known])];
+  const catalogActions = getCurrentCommands().map(c => c.action);
+  const all = [...new Set([...recentActions, ...catalogActions])];
   cmdDatalist.innerHTML = all.map(a => `<option value="${a}">`).join('');
 }
 
@@ -90,11 +114,18 @@ quickCmdsEl.addEventListener('click', e => {
   const btn = e.target.closest('.quick-cmd-btn');
   if (!btn) return;
   const action = btn.dataset.action;
-  const noBody = btn.dataset.nobody === 'true';
-  if (noBody) {
+  const hasBody = btn.dataset.hasBody === 'true';
+  if (!hasBody) {
     doSend(action, {});
   } else {
     cmdAction.value = action;
+    const tpl = btn.dataset.template;
+    if (tpl) {
+      try { cmdBody.value = JSON.stringify(JSON.parse(tpl), null, 2); }
+      catch { cmdBody.value = tpl; }
+    } else {
+      cmdBody.value = '';
+    }
     cmdBody.focus();
   }
 });
@@ -355,7 +386,7 @@ onWsEvent(evt => {
     const comp = agentData.components[cid];
     if (tt === 'status')   comp.status   = evt.payload;
     if (tt === 'state')    comp.state    = evt.payload;
-    if (tt === 'metadata') comp.metadata = evt.payload;
+    if (tt === 'metadata') { comp.metadata = evt.payload; debouncedCatalogRefresh(); }
     if (tt === 'cfg')      comp.cfg      = evt.payload;
     renderRetained(agentData);
 
@@ -376,10 +407,14 @@ onWsEvent(evt => {
   }
 });
 
+function debouncedCatalogRefresh() {
+  clearTimeout(catalogDebounce);
+  catalogDebounce = setTimeout(loadCommandCatalog, 2000);
+}
+
 btnClearLogs.addEventListener('click', () => { logFeed.innerHTML = ''; });
 
 // ── Boot ───────────────────────────────────────────────────────────────
-renderQuickCmds();
-updateDatalist();
+loadCommandCatalog();
 loadAgent();
 loadCommands();
