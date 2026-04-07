@@ -28,6 +28,7 @@ const rawStatus   = document.getElementById('raw-status');
 const rawState    = document.getElementById('raw-state');
 const rawMetadata = document.getElementById('raw-metadata');
 const rawCfg      = document.getElementById('raw-cfg');
+const rawComps    = document.getElementById('raw-components');
 
 const MAX_LOGS = 500;
 
@@ -207,10 +208,76 @@ function renderOverview(agent) {
   } else {
     cardComponents.innerHTML = comps.map(c => {
       const cs = c.status?.state || 'unknown';
-      return `<div class="overview-comp">
-        <span class="overview-comp-id">${escHtml(c.component_id)}</span>
-        <span class="status-badge status-${cs}" style="font-size:.65rem">${cs}</span>
-      </div>`;
+      const meta = c.metadata || {};
+      const state = c.state || {};
+      const cfg = c.cfg || {};
+      const caps = meta.capabilities || [];
+
+      // Build detail rows
+      let detailRows = '';
+      if (meta.version) detailRows += kvRow('version', meta.version);
+      if (c.first_seen_ts) detailRows += kvRow('first seen', new Date(c.first_seen_ts).toLocaleString());
+      if (c.last_seen_ts) detailRows += kvRow('last seen', new Date(c.last_seen_ts).toLocaleString());
+
+      // Status fields beyond state
+      const statusObj = c.status || {};
+      for (const [k, v] of Object.entries(statusObj)) {
+        if (k === 'state' || k === 'received_ts') continue;
+        if (typeof v !== 'object') detailRows += kvRow(k, v);
+      }
+
+      // Capabilities
+      const capsHtml = caps.length
+        ? `<div class="comp-detail-section"><div class="comp-detail-label">Capabilities</div><div class="comp-caps">${caps.map(cap => `<span class="comp-cap-tag">${escHtml(cap)}</span>`).join('')}</div></div>`
+        : '';
+
+      // State
+      const statePayload = state.payload || state;
+      const stateEntries = typeof statePayload === 'object' ? Object.entries(statePayload) : [];
+      let stateHtml = '';
+      if (stateEntries.length) {
+        let stateRows = '';
+        for (const [k, v] of stateEntries) {
+          if (k === 'received_ts') continue;
+          stateRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
+        }
+        if (stateRows) stateHtml = `<div class="comp-detail-section"><div class="comp-detail-label">State</div>${kvTable(stateRows)}</div>`;
+      }
+
+      // Config
+      const cfgPayload = cfg.payload || cfg;
+      const cfgEntries = typeof cfgPayload === 'object' ? Object.entries(cfgPayload) : [];
+      let cfgHtml = '';
+      if (cfgEntries.length) {
+        let cfgRows = '';
+        for (const [k, v] of cfgEntries) {
+          if (k === 'received_ts') continue;
+          cfgRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
+        }
+        if (cfgRows) cfgHtml = `<div class="comp-detail-section"><div class="comp-detail-label">Config</div>${kvTable(cfgRows)}</div>`;
+      }
+
+      // Logging config
+      const logging = cfg.logging || {};
+      if (logging.level) detailRows += kvRow('log level', logging.level);
+
+      const hasDetails = detailRows || capsHtml || stateHtml || cfgHtml;
+
+      return `<details class="comp-details">
+        <summary class="overview-comp">
+          <span class="overview-comp-id">${escHtml(c.component_id)}</span>
+          <span class="comp-header-right">
+            ${meta.version ? `<span class="comp-version">v${escHtml(meta.version)}</span>` : ''}
+            <span class="status-badge status-${cs}" style="font-size:.65rem">${cs}</span>
+          </span>
+        </summary>
+        ${hasDetails ? `<div class="comp-detail-body">
+          ${detailRows ? `<div class="comp-detail-section"><div class="comp-detail-label">Info</div>${kvTable(detailRows)}</div>` : ''}
+          ${capsHtml}
+          ${stateHtml}
+          ${cfgHtml}
+        </div>` : ''}
+      </details>`;
     }).join('');
   }
 
@@ -235,6 +302,7 @@ function renderOverview(agent) {
   rawState.textContent    = fmtJson(agent.state);
   rawMetadata.textContent = fmtJson(agent.metadata);
   rawCfg.textContent      = fmtJson(agent.cfg);
+  rawComps.textContent    = fmtJson(agent.components);
 
   // Populate command target dropdown
   const current = cmdTarget.value;
