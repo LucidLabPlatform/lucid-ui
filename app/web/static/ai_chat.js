@@ -219,6 +219,10 @@ if (voiceBtn) {
 }
 
 async function startRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        appendMessage('assistant', 'Microphone not available. Chrome requires HTTPS for mic access on non-localhost. Try chrome://flags/#unsafely-treat-insecure-origin-as-secure and add http://10.205.10.16:5000', []);
+        return;
+    }
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioChunks = [];
@@ -237,7 +241,7 @@ async function startRecording() {
         // Max 30s safety limit
         recordingTimeout = setTimeout(() => stopRecording(), 30000);
     } catch (err) {
-        console.error('Microphone access denied:', err);
+        appendMessage('assistant', `Microphone error: ${err.message}. Make sure mic access is allowed.`, []);
     }
 }
 
