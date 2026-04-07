@@ -1239,16 +1239,6 @@ main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
 }
 .btn-warn:hover { background: #292009; }
 
-/* ── Agent card actions ──────────────────────────────────────────── */
-.agent-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.agent-card:hover .agent-card-actions { opacity: 1; }
-
 /* ── Topic Tree ──────────────────────────────────────────────────── */
 .topic-tree-container { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -1612,35 +1602,6 @@ main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
   min-height: 0;
 }
 
-/* ── Component row click-to-expand ───────────────────────────────── */
-.comp-row-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.3rem 0;
-  font-size: 0.8rem;
-}
-
-.comp-row-clickable .comp-row-main {
-  cursor: pointer;
-  border-radius: 4px;
-  padding: 0.3rem 0.3rem;
-  margin: 0 -0.3rem;
-  transition: background 0.12s;
-}
-.comp-row-clickable .comp-row-main:hover {
-  background: #1a2234;
-}
-.comp-row-clickable.comp-expanded .comp-row-main {
-  color: var(--text);
-}
-.comp-row-clickable.comp-expanded .comp-id {
-  color: var(--accent);
-}
-
-.comp-state-detail { }
-.comp-state-detail.hidden { display: none; }
-
 /* ── Command row result payload ───────────────────────────────────── */
 .cmd-row-payload .json-pre {
   font-size: 0.68rem;
@@ -1653,17 +1614,3 @@ main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
   font-size: 0.85em;
 }
 
-/* ── Dashboard ping button ───────────────────────────────────────── */
-.btn-ping {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--subtle);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.72rem;
-  cursor: pointer;
-  transition: border-color 0.12s, color 0.12s;
-}
-.btn-ping:hover { border-color: var(--accent); color: var(--accent); }
-.btn-ping.ping-ok   { border-color: #14532d; color: var(--green); }
-.btn-ping.ping-fail { border-color: #450a0a; color: var(--red); }
