@@ -73,7 +73,6 @@ function escHtml(str) {
 }
 
 window.deleteSession = async function(sid) {
-    if (!confirm('Delete this session?')) return;
     await fetch(`/api/ai/sessions/${sid}`, { method: 'DELETE' });
     if (sid === sessionId) {
         newChat();
