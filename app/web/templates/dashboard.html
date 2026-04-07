@@ -11,7 +11,23 @@
     <button id="filter-offline" class="btn-sm filter-btn" type="button">Offline</button>
   </div>
 </div>
-<div id="agent-grid" class="agent-grid"></div>
+<div class="table-wrap">
+  <table class="fleet-table" id="fleet-table">
+    <thead>
+      <tr>
+        <th class="sortable" data-sort="agent_id">Agent</th>
+        <th class="sortable" data-sort="status">Status</th>
+        <th class="sortable" data-sort="host">Host / IP</th>
+        <th class="sortable" data-sort="uptime">Uptime</th>
+        <th class="sortable" data-sort="last_seen">Last Seen</th>
+        <th>Components</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="fleet-body"></tbody>
+  </table>
+</div>
+<div id="fleet-empty" class="empty" style="display:none">No agents found</div>
 {% endblock %}
 
 {% block scripts %}
