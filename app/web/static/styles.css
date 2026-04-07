@@ -2,18 +2,22 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:       #0f1117;
-  --surface:  #1e2433;
-  --border:   #2d3748;
+  --bg:       #0d1017;
+  --surface:  #1a2036;
+  --surface-hover: #1e2744;
+  --border:   #283044;
   --text:     #e2e8f0;
-  --muted:    #64748b;
+  --muted:    #8494ab;
   --subtle:   #94a3b8;
   --accent:   #60a5fa;
+  --accent-dim: rgba(96, 165, 250, 0.10);
   --green:    #4ade80;
   --red:      #f87171;
   --yellow:   #facc15;
-  --radius:   8px;
+  --radius:   10px;
+  --radius-sm: 6px;
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --transition: 150ms ease;
 }
 
 body {
@@ -21,10 +25,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent); text-decoration: none; transition: color var(--transition); }
 a:hover { text-decoration: underline; }
 
 /* ── Top nav ───────────────────────────────────────────────────────── */
@@ -72,7 +76,12 @@ a:hover { text-decoration: underline; }
 .ws-disconnected { background: #450a0a; color: var(--red); }
 
 /* ── Main content ─────────────────────────────────────────────────── */
-main { padding: 1.5rem; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
 
 .page-header {
   display: flex;
@@ -81,9 +90,9 @@ main { padding: 1.5rem; }
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
-.page-header h1 { font-size: 1.25rem; font-weight: 600; }
+.page-header h1 { font-size: 1.4rem; font-weight: 700; }
 .subtitle { color: var(--muted); font-size: 0.85rem; }
-.back-link { color: var(--muted); font-size: 0.85rem; }
+.back-link { color: var(--muted); font-size: 0.85rem; transition: color var(--transition); }
 .back-link:hover { color: var(--text); text-decoration: none; }
 
 .dashboard-filters {
@@ -126,19 +135,22 @@ main { padding: 1.5rem; }
 
 /* ── Status badge ─────────────────────────────────────────────────── */
 .status-badge {
-  display: inline-block;
-  padding: 0.15rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.6rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  transition: background var(--transition);
 }
-.status-online   { background: #14532d; color: var(--green); }
-.status-offline  { background: #1c1917; color: var(--muted); }
-.status-error    { background: #450a0a; color: var(--red); }
-.status-starting { background: #1c1917; color: var(--yellow); }
-.status-unknown  { background: #1e2433; color: var(--muted); }
+.status-online   { background: #14532d88; color: var(--green); }
+.status-offline  { background: #1c191788; color: var(--muted); }
+.status-error    { background: #450a0a88; color: var(--red); }
+.status-starting { background: #1c191788; color: var(--yellow); }
+.status-unknown  { background: #1e243388; color: var(--muted); }
 
 /* ── Agent detail layout ──────────────────────────────────────────── */
 .agent-layout {
@@ -259,22 +271,25 @@ main { padding: 1.5rem; }
   background: var(--accent);
   color: #0f1117;
   border: none;
-  border-radius: 5px;
-  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1.1rem;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  transition: filter var(--transition), transform var(--transition);
 }
-.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
 
 .btn-sm {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.6rem;
   font-size: 0.72rem;
   cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
 }
 .btn-sm:hover { border-color: var(--subtle); color: var(--text); }
 
@@ -395,10 +410,11 @@ main { padding: 1.5rem; }
   background: transparent;
   border: 1px solid #450a0a;
   color: var(--red);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.55rem;
   font-size: 0.72rem;
   cursor: pointer;
+  transition: background var(--transition);
 }
 .btn-danger:hover { background: #450a0a; }
 
