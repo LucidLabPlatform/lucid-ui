@@ -5,22 +5,18 @@ function uuid() {
     );
 }
 
-// Session management
+// Session management — use localStorage so sessions persist across tabs/restarts
 const SESSION_KEY = 'lucid_ai_session';
-let sessionId = sessionStorage.getItem(SESSION_KEY);
+let sessionId = localStorage.getItem(SESSION_KEY);
 if (!sessionId) {
     sessionId = uuid();
-    sessionStorage.setItem(SESSION_KEY, sessionId);
+    localStorage.setItem(SESSION_KEY, sessionId);
 }
 
-const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('input');
-const loadingEl = document.getElementById('loading');
-const sessionLabelEl = document.getElementById('session-label');
-
-if (sessionLabelEl) {
-    sessionLabelEl.textContent = `session: ${sessionId.slice(0, 8)}…`;
-}
+const messagesEl   = document.getElementById('messages');
+const inputEl      = document.getElementById('input');
+const loadingEl    = document.getElementById('loading');
+const sessionList  = document.getElementById('session-list');
 
 // Elapsed timer
 let timerInterval = null;
@@ -43,7 +39,48 @@ function stopTimer() {
     if (timerEl) timerEl.classList.add('hidden');
 }
 
-// Load history on page load
+// ── Session sidebar ──────────────────────────────────────────────────
+async function loadSessions() {
+    try {
+        const resp = await fetch('/api/ai/sessions');
+        const sessions = await resp.json();
+        if (!sessions.length) {
+            sessionList.innerHTML = '<div class="empty" style="font-size:.75rem;padding:.5rem">No sessions yet</div>';
+            return;
+        }
+        sessionList.innerHTML = sessions.map(s => {
+            const active = s.session_id === sessionId ? ' ai-session-active' : '';
+            const preview = s.preview || 'Empty session';
+            const ts = s.last_active_at
+                ? new Date(s.last_active_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+                : '';
+            return `
+                <div class="ai-session-item${active}" data-sid="${s.session_id}" onclick="switchSession('${s.session_id}')">
+                    <div class="ai-session-preview">${escHtml(preview)}</div>
+                    <div class="ai-session-ts">${ts}</div>
+                </div>`;
+        }).join('');
+    } catch {
+        sessionList.innerHTML = '<div class="empty" style="font-size:.75rem;padding:.5rem">Could not load sessions</div>';
+    }
+}
+
+function escHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+window.switchSession = function(sid) {
+    sessionId = sid;
+    localStorage.setItem(SESSION_KEY, sessionId);
+    messagesEl.innerHTML = '';
+    loadHistory();
+    // Update active class
+    sessionList.querySelectorAll('.ai-session-item').forEach(el => {
+        el.classList.toggle('ai-session-active', el.dataset.sid === sid);
+    });
+};
+
+// ── Chat history ─────────────────────────────────────────────────────
 async function loadHistory() {
     try {
         const resp = await fetch(`/api/ai/history?session_id=${sessionId}`);
@@ -51,7 +88,7 @@ async function loadHistory() {
         for (const turn of (data.turns || [])) {
             appendMessage(turn.role, turn.content, []);
         }
-    } catch (e) {
+    } catch {
         // silently ignore — history is optional
     }
 }
@@ -99,6 +136,7 @@ function formatToolCall(tc) {
     return args ? `${name}: ${args}` : name;
 }
 
+// ── Send ─────────────────────────────────────────────────────────────
 async function sendMessage() {
     const text = inputEl.value.trim();
     if (!text) return;
@@ -125,16 +163,16 @@ async function sendMessage() {
     } finally {
         stopTimer();
         loadingEl.classList.add('hidden');
+        loadSessions(); // refresh sidebar to show updated timestamp
     }
 }
 
 function newChat() {
     sessionId = uuid();
-    sessionStorage.setItem(SESSION_KEY, sessionId);
+    localStorage.setItem(SESSION_KEY, sessionId);
     messagesEl.innerHTML = '';
-    if (sessionLabelEl) {
-        sessionLabelEl.textContent = `session: ${sessionId.slice(0, 8)}…`;
-    }
+    loadSessions();
+    inputEl.focus();
 }
 
 // Enter to send (Shift+Enter for newline)
@@ -148,4 +186,5 @@ inputEl.addEventListener('keydown', e => {
 document.getElementById('send-btn').addEventListener('click', sendMessage);
 document.getElementById('new-chat-btn').addEventListener('click', newChat);
 
+loadSessions();
 loadHistory();

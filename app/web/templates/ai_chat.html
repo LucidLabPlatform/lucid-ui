@@ -4,23 +4,35 @@
 {% block content %}
 <div class="page-header">
   <h1>AI Assistant</h1>
-  <span class="subtitle" id="session-label"></span>
 </div>
 
 <div class="ai-chat-layout">
-  <div class="ai-messages-panel panel">
-    <div id="messages" class="ai-messages"></div>
-    <div id="loading" class="ai-loading hidden">
-      <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-      <span id="timer" class="ai-timer hidden"></span>
+  <!-- Session sidebar -->
+  <aside class="ai-sidebar panel">
+    <div class="ai-sidebar-header">
+      <h3>Sessions</h3>
+      <button id="new-chat-btn" class="btn-sm">+ New</button>
     </div>
-  </div>
+    <div id="session-list" class="ai-session-list">
+      <div class="empty">Loading…</div>
+    </div>
+  </aside>
 
-  <div class="ai-input-bar">
-    <textarea id="input" class="ai-textarea" rows="2" placeholder="Ask anything about the fleet…"></textarea>
-    <div class="ai-input-actions">
-      <button id="new-chat-btn" class="btn-sm">New Chat</button>
-      <button id="send-btn" class="btn-primary">Send</button>
+  <!-- Chat area -->
+  <div class="ai-chat-main">
+    <div class="ai-messages-panel panel">
+      <div id="messages" class="ai-messages"></div>
+      <div id="loading" class="ai-loading hidden">
+        <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+        <span id="timer" class="ai-timer hidden"></span>
+      </div>
+    </div>
+
+    <div class="ai-input-bar">
+      <textarea id="input" class="ai-textarea" rows="2" placeholder="Ask anything about the fleet…"></textarea>
+      <div class="ai-input-actions">
+        <button id="send-btn" class="btn-primary">Send</button>
+      </div>
     </div>
   </div>
 </div>
