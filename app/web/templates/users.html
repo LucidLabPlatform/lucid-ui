@@ -13,16 +13,15 @@
 <div class="users-layout">
   <!-- Add forms -->
   <section class="panel add-panel">
-    <h2>Add Agent</h2>
+    <h2>Add User</h2>
     <div class="form-body">
-      <input id="agent-id-input" placeholder="Agent ID (e.g. nikandros)" class="cmd-input">
-      <button id="btn-add-agent" class="btn-primary">Create Agent</button>
-    </div>
-
-    <h2 style="margin-top:1.5rem">Add Central Command</h2>
-    <div class="form-body">
-      <p class="form-note">Creates the configured Central Command MQTT user if it is missing.</p>
-      <button id="btn-add-cc" class="btn-primary">Create CC User</button>
+      <select id="user-role" class="cmd-select">
+        <option value="agent">Agent</option>
+        <option value="observer">Observer (subscribe-only)</option>
+        <option value="central-command">Central Command</option>
+      </select>
+      <input id="username-input" placeholder="Username (e.g. nikandros)" class="cmd-input">
+      <button id="btn-add-user" class="btn-primary">Create User</button>
     </div>
 
     <!-- Password reveal -->

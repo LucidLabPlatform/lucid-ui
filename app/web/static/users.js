@@ -1,22 +1,37 @@
 // Users management page
 document.querySelector('a[href="/users"]')?.classList.add('active');
 
-const tableWrap   = document.getElementById('users-table-wrap');
-const reveal      = document.getElementById('password-reveal');
-const pwValue     = document.getElementById('password-value');
-const pwMeta      = document.getElementById('password-user');
-const btnCopyPw   = document.getElementById('btn-copy-pw');
-const agentInput  = document.getElementById('agent-id-input');
-const btnAddAgent = document.getElementById('btn-add-agent');
-const btnAddCc    = document.getElementById('btn-add-cc');
-const syncHealth  = document.getElementById('users-sync-health');
+const tableWrap    = document.getElementById('users-table-wrap');
+const reveal       = document.getElementById('password-reveal');
+const pwValue      = document.getElementById('password-value');
+const pwMeta       = document.getElementById('password-user');
+const btnCopyPw    = document.getElementById('btn-copy-pw');
+const roleSelect   = document.getElementById('user-role');
+const usernameInput = document.getElementById('username-input');
+const btnAddUser   = document.getElementById('btn-add-user');
+const syncHealth   = document.getElementById('users-sync-health');
+
+// CC doesn't need a username input
+roleSelect.addEventListener('change', () => {
+  if (roleSelect.value === 'central-command') {
+    usernameInput.style.display = 'none';
+    usernameInput.value = '';
+  } else {
+    usernameInput.style.display = '';
+    usernameInput.placeholder = roleSelect.value === 'observer'
+      ? 'Username (e.g. dashboard)'
+      : 'Agent ID (e.g. nikandros)';
+  }
+});
 
 function fmtTs(ts) {
   return ts ? new Date(ts).toLocaleString([], { hour12: false }) : '—';
 }
 
 function roleBadge(role) {
-  const cls = role === 'central-command' ? 'badge-cc' : 'badge-agent';
+  const cls = role === 'central-command' ? 'badge-cc'
+            : role === 'observer' ? 'badge-observer'
+            : 'badge-agent';
   return `<span class="badge ${cls}">${role}</span>`;
 }
 
@@ -38,7 +53,6 @@ btnCopyPw.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(text);
   } catch {
-    // Fallback for non-HTTPS contexts where the Clipboard API is unavailable
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -135,43 +149,42 @@ window.rotateUser = async function(username) {
   }
 };
 
-btnAddAgent.addEventListener('click', async () => {
-  const agentId = agentInput.value.trim();
-  if (!agentId) { agentInput.focus(); return; }
+btnAddUser.addEventListener('click', async () => {
+  const role = roleSelect.value;
+  let url, body;
 
-  btnAddAgent.disabled = true;
-  const res = await fetch('/api/users/agent', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ agent_id: agentId }),
-  });
-  btnAddAgent.disabled = false;
-
-  if (res.ok) {
-    const data = await res.json();
-    agentInput.value = '';
-    showPassword(data.username, data.password);
-    loadUsers();
-    loadSyncHealth();
+  if (role === 'central-command') {
+    url = '/api/users/cc';
+    body = null;
+  } else if (role === 'observer') {
+    const username = usernameInput.value.trim();
+    if (!username) { usernameInput.focus(); return; }
+    url = '/api/users/observer';
+    body = JSON.stringify({ agent_id: username });
   } else {
-    const err = await res.json();
-    alert(err.detail || 'Failed to create agent');
+    const agentId = usernameInput.value.trim();
+    if (!agentId) { usernameInput.focus(); return; }
+    url = '/api/users/agent';
+    body = JSON.stringify({ agent_id: agentId });
   }
-});
 
-btnAddCc.addEventListener('click', async () => {
-  btnAddCc.disabled = true;
-  const res = await fetch('/api/users/cc', { method: 'POST' });
-  btnAddCc.disabled = false;
+  btnAddUser.disabled = true;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body,
+  });
+  btnAddUser.disabled = false;
 
   if (res.ok) {
     const data = await res.json();
+    usernameInput.value = '';
     showPassword(data.username, data.password);
     loadUsers();
     loadSyncHealth();
   } else {
     const err = await res.json();
-    alert(err.detail || 'Failed to create CC user');
+    alert(err.detail || 'Failed to create user');
   }
 });
 
