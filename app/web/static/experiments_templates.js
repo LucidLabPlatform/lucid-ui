@@ -339,8 +339,14 @@ function isBuilderSupportedSteps(steps, depth) {
     }
     for (const key of Object.keys(step)) {
       if (allowed.has(key)) continue;
-      // Ignore null/default fields from backend serialization
-      if (modelDefaults.has(key) && (step[key] === null || step[key] === 0 || step[key] === '*' || step[key] === 'create' || step[key] === 'abort')) continue;
+      // Ignore null/default fields from backend model serialization
+      if (modelDefaults.has(key)) {
+        const v = step[key];
+        if (v === null || v === 0 || v === false || v === '' || v === '*' || v === 'create' || v === 'abort') continue;
+        if (typeof v === 'number') continue; // default timeout_s, duration_s, qos, retries
+        if (Array.isArray(v) && v.length === 0) continue;
+        if (typeof v === 'object' && v !== null && Object.keys(v).length === 0) continue;
+      }
       return `Unsupported step field '${key}'`;
     }
     if (type === 'parallel') {
