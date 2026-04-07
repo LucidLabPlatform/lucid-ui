@@ -961,6 +961,36 @@ main { padding: 1.5rem; }
 }
 .agent-card:hover .agent-card-actions { opacity: 1; }
 
+/* ── Topic Tree ──────────────────────────────────────────────────── */
+.topic-tree-container { display: flex; flex-direction: column; gap: 1rem; }
+
+.tt-agent { padding: 0; }
+.tt-agent-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; cursor: pointer; list-style: none; }
+.tt-agent-header::-webkit-details-marker { display: none; }
+.tt-agent-id { margin: 0; font-size: 1rem; }
+.tt-agent-prefix, .tt-comp-prefix { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-left: auto; }
+.tt-agent-body { padding: 0 1rem 1rem; }
+
+.tt-comp-heading { font-size: 0.85rem; margin: 1rem 0 0.5rem; color: var(--subtle); }
+.tt-component { margin-bottom: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
+.tt-comp-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; cursor: pointer; list-style: none; }
+.tt-comp-header::-webkit-details-marker { display: none; }
+.tt-comp-id { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; }
+.tt-comp-body { padding: 0 0.75rem 0.75rem; }
+
+.tt-section { margin-bottom: 0.4rem; }
+.tt-section-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); cursor: pointer; padding: 0.2rem 0; }
+.tt-count { font-size: 0.65rem; color: var(--subtle); }
+.tt-section-body { padding-left: 0.5rem; }
+
+.tt-topic { display: flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0; font-size: 0.75rem; }
+.tt-path { font-family: var(--font-mono); color: var(--text); word-break: break-all; }
+.tt-badge { font-size: 0.55rem; padding: 0.1rem 0.35rem; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; flex-shrink: 0; }
+.tt-badge-retained { background: #1e3a5f; color: #60a5fa; }
+.tt-badge-streams { background: #14532d; color: var(--green); }
+.tt-badge-commands { background: #3b2f1e; color: #f59e0b; }
+.tt-badge-events { background: #2d1f4e; color: #a78bfa; }
+
 /* ── AI Chat ─────────────────────────────────────────────────────── */
 .ai-chat-layout {
   display: flex;

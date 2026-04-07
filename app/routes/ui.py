@@ -143,6 +143,14 @@ if SHOW_EXPERIMENTS:
         )
 
 
+@router.get("/topic-tree", response_class=HTMLResponse)
+def topic_tree_page(request: Request):
+    ctx = _ctx(request)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="topic_tree.html", context=ctx)
+
+
 @router.get("/topic-links", response_class=HTMLResponse)
 def topic_links_page(request: Request):
     ctx = _ctx(request)

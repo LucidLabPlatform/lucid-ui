@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Topic Tree · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>MQTT Topic Tree</h1>
+</div>
+
+<div id="topic-tree" class="topic-tree-container">
+  <div class="empty">Loading…</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/topic_tree.js"></script>
+{% endblock %}
