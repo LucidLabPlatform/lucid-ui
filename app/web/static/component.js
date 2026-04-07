@@ -1,42 +1,43 @@
-// Agent detail page JS — sidebar + tabs
-let agentId = window.LUCID_AGENT_ID;
+// Component detail page JS
+const agentId = window.LUCID_AGENT_ID;
+let componentId = window.LUCID_COMPONENT_ID;
 
 // ── DOM refs ────────────────────────────────────────────────────────
-const sidebarList = document.getElementById('sidebar-list');
-const titleEl     = document.getElementById('agent-title');
-const badgeEl     = document.getElementById('agent-badge');
-const lastSeenEl  = document.getElementById('agent-last-seen');
-const logFeed     = document.getElementById('log-feed');
-const cmdTarget   = document.getElementById('cmd-target');
-const cmdAction   = document.getElementById('cmd-action');
-const cmdBody     = document.getElementById('cmd-body');
-const cmdSend     = document.getElementById('cmd-send');
-const cmdStatus   = document.getElementById('cmd-status');
-const cmdHistory  = document.getElementById('cmd-history');
-const quickCmdsEl = document.getElementById('quick-cmds');
-const cmdDatalist = document.getElementById('cmd-datalist');
-const btnClearLogs = document.getElementById('btn-clear-logs');
+const sidebarList   = document.getElementById('sidebar-list');
+const titleEl       = document.getElementById('comp-title');
+const badgeEl       = document.getElementById('comp-badge');
+const versionEl     = document.getElementById('comp-version');
+const lastSeenEl    = document.getElementById('comp-last-seen');
+const logFeed       = document.getElementById('log-feed');
+const cmdAction     = document.getElementById('cmd-action');
+const cmdBody       = document.getElementById('cmd-body');
+const cmdSend       = document.getElementById('cmd-send');
+const cmdStatus     = document.getElementById('cmd-status');
+const cmdHistory    = document.getElementById('cmd-history');
+const quickCmdsEl   = document.getElementById('quick-cmds');
+const cmdDatalist   = document.getElementById('cmd-datalist');
+const btnClearLogs  = document.getElementById('btn-clear-logs');
 
 // Overview cards
-const cardStatus     = document.getElementById('card-status');
-const cardMetadata   = document.getElementById('card-metadata');
-const cardComponents = document.getElementById('card-components');
-const cardConfig     = document.getElementById('card-config');
+const cardStatus       = document.getElementById('card-status');
+const cardMetadata     = document.getElementById('card-metadata');
+const cardState        = document.getElementById('card-state');
+const cardConfig       = document.getElementById('card-config');
+const cardCapabilities = document.getElementById('card-capabilities');
 
 // Raw JSON
 const rawStatus   = document.getElementById('raw-status');
 const rawState    = document.getElementById('raw-state');
 const rawMetadata = document.getElementById('raw-metadata');
 const rawCfg      = document.getElementById('raw-cfg');
-const rawComps    = document.getElementById('raw-components');
 
 const MAX_LOGS = 500;
 
+let compData = null;
 let agentData = null;
-let allAgents = [];
 
 // ── Command catalog ─────────────────────────────────────────────────
-let commandCatalog = { agent: [], components: {} };
+let commandCatalog = [];
 let catalogDebounce = null;
 const sessionCmds = new Map();
 let recentActions = [];
@@ -81,66 +82,22 @@ function kvTable(rows) {
 }
 
 // ── Sidebar ─────────────────────────────────────────────────────────
-async function loadSidebar() {
-  try {
-    const res = await fetch('/api/agents');
-    if (res.ok) {
-      allAgents = await res.json();
-      renderSidebar();
-    }
-  } catch {}
-}
-
-function renderSidebar() {
-  sidebarList.innerHTML = allAgents.map(a => {
-    const state = a.status?.state || 'unknown';
-    const isActive = a.agent_id === agentId;
+function renderSidebar(components) {
+  if (!components || !Object.keys(components).length) {
+    sidebarList.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:.5rem">No components</div>';
+    return;
+  }
+  sidebarList.innerHTML = Object.values(components).map(c => {
+    const state = c.status?.state || 'unknown';
+    const isActive = c.component_id === componentId;
     return `
       <a class="sidebar-agent${isActive ? ' is-active' : ''}"
-         href="/agent/${a.agent_id}"
-         onclick="switchAgent(event, '${escHtml(a.agent_id)}')">
+         href="/agent/${agentId}/component/${encodeURIComponent(c.component_id)}">
         <span class="sidebar-dot sidebar-dot-${state}"></span>
-        ${escHtml(a.agent_id)}
+        ${escHtml(c.component_id)}
       </a>`;
   }).join('');
 }
-
-window.switchAgent = function(e, newId) {
-  e.preventDefault();
-  if (newId === agentId) return;
-  agentId = newId;
-  agentData = null;
-  history.pushState(null, '', `/agent/${newId}`);
-  titleEl.textContent = newId;
-  setBadge('unknown');
-  lastSeenEl.textContent = '';
-  logFeed.innerHTML = '';
-  cmdHistory.innerHTML = '';
-  sessionCmds.clear();
-  recentActions = [];
-  renderSidebar();
-  loadAgent();
-  loadCommands();
-  loadCommandCatalog();
-};
-
-// Handle browser back/forward
-window.addEventListener('popstate', () => {
-  const match = location.pathname.match(/^\/agent\/(.+)$/);
-  if (match) {
-    const newId = decodeURIComponent(match[1]);
-    if (newId !== agentId) {
-      agentId = newId;
-      agentData = null;
-      titleEl.textContent = newId;
-      logFeed.innerHTML = '';
-      renderSidebar();
-      loadAgent();
-      loadCommands();
-      loadCommandCatalog();
-    }
-  }
-});
 
 // ── Tabs ─────────────────────────────────────────────────────────────
 const tabBar = document.getElementById('tab-bar');
@@ -157,11 +114,9 @@ tabBar.addEventListener('click', e => {
   const target = document.getElementById(`tab-${tab}`);
   if (target) target.classList.add('is-active');
 
-  // Update URL hash
   history.replaceState(null, '', `#${tab}`);
 });
 
-// Restore tab from URL hash on load
 function restoreTab() {
   const hash = location.hash.replace('#', '');
   if (hash) {
@@ -171,177 +126,103 @@ function restoreTab() {
 }
 
 // ── Overview rendering ──────────────────────────────────────────────
-function renderOverview(agent) {
-  // Status & State card
-  const status = agent.status || {};
-  const state = agent.state || {};
+function renderOverview(comp) {
+  // Status card
+  const status = comp.status || {};
   let statusRows = '';
   statusRows += kvRow('state', status.state, status.state === 'online' ? 'var(--green)' : status.state === 'error' ? 'var(--red)' : null);
-  if (status.uptime_s != null) {
-    const d = Math.floor(status.uptime_s / 86400);
-    const h = Math.floor((status.uptime_s % 86400) / 3600);
-    statusRows += kvRow('uptime', d > 0 ? `${d}d ${h}h` : `${h}h`);
-  }
-  // Include state fields
-  for (const [k, v] of Object.entries(state)) {
-    if (typeof v !== 'object') statusRows += kvRow(k, v);
-  }
-  // Include remaining status fields
   for (const [k, v] of Object.entries(status)) {
-    if (k === 'state' || k === 'uptime_s') continue;
+    if (k === 'state' || k === 'received_ts') continue;
     if (typeof v !== 'object') statusRows += kvRow(k, v);
   }
+  if (comp.first_seen_ts) statusRows += kvRow('first seen', new Date(comp.first_seen_ts).toLocaleString());
+  if (comp.last_seen_ts) statusRows += kvRow('last seen', new Date(comp.last_seen_ts).toLocaleString());
   cardStatus.innerHTML = kvTable(statusRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
 
   // Metadata card
-  const meta = agent.metadata || {};
+  const meta = comp.metadata || {};
   let metaRows = '';
   for (const [k, v] of Object.entries(meta)) {
-    if (typeof v !== 'object') metaRows += kvRow(k, v);
+    if (k === 'capabilities' || k === 'received_ts') continue;
+    if (typeof v === 'object') {
+      metaRows += kvRow(k, JSON.stringify(v));
+    } else {
+      metaRows += kvRow(k, v);
+    }
   }
   cardMetadata.innerHTML = kvTable(metaRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
 
-  // Components card
-  const comps = Object.values(agent.components || {});
-  if (!comps.length) {
-    cardComponents.innerHTML = '<span style="color:var(--muted);font-size:0.78rem">No components</span>';
-  } else {
-    cardComponents.innerHTML = comps.map(c => {
-      const cs = c.status?.state || 'unknown';
-      const meta = c.metadata || {};
-      const state = c.state || {};
-      const cfg = c.cfg || {};
-      const caps = meta.capabilities || [];
-
-      // Build detail rows
-      let detailRows = '';
-      if (meta.version) detailRows += kvRow('version', meta.version);
-      if (c.first_seen_ts) detailRows += kvRow('first seen', new Date(c.first_seen_ts).toLocaleString());
-      if (c.last_seen_ts) detailRows += kvRow('last seen', new Date(c.last_seen_ts).toLocaleString());
-
-      // Status fields beyond state
-      const statusObj = c.status || {};
-      for (const [k, v] of Object.entries(statusObj)) {
-        if (k === 'state' || k === 'received_ts') continue;
-        if (typeof v !== 'object') detailRows += kvRow(k, v);
-      }
-
-      // Capabilities
-      const capsHtml = caps.length
-        ? `<div class="comp-detail-section"><div class="comp-detail-label">Capabilities</div><div class="comp-caps">${caps.map(cap => `<span class="comp-cap-tag">${escHtml(cap)}</span>`).join('')}</div></div>`
-        : '';
-
-      // State
-      const statePayload = state.payload || state;
-      const stateEntries = typeof statePayload === 'object' ? Object.entries(statePayload) : [];
-      let stateHtml = '';
-      if (stateEntries.length) {
-        let stateRows = '';
-        for (const [k, v] of stateEntries) {
-          if (k === 'received_ts') continue;
-          stateRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
-        }
-        if (stateRows) stateHtml = `<div class="comp-detail-section"><div class="comp-detail-label">State</div>${kvTable(stateRows)}</div>`;
-      }
-
-      // Config
-      const cfgPayload = cfg.payload || cfg;
-      const cfgEntries = typeof cfgPayload === 'object' ? Object.entries(cfgPayload) : [];
-      let cfgHtml = '';
-      if (cfgEntries.length) {
-        let cfgRows = '';
-        for (const [k, v] of cfgEntries) {
-          if (k === 'received_ts') continue;
-          cfgRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
-        }
-        if (cfgRows) cfgHtml = `<div class="comp-detail-section"><div class="comp-detail-label">Config</div>${kvTable(cfgRows)}</div>`;
-      }
-
-      // Logging config
-      const logging = cfg.logging || {};
-      if (logging.level) detailRows += kvRow('log level', logging.level);
-
-      const hasDetails = detailRows || capsHtml || stateHtml || cfgHtml;
-
-      return `<details class="comp-details">
-        <summary class="overview-comp">
-          <a href="/agent/${encodeURIComponent(agentId)}/component/${encodeURIComponent(c.component_id)}" class="overview-comp-id comp-link">${escHtml(c.component_id)}</a>
-          <span class="comp-header-right">
-            ${meta.version ? `<span class="comp-version">v${escHtml(meta.version)}</span>` : ''}
-            <span class="status-badge status-${cs}" style="font-size:.65rem">${cs}</span>
-          </span>
-        </summary>
-        ${hasDetails ? `<div class="comp-detail-body">
-          ${detailRows ? `<div class="comp-detail-section"><div class="comp-detail-label">Info</div>${kvTable(detailRows)}</div>` : ''}
-          ${capsHtml}
-          ${stateHtml}
-          ${cfgHtml}
-        </div>` : ''}
-      </details>`;
-    }).join('');
-    // Prevent component links from toggling the details element
-    cardComponents.querySelectorAll('.comp-link').forEach(link => {
-      link.addEventListener('click', e => e.stopPropagation());
-    });
+  // Version in header
+  if (meta.version) {
+    versionEl.textContent = `v${meta.version}`;
   }
 
+  // State card
+  const stateObj = comp.state || {};
+  const statePayload = stateObj.payload || stateObj;
+  let stateRows = '';
+  if (typeof statePayload === 'object') {
+    for (const [k, v] of Object.entries(statePayload)) {
+      if (k === 'received_ts') continue;
+      stateRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
+    }
+  }
+  cardState.innerHTML = kvTable(stateRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
+
   // Config card
-  const cfg = agent.cfg || {};
+  const cfg = comp.cfg || {};
   let cfgRows = '';
-  for (const [k, v] of Object.entries(cfg)) {
-    if (typeof v === 'object') {
-      cfgRows += kvRow(k, JSON.stringify(v));
+  for (const [section, val] of Object.entries(cfg)) {
+    if (section === 'received_ts') continue;
+    if (typeof val === 'object') {
+      // Flatten sub-objects like logging, telemetry, payload
+      for (const [k, v] of Object.entries(val)) {
+        if (k === 'received_ts') continue;
+        cfgRows += kvRow(`${section}.${k}`, typeof v === 'object' ? JSON.stringify(v) : v);
+      }
     } else {
-      cfgRows += kvRow(k, v);
+      cfgRows += kvRow(section, val);
     }
   }
   cardConfig.innerHTML = kvTable(cfgRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
 
-  // Update badge and last seen
+  // Capabilities card
+  const caps = meta.capabilities || [];
+  if (caps.length) {
+    cardCapabilities.innerHTML = `<div class="comp-caps">${caps.map(cap => `<span class="comp-cap-tag">${escHtml(cap)}</span>`).join('')}</div>`;
+  } else {
+    cardCapabilities.innerHTML = '<span style="color:var(--muted);font-size:0.78rem">No capabilities reported</span>';
+  }
+
+  // Update badge
   setBadge(status.state);
-  lastSeenEl.textContent = fmtRelative(agent.last_seen_ts);
+  lastSeenEl.textContent = fmtRelative(comp.last_seen_ts);
 
   // Raw JSON tab
-  rawStatus.textContent   = fmtJson(agent.status);
-  rawState.textContent    = fmtJson(agent.state);
-  rawMetadata.textContent = fmtJson(agent.metadata);
-  rawCfg.textContent      = fmtJson(agent.cfg);
-  rawComps.textContent    = fmtJson(agent.components);
-
-  // Populate command target dropdown
-  const current = cmdTarget.value;
-  while (cmdTarget.options.length > 1) cmdTarget.remove(1);
-  comps.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.component_id;
-    opt.textContent = c.component_id;
-    cmdTarget.appendChild(opt);
-  });
-  if (current) cmdTarget.value = current;
+  rawStatus.textContent   = fmtJson(comp.status);
+  rawState.textContent    = fmtJson(comp.state);
+  rawMetadata.textContent = fmtJson(comp.metadata);
+  rawCfg.textContent      = fmtJson(comp.cfg);
 }
 
 // ── Command catalog ─────────────────────────────────────────────────
 async function loadCommandCatalog() {
   try {
     const res = await fetch(`/api/agents/${agentId}/command-catalog`);
-    if (res.ok) commandCatalog = await res.json();
+    if (res.ok) {
+      const catalog = await res.json();
+      commandCatalog = catalog.components[componentId] || [];
+    }
   } catch {}
   renderQuickCmds();
   updateDatalist();
 }
 
-function getCurrentCommands() {
-  const cid = cmdTarget.value;
-  if (cid && commandCatalog.components[cid]) return commandCatalog.components[cid];
-  return cid ? [] : commandCatalog.agent;
-}
-
 function renderQuickCmds() {
-  const cmds = getCurrentCommands();
   templateMap.clear();
-  if (!cmds.length) { quickCmdsEl.innerHTML = ''; return; }
+  if (!commandCatalog.length) { quickCmdsEl.innerHTML = ''; return; }
   const groups = {};
-  for (const cmd of cmds) {
+  for (const cmd of commandCatalog) {
     const cat = cmd.category || 'other';
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(cmd);
@@ -359,7 +240,7 @@ function renderQuickCmds() {
 }
 
 function updateDatalist() {
-  const catalogActions = getCurrentCommands().map(c => c.action);
+  const catalogActions = commandCatalog.map(c => c.action);
   const all = [...new Set([...recentActions, ...catalogActions])];
   cmdDatalist.innerHTML = all.map(a => `<option value="${a}">`).join('');
 }
@@ -378,8 +259,6 @@ quickCmdsEl.addEventListener('click', e => {
   }
 });
 
-cmdTarget.addEventListener('change', () => { renderQuickCmds(); updateDatalist(); cmdAction.focus(); });
-
 // ── Keyboard shortcuts ──────────────────────────────────────────────
 cmdAction.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); handleSend(); }
@@ -390,10 +269,7 @@ cmdBody.addEventListener('keydown', e => {
 
 // ── Send logic ──────────────────────────────────────────────────────
 async function doSend(action, body) {
-  const cid = cmdTarget.value;
-  const url = cid
-    ? `/api/agents/${agentId}/components/${encodeURIComponent(cid)}/cmd/${encodeURIComponent(action)}`
-    : `/api/agents/${agentId}/cmd/${encodeURIComponent(action)}`;
+  const url = `/api/agents/${agentId}/components/${encodeURIComponent(componentId)}/cmd/${encodeURIComponent(action)}`;
   cmdSend.disabled = true;
   cmdStatus.textContent = 'Sending…';
   cmdStatus.className = 'cmd-status';
@@ -406,7 +282,7 @@ async function doSend(action, body) {
     if (res.ok) {
       const data = await res.json();
       const rid = data.request_id;
-      sessionCmds.set(rid, { action, componentId: cid, body, resultOk: null, resultPayload: null });
+      sessionCmds.set(rid, { action, componentId, body, resultOk: null, resultPayload: null });
       recentActions = [action, ...recentActions.filter(a => a !== action)].slice(0, 10);
       updateDatalist();
       cmdStatus.textContent = `Sent · ${rid.slice(0, 8)}…`;
@@ -458,23 +334,24 @@ btnClearLogs.addEventListener('click', () => { logFeed.innerHTML = ''; });
 
 // ── Command history ─────────────────────────────────────────────────
 function renderCmdHistory(cmds) {
-  if (!cmds.length) {
+  // Filter to this component only
+  const filtered = cmds.filter(c => c.component_id === componentId);
+  if (!filtered.length) {
     cmdHistory.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;padding:0.5rem 0">No commands yet</div>';
     return;
   }
-  cmdHistory.innerHTML = cmds.map(c => {
+  cmdHistory.innerHTML = filtered.map(c => {
     const session = sessionCmds.get(c.request_id);
     const resultOk = session?.resultOk ?? c.result_ok;
     const payload  = session?.resultPayload;
     let resultCls = 'cmd-result-pending', resultTxt = '…';
     if (resultOk === true)  { resultCls = 'cmd-result-ok';   resultTxt = '✓ ok'; }
     if (resultOk === false) { resultCls = 'cmd-result-fail'; resultTxt = '✗ fail'; }
-    const target = c.component_id ? `<span class="cmd-target-id">${escHtml(c.component_id)}/</span>` : '';
     const payloadHtml = payload
       ? `<div class="cmd-row-payload"><pre class="json-pre" style="max-height:80px;margin-top:.3rem">${escHtml(fmtJson(payload))}</pre></div>`
       : '';
     return `<div class="cmd-row" data-rid="${c.request_id}">
-      <div class="cmd-row-header"><span class="cmd-action">${target}${escHtml(c.action)}</span><span class="${resultCls}">${resultTxt}</span></div>
+      <div class="cmd-row-header"><span class="cmd-action">${escHtml(c.action)}</span><span class="${resultCls}">${resultTxt}</span></div>
       <div class="cmd-rid">${c.request_id.slice(0, 8)}… · ${fmtTs(c.sent_ts)}</div>
       ${payloadHtml}
     </div>`;
@@ -487,14 +364,16 @@ async function loadAgent() {
     const res = await fetch(`/api/agents/${agentId}`);
     if (res.ok) {
       agentData = await res.json();
-      renderOverview(agentData);
+      renderSidebar(agentData.components);
+      compData = (agentData.components || {})[componentId];
+      if (compData) renderOverview(compData);
     }
   } catch {}
 }
 
 async function loadCommands() {
   try {
-    const res = await fetch(`/api/agents/${agentId}/commands?limit=20`);
+    const res = await fetch(`/api/agents/${agentId}/commands?limit=50`);
     if (res.ok) renderCmdHistory(await res.json());
   } catch {}
 }
@@ -502,35 +381,15 @@ async function loadCommands() {
 // ── WebSocket live updates ──────────────────────────────────────────
 onWsEvent(evt => {
   if (evt.type !== 'mqtt') return;
-
-  // Update sidebar for any agent
-  const sidebarAgent = allAgents.find(a => a.agent_id === evt.agent_id);
-  if (sidebarAgent && evt.scope === 'agent' && evt.topic_type === 'status') {
-    sidebarAgent.status = evt.payload;
-    renderSidebar();
-  }
-
-  // Only process detail events for the current agent
   if (evt.agent_id !== agentId) return;
 
-  if (!agentData) agentData = { agent_id: agentId, status: null, state: null, metadata: null, cfg: null, components: {}, last_seen_ts: evt.ts };
-  agentData.last_seen_ts = evt.ts;
+  // Update sidebar for all components of this agent
+  if (!agentData) agentData = { agent_id: agentId, components: {} };
 
   const cid = evt.component_id;
   const tt  = evt.topic_type;
 
-  if (!cid) {
-    if (tt === 'status')   agentData.status   = evt.payload;
-    if (tt === 'state')    agentData.state    = evt.payload;
-    if (tt === 'metadata') agentData.metadata = evt.payload;
-    if (tt === 'cfg')      agentData.cfg      = evt.payload;
-
-    if (tt === 'logs' && evt.payload?.lines) {
-      evt.payload.lines.forEach(l => appendLog(l));
-    } else if (tt === 'logs' && typeof evt.payload === 'object') {
-      appendLog(evt.payload);
-    }
-  } else {
+  if (cid) {
     if (!agentData.components[cid]) agentData.components[cid] = { component_id: cid };
     const comp = agentData.components[cid];
     if (tt === 'status')   comp.status   = evt.payload;
@@ -538,14 +397,23 @@ onWsEvent(evt => {
     if (tt === 'metadata') { comp.metadata = evt.payload; debouncedCatalogRefresh(); }
     if (tt === 'cfg')      comp.cfg      = evt.payload;
 
-    if (tt === 'logs' && evt.payload?.lines) {
-      evt.payload.lines.forEach(l => appendLog({ ...l, message: `[${cid}] ${l.message}` }));
+    renderSidebar(agentData.components);
+
+    // Only render detail and logs for current component
+    if (cid === componentId) {
+      comp.last_seen_ts = evt.ts;
+      compData = comp;
+      renderOverview(compData);
+
+      if (tt === 'logs' && evt.payload?.lines) {
+        evt.payload.lines.forEach(l => appendLog(l));
+      } else if (tt === 'logs' && typeof evt.payload === 'object') {
+        appendLog(evt.payload);
+      }
     }
   }
 
-  renderOverview(agentData);
-
-  if (tt.startsWith('evt/')) {
+  if (tt.startsWith('evt/') && cid === componentId) {
     const rid = evt.payload?.request_id;
     if (rid && sessionCmds.has(rid)) {
       const session = sessionCmds.get(rid);
@@ -562,13 +430,12 @@ function debouncedCatalogRefresh() {
 }
 
 // ── Boot ────────────────────────────────────────────────────────────
-loadSidebar();
-loadCommandCatalog();
 loadAgent();
+loadCommandCatalog();
 loadCommands();
 restoreTab();
 
 // Refresh last-seen timestamp
 setInterval(() => {
-  if (agentData) lastSeenEl.textContent = fmtRelative(agentData.last_seen_ts);
+  if (compData) lastSeenEl.textContent = fmtRelative(compData.last_seen_ts);
 }, 30_000);

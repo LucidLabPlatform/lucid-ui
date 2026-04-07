@@ -314,6 +314,35 @@ main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
   color: var(--muted);
 }
 
+.sidebar-back {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.sidebar-back:hover { text-decoration: underline; }
+
+.sidebar-subheader {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.comp-link {
+  color: var(--subtle);
+  text-decoration: none;
+}
+.comp-link:hover { color: var(--accent); text-decoration: underline; }
+
+.comp-header-version {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
 /* ── Tab bar ─────────────────────────────────────────────────────── */
 .tab-bar {
   display: flex;

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ component_id }} · {{ agent_id }} · LUCID{% endblock %}
+
+{% block content %}
+<div class="agent-page">
+  <!-- Sidebar: component list for this agent -->
+  <aside class="agent-sidebar" id="agent-sidebar">
+    <div class="sidebar-header">
+      <a href="/agent/{{ agent_id }}" class="sidebar-back">← {{ agent_id }}</a>
+    </div>
+    <div class="sidebar-subheader">Components</div>
+    <div class="sidebar-list" id="sidebar-list"></div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="agent-main">
+    <!-- Header -->
+    <div class="agent-header">
+      <div class="agent-header-left">
+        <h1 id="comp-title">{{ component_id }}</h1>
+        <span id="comp-badge" class="status-badge">…</span>
+        <span id="comp-version" class="comp-header-version"></span>
+      </div>
+      <div class="agent-header-right">
+        <span class="agent-last-seen" id="comp-last-seen"></span>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar" id="tab-bar">
+      <button class="tab-btn is-active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="logs">Logs</button>
+      <button class="tab-btn" data-tab="commands">Commands</button>
+      <button class="tab-btn" data-tab="raw">Raw JSON</button>
+    </div>
+
+    <!-- Tab: Overview -->
+    <div class="tab-content is-active" id="tab-overview">
+      <div class="overview-grid">
+        <div class="info-card">
+          <div class="info-card-title">Status</div>
+          <div class="info-card-body" id="card-status"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Metadata</div>
+          <div class="info-card-body" id="card-metadata"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">State</div>
+          <div class="info-card-body" id="card-state"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">Config</div>
+          <div class="info-card-body" id="card-config"></div>
+        </div>
+        <div class="info-card info-card-full">
+          <div class="info-card-title">Capabilities</div>
+          <div class="info-card-body" id="card-capabilities"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Logs -->
+    <div class="tab-content" id="tab-logs">
+      <div class="tab-content-header">
+        <button id="btn-clear-logs" class="btn-sm">Clear</button>
+      </div>
+      <div id="log-feed" class="log-feed"></div>
+    </div>
+
+    <!-- Tab: Commands -->
+    <div class="tab-content" id="tab-commands">
+      <div class="cmd-form">
+        <div id="quick-cmds" class="quick-cmds"></div>
+        <input id="cmd-action" placeholder="action  (Enter to send)" class="cmd-input" autocomplete="off" list="cmd-datalist">
+        <datalist id="cmd-datalist"></datalist>
+        <textarea id="cmd-body" placeholder='{"key":"value"}  (optional · Ctrl+Enter to send)' class="cmd-textarea" rows="3"></textarea>
+        <div class="cmd-send-row">
+          <button id="cmd-send" class="btn-primary">Send</button>
+          <div id="cmd-status" class="cmd-status"></div>
+        </div>
+      </div>
+      <div class="cmd-history-section">
+        <div class="info-card-title" style="padding:0.75rem 0 0.5rem">History</div>
+        <div id="cmd-history" class="cmd-history"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Raw JSON -->
+    <div class="tab-content" id="tab-raw">
+      <div class="raw-sections">
+        <details class="raw-section" open>
+          <summary>Status</summary>
+          <pre id="raw-status" class="json-pre">—</pre>
+        </details>
+        <details class="raw-section" open>
+          <summary>State</summary>
+          <pre id="raw-state" class="json-pre">—</pre>
+        </details>
+        <details class="raw-section">
+          <summary>Metadata</summary>
+          <pre id="raw-metadata" class="json-pre">—</pre>
+        </details>
+        <details class="raw-section">
+          <summary>Config</summary>
+          <pre id="raw-cfg" class="json-pre">—</pre>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.LUCID_AGENT_ID = {{ agent_id | tojson }};
+  window.LUCID_COMPONENT_ID = {{ component_id | tojson }};
+</script>
+<script src="/static/component.js"></script>
+{% endblock %}

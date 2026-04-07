@@ -82,6 +82,14 @@ def agent_detail(agent_id: str, request: Request):
     return templates.TemplateResponse(request=request, name="agent.html", context=ctx)
 
 
+@router.get("/agent/{agent_id}/component/{component_id}", response_class=HTMLResponse)
+def component_detail(agent_id: str, component_id: str, request: Request):
+    ctx = _ctx(request, agent_id=agent_id, component_id=component_id)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="component.html", context=ctx)
+
+
 @router.get("/users", response_class=HTMLResponse)
 def users_page(request: Request):
     ctx = _ctx(request)
