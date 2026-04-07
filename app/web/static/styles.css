@@ -1230,7 +1230,35 @@ main { padding: 1.5rem; }
 .ai-input-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.5rem;
+}
+
+/* ── Voice button ──────────────────────────────────────────────── */
+.btn-voice {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-voice:hover { border-color: var(--accent); }
+.btn-voice.recording {
+  background: #dc3545;
+  border-color: #dc3545;
+  animation: voice-pulse 1s infinite;
+}
+.btn-voice.hidden { display: none; }
+@keyframes voice-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
 }
 
 /* ── Quick command chips ──────────────────────────────────────────── */

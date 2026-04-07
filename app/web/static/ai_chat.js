@@ -197,5 +197,112 @@ inputEl.addEventListener('keydown', e => {
 document.getElementById('send-btn').addEventListener('click', sendMessage);
 document.getElementById('new-chat-btn').addEventListener('click', newChat);
 
+// ── Voice (push-to-talk) ─────────────────────────────────────────────
+const voiceBtn = document.getElementById('voice-btn');
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingTimeout = null;
+
+// Check if voice service is available
+fetch('/api/voice/health').then(r => {
+    if (r.ok && voiceBtn) voiceBtn.classList.remove('hidden');
+}).catch(() => {});
+
+if (voiceBtn) {
+    voiceBtn.addEventListener('mousedown', startRecording);
+    voiceBtn.addEventListener('mouseup', stopRecording);
+    voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+    voiceBtn.addEventListener('touchend', e => { e.preventDefault(); stopRecording(); });
+    voiceBtn.addEventListener('mouseleave', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') stopRecording();
+    });
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioChunks = [];
+        // Try opus first, fall back to default
+        let options = {};
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            options.mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            options.mimeType = 'audio/webm';
+        }
+        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = handleRecordingComplete;
+        mediaRecorder.start();
+        voiceBtn.classList.add('recording');
+        // Max 30s safety limit
+        recordingTimeout = setTimeout(() => stopRecording(), 30000);
+    } catch (err) {
+        console.error('Microphone access denied:', err);
+    }
+}
+
+function stopRecording() {
+    clearTimeout(recordingTimeout);
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+    voiceBtn.classList.remove('recording');
+}
+
+async function handleRecordingComplete() {
+    const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+    if (blob.size < 1000) return;
+
+    loadingEl.classList.remove('hidden');
+    startTimer();
+
+    try {
+        // STT
+        const form = new FormData();
+        form.append('audio', blob, 'recording.webm');
+        const sttResp = await fetch('/api/voice/stt', { method: 'POST', body: form });
+        if (!sttResp.ok) {
+            const err = await sttResp.json().catch(() => ({}));
+            throw new Error(err.detail || 'Transcription failed');
+        }
+        const { text } = await sttResp.json();
+        appendMessage('user', text, []);
+
+        // Chat (existing flow)
+        const chatResp = await fetch('/api/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text, session_id: sessionId })
+        });
+        const data = await chatResp.json();
+        if (!chatResp.ok) {
+            appendMessage('assistant', `Error: ${data.detail || 'Unknown error'}`, []);
+            return;
+        }
+        appendMessage('assistant', data.response, data.tool_calls || []);
+
+        // TTS
+        const ttsResp = await fetch('/api/voice/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: data.response })
+        });
+        if (ttsResp.ok) {
+            const audioBlob = await ttsResp.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+            audio.onended = () => URL.revokeObjectURL(audioUrl);
+        }
+    } catch (e) {
+        appendMessage('assistant', `Voice error: ${e.message}`, []);
+    } finally {
+        stopTimer();
+        loadingEl.classList.add('hidden');
+        loadSessions();
+    }
+}
+
 loadSessions();
 loadHistory();
