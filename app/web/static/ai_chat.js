@@ -55,9 +55,12 @@ async function loadSessions() {
                 ? new Date(s.last_active_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
                 : '';
             return `
-                <div class="ai-session-item${active}" data-sid="${s.session_id}" onclick="switchSession('${s.session_id}')">
-                    <div class="ai-session-preview">${escHtml(preview)}</div>
-                    <div class="ai-session-ts">${ts}</div>
+                <div class="ai-session-item${active}" data-sid="${s.session_id}">
+                    <div class="ai-session-content" onclick="switchSession('${s.session_id}')">
+                        <div class="ai-session-preview">${escHtml(preview)}</div>
+                        <div class="ai-session-ts">${ts}</div>
+                    </div>
+                    <button class="ai-session-delete" onclick="event.stopPropagation();deleteSession('${s.session_id}')" title="Delete">&times;</button>
                 </div>`;
         }).join('');
     } catch {
@@ -68,6 +71,15 @@ async function loadSessions() {
 function escHtml(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+
+window.deleteSession = async function(sid) {
+    if (!confirm('Delete this session?')) return;
+    await fetch(`/api/ai/sessions/${sid}`, { method: 'DELETE' });
+    if (sid === sessionId) {
+        newChat();
+    }
+    loadSessions();
+};
 
 window.switchSession = function(sid) {
     sessionId = sid;

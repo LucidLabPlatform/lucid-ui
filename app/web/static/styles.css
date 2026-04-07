@@ -1000,6 +1000,33 @@ main { padding: 1.5rem; }
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ai-session-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-session-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.ai-session-item:hover .ai-session-delete {
+  opacity: 1;
+}
+
+.ai-session-delete:hover {
+  color: var(--red);
 }
 
 .ai-session-item:hover {

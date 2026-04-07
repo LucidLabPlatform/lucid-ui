@@ -313,6 +313,14 @@ function isBuilderSupportedTemplate(template) {
 }
 
 function isBuilderSupportedSteps(steps, depth) {
+  // Fields serialized by the backend on every step (model defaults) — always ignore
+  const modelDefaults = new Set([
+    'qos', 'operation', 'select_clause', 'source_topic', 'target_topic',
+    'payload_template', 'condition', 'telemetry_metric', 'message',
+    'on_timeout', 'duration_s', 'steps', 'agent_id', 'component_id',
+    'action', 'params', 'timeout_s',
+  ]);
+
   for (const step of steps) {
     const allowedCommon = new Set(['name', 'type', 'on_failure', 'retries']);
     const type = step.type || 'command';
@@ -330,7 +338,10 @@ function isBuilderSupportedSteps(steps, depth) {
       return `Unsupported step type '${type}'`;
     }
     for (const key of Object.keys(step)) {
-      if (!allowed.has(key)) return `Unsupported step field '${key}'`;
+      if (allowed.has(key)) continue;
+      // Ignore null/default fields from backend serialization
+      if (modelDefaults.has(key) && (step[key] === null || step[key] === 0 || step[key] === '*' || step[key] === 'create' || step[key] === 'abort')) continue;
+      return `Unsupported step field '${key}'`;
     }
     if (type === 'parallel') {
       const nested = isBuilderSupportedSteps(step.steps || [], depth + 1);
