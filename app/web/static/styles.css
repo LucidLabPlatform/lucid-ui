@@ -107,31 +107,94 @@ main { padding: 1.5rem; animation: fadeIn 200ms ease-out; }
   background: #172033;
 }
 
-/* ── Agent grid (dashboard) ────────────────────────────────────────── */
-.agent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
+/* ── Fleet table (dashboard) ─────────────────────────────────────── */
+.fleet-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.82rem;
 }
 
-.agent-card {
+.fleet-table thead th {
+  text-align: left;
+  padding: 0.6rem 1rem;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  cursor: pointer;
-  transition: border-color 0.15s;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
 }
-.agent-card:hover { border-color: var(--accent); }
 
-.agent-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
+.fleet-table thead th.sortable {
+  cursor: pointer;
+  transition: color var(--transition);
 }
-.agent-card-name { font-weight: 600; font-size: 0.95rem; }
-.agent-card-meta { color: var(--muted); font-size: 0.75rem; margin-top: 0.25rem; }
+.fleet-table thead th.sortable:hover { color: var(--text); }
+.fleet-table thead th.sort-asc::after  { content: " ▲"; font-size: 0.6rem; }
+.fleet-table thead th.sort-desc::after { content: " ▼"; font-size: 0.6rem; }
+
+.fleet-table tbody tr {
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.fleet-table tbody tr:hover { background: var(--surface-hover); }
+.fleet-table tbody tr.is-offline { opacity: 0.55; }
+
+.fleet-table tbody td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.fleet-agent-id {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.fleet-host { font-size: 0.8rem; }
+.fleet-ip   { font-size: 0.72rem; color: var(--muted); }
+
+.fleet-comp-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.comp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.comp-badge-online  { background: #14532d44; color: var(--green); }
+.comp-badge-offline { background: #1c191744; color: var(--muted); }
+.comp-badge-error   { background: #450a0a44; color: var(--red); }
+.comp-badge-unknown { background: #1e243344; color: var(--muted); }
+
+.fleet-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+@keyframes rowFlash {
+  0%   { background: var(--accent-dim); }
+  100% { background: transparent; }
+}
+.fleet-table tbody tr.row-flash {
+  animation: rowFlash 600ms ease-out;
+}
 
 /* ── Status badge ─────────────────────────────────────────────────── */
 .status-badge {
