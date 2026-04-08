@@ -139,6 +139,46 @@ window.navAgent = function(e, id) {
   location.href = `/agent/${id}`;
 };
 
+// ── In-place row patch (avoids detaching rows mid-click) ──────────────
+function patchRow(id) {
+  const agent = agents[id];
+  const existing = fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
+
+  if (!existing) {
+    // New agent — fall back to full render to insert in sorted position
+    renderTable();
+    return;
+  }
+
+  const state = agentState(agent);
+  const isOnline = state === 'online';
+  const host = metaField(agent, 'hostname', 'host');
+  const ip   = metaField(agent, 'ip', 'ip_address');
+  const comps = Object.values(agent.components || {});
+  const compBadges = comps.map(c => {
+    const cs = c.status?.state || 'unknown';
+    return `<span class="comp-badge comp-badge-${cs}">● ${c.component_id}</span>`;
+  }).join('');
+
+  existing.className = isOnline ? '' : 'is-offline';
+
+  const cells = existing.querySelectorAll('td');
+  // td[0] agent_id — never changes
+  cells[1].innerHTML = `<span class="status-badge status-${state}">${state}</span>`;
+  cells[2].innerHTML = `<div class="fleet-host">${host}</div><div class="fleet-ip">${ip}</div>`;
+  cells[3].textContent = fmtUptime(agent.status);
+  cells[4].textContent = fmtTs(agent.last_seen_ts);
+  cells[5].innerHTML   = `<div class="fleet-comp-badges">${compBadges || '<span style="color:var(--muted)">—</span>'}</div>`;
+
+  const pingBtn = isOnline
+    ? `<button class="btn-sm" id="ping-${id}" onclick="quickPing(event,'${id}')">Ping</button>`
+    : '';
+  const actionsDiv = cells[6].querySelector('.fleet-actions');
+  if (actionsDiv) {
+    actionsDiv.innerHTML = `${pingBtn}<button class="btn-danger" onclick="deleteAgent(event, '${id}')">Delete</button>`;
+  }
+}
+
 // ── Actions ──────────────────────────────────────────────────────────
 window.quickPing = async function(e, id) {
   e.stopPropagation();
@@ -242,14 +282,20 @@ onWsEvent(evt => {
     if (evt.topic_type === 'status') comp.status = evt.payload;
   }
 
-  renderTable();
+  const isNew = !fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
+  patchRow(id);
 
-  // Flash the updated row
-  const row = fleetBody.querySelector(`tr[data-agent="${id}"]`);
-  if (row) {
-    row.classList.remove('row-flash');
-    void row.offsetWidth; // reflow to restart animation
-    row.classList.add('row-flash');
+  const onlineCount = Object.values(agents).filter(a => agentState(a) === 'online').length;
+  countEl.textContent = `${Object.keys(agents).length} agent${Object.keys(agents).length !== 1 ? 's' : ''}, ${onlineCount} online`;
+
+  if (!isNew) {
+    // Flash the updated row (only if it was patched in-place, not a full re-render)
+    const row = fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
+    if (row) {
+      row.classList.remove('row-flash');
+      void row.offsetWidth; // reflow to restart animation
+      row.classList.add('row-flash');
+    }
   }
 });
 
