@@ -182,13 +182,16 @@ function renderOverview(agent) {
     const h = Math.floor((status.uptime_s % 86400) / 3600);
     statusRows += kvRow('uptime', d > 0 ? `${d}d ${h}h` : `${h}h`);
   }
-  // Include state fields
+  if (agent.first_seen_ts) statusRows += kvRow('first seen', new Date(agent.first_seen_ts).toLocaleString());
+  if (status.connected_since_ts) statusRows += kvRow('connected since', new Date(status.connected_since_ts).toLocaleString());
+  // Include state fields (skip timestamps and nested objects)
   for (const [k, v] of Object.entries(state)) {
+    if (k === 'received_ts' || k === 'components') continue;
     if (typeof v !== 'object') statusRows += kvRow(k, v);
   }
-  // Include remaining status fields
+  // Include remaining status fields (skip already-shown and timestamps)
   for (const [k, v] of Object.entries(status)) {
-    if (k === 'state' || k === 'uptime_s') continue;
+    if (k === 'state' || k === 'uptime_s' || k === 'connected_since_ts' || k === 'received_ts') continue;
     if (typeof v !== 'object') statusRows += kvRow(k, v);
   }
   cardStatus.innerHTML = kvTable(statusRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
@@ -244,15 +247,30 @@ function renderOverview(agent) {
         if (stateRows) stateHtml = `<div class="comp-detail-section"><div class="comp-detail-label">State</div>${kvTable(stateRows)}</div>`;
       }
 
-      // Config
-      const cfgPayload = cfg.payload || cfg;
-      const cfgEntries = typeof cfgPayload === 'object' ? Object.entries(cfgPayload) : [];
+      // Config — expand logging and telemetry
       let cfgHtml = '';
-      if (cfgEntries.length) {
+      {
         let cfgRows = '';
-        for (const [k, v] of cfgEntries) {
+        const cfgObj = cfg.payload || cfg;
+        for (const [k, v] of Object.entries(cfgObj)) {
           if (k === 'received_ts') continue;
-          cfgRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
+          if (k === 'logging' && typeof v === 'object') {
+            for (const [lk, lv] of Object.entries(v)) {
+              if (lk === 'received_ts') continue;
+              cfgRows += kvRow(`logging.${lk}`, lv);
+            }
+          } else if (k === 'telemetry' && typeof v === 'object') {
+            for (const [metric, mcfg] of Object.entries(v)) {
+              if (typeof mcfg === 'object') {
+                const detail = mcfg.enabled ? `✓ on · every ${mcfg.interval_s}s` : '✗ off';
+                cfgRows += kvRow(`telemetry.${metric}`, detail, mcfg.enabled ? null : 'var(--muted)');
+              } else {
+                cfgRows += kvRow(`telemetry.${metric}`, mcfg);
+              }
+            }
+          } else {
+            cfgRows += kvRow(k, typeof v === 'object' ? JSON.stringify(v) : v);
+          }
         }
         if (cfgRows) cfgHtml = `<div class="comp-detail-section"><div class="comp-detail-label">Config</div>${kvTable(cfgRows)}</div>`;
       }
@@ -285,11 +303,29 @@ function renderOverview(agent) {
     });
   }
 
-  // Config card
+  // Config card — expand logging and telemetry sub-objects
   const cfg = agent.cfg || {};
   let cfgRows = '';
   for (const [k, v] of Object.entries(cfg)) {
-    if (typeof v === 'object') {
+    if (k === 'received_ts') continue;
+    if (k === 'logging' && typeof v === 'object') {
+      for (const [lk, lv] of Object.entries(v)) {
+        if (lk === 'received_ts') continue;
+        cfgRows += kvRow(`logging.${lk}`, lv);
+      }
+    } else if (k === 'telemetry' && typeof v === 'object') {
+      for (const [metric, mcfg] of Object.entries(v)) {
+        if (typeof mcfg === 'object') {
+          const enabled = mcfg.enabled ? '✓ on' : '✗ off';
+          const detail = mcfg.enabled
+            ? `${enabled}  · every ${mcfg.interval_s}s`
+            : enabled;
+          cfgRows += kvRow(`telemetry.${metric}`, detail, mcfg.enabled ? null : 'var(--muted)');
+        } else {
+          cfgRows += kvRow(`telemetry.${metric}`, mcfg);
+        }
+      }
+    } else if (typeof v === 'object') {
       cfgRows += kvRow(k, JSON.stringify(v));
     } else {
       cfgRows += kvRow(k, v);

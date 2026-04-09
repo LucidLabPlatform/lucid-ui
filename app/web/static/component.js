@@ -169,13 +169,27 @@ function renderOverview(comp) {
   }
   cardState.innerHTML = kvTable(stateRows) || '<span style="color:var(--muted);font-size:0.78rem">No data</span>';
 
-  // Config card
+  // Config card — expand logging and telemetry sub-objects fully
   const cfg = comp.cfg || {};
   let cfgRows = '';
-  for (const [section, val] of Object.entries(cfg)) {
+  const cfgRoot = cfg.payload || cfg;
+  for (const [section, val] of Object.entries(cfgRoot)) {
     if (section === 'received_ts') continue;
-    if (typeof val === 'object') {
-      // Flatten sub-objects like logging, telemetry, payload
+    if (section === 'logging' && typeof val === 'object') {
+      for (const [k, v] of Object.entries(val)) {
+        if (k === 'received_ts') continue;
+        cfgRows += kvRow(`logging.${k}`, v);
+      }
+    } else if (section === 'telemetry' && typeof val === 'object') {
+      for (const [metric, mcfg] of Object.entries(val)) {
+        if (typeof mcfg === 'object') {
+          const detail = mcfg.enabled ? `✓ on · every ${mcfg.interval_s}s` : '✗ off';
+          cfgRows += kvRow(`telemetry.${metric}`, detail, mcfg.enabled ? null : 'var(--muted)');
+        } else {
+          cfgRows += kvRow(`telemetry.${metric}`, mcfg);
+        }
+      }
+    } else if (typeof val === 'object') {
       for (const [k, v] of Object.entries(val)) {
         if (k === 'received_ts') continue;
         cfgRows += kvRow(`${section}.${k}`, typeof v === 'object' ? JSON.stringify(v) : v);
