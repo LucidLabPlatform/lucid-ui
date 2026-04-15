@@ -13,12 +13,17 @@
     <div class="nav-links">
       <a href="/" class="nav-link">Fleet</a>
       {% if show_experiments %}<a href="/experiments/templates" class="nav-link">Experiments</a>{% endif %}
-      <a href="/topic-tree" class="nav-link">Topic Tree</a>
-      <a href="/topic-links" class="nav-link">Topic Links</a>
       {% if show_ai %}<a href="/ai" class="nav-link">AI Assistant</a>{% endif %}
-      <a href="/users" class="nav-link">Users</a>
-      <a href="/auth-log" class="nav-link">Auth Log</a>
-      <a href="/schema" class="nav-link">Schema</a>
+      <div class="nav-tools-wrap">
+        <span class="nav-tools" id="tools-btn">Tools ▾</span>
+        <div class="tools-dropdown" id="tools-dropdown">
+          <a href="/topic-tree" class="tools-item">Topic Tree</a>
+          <a href="/topic-links" class="tools-item">Topic Links</a>
+          <a href="/users" class="tools-item">Users</a>
+          <a href="/auth-log" class="tools-item">Auth Log</a>
+          <a href="/schema" class="tools-item">Schema</a>
+        </div>
+      </div>
     </div>
     <div class="nav-user">
       {% if user %}<span class="nav-username">{{ user }}</span>
@@ -58,6 +63,18 @@
     function onWsEvent(handler) { wsHandlers.push(handler); }
 
     wsConnect();
+
+    // Tools dropdown
+    document.getElementById('tools-btn')?.addEventListener('click', function() {
+      this.classList.toggle('open');
+      document.getElementById('tools-dropdown').classList.toggle('open');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.nav-tools-wrap')) {
+        document.getElementById('tools-btn')?.classList.remove('open');
+        document.getElementById('tools-dropdown')?.classList.remove('open');
+      }
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>

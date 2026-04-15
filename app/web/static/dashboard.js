@@ -1,193 +1,303 @@
-// Dashboard page JS — fleet table view
-const fleetBody  = document.getElementById('fleet-body');
-const fleetEmpty = document.getElementById('fleet-empty');
-const countEl    = document.getElementById('agent-count');
-const filterButtons = {
-  all:     document.getElementById('filter-all'),
-  online:  document.getElementById('filter-online'),
-  offline: document.getElementById('filter-offline'),
-};
+// Fleet dashboard — two-panel layout
+const sidebarList = document.getElementById('sidebar-list');
+const fleetCount  = document.getElementById('fleet-count');
+const fleetEmpty  = document.getElementById('fleet-empty');
+const agentPanel  = document.getElementById('agent-panel');
+const agentScroll = document.getElementById('agent-scroll');
+const advChk      = document.getElementById('adv-chk');
 
-let agents = {};       // agent_id → data
-let activeFilter = 'all';
-let sortCol = 'agent_id';
-let sortAsc = true;
+let agents = {};      // agent_id → data
+let catalogs = {};    // agent_id → command catalog
+let selectedId = null;
+let advancedOn = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────
-function agentState(agent) {
-  return agent.status?.state ?? 'unknown';
-}
+function agentState(a) { return a.status?.state ?? 'unknown'; }
 
 function fmtTs(ts) {
   if (!ts) return '—';
-  const d = new Date(ts);
-  const diffS = Math.floor((Date.now() - d) / 1000);
-  if (diffS < 60)   return `${diffS}s ago`;
-  if (diffS < 3600) return `${Math.floor(diffS / 60)}m ago`;
-  if (diffS < 86400) return `${Math.floor(diffS / 3600)}h ago`;
-  return `${Math.floor(diffS / 86400)}d ago`;
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (s < 60)    return `${s}s ago`;
+  if (s < 3600)  return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
 }
 
 function fmtUptime(status) {
   const up = status?.uptime_s;
   if (up == null) return '—';
-  const d = Math.floor(up / 86400);
-  const h = Math.floor((up % 86400) / 3600);
-  const m = Math.floor((up % 3600) / 60);
+  const d = Math.floor(up/86400), h = Math.floor((up%86400)/3600), m = Math.floor((up%3600)/60);
   if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
 }
 
-function metaField(agent, ...keys) {
-  const m = agent.metadata || agent.status || {};
-  for (const k of keys) {
-    if (m[k] != null) return m[k];
-  }
-  return '—';
+function esc(s) {
+  const el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
 }
 
-// ── Sorting ──────────────────────────────────────────────────────────
-function sortValue(agent, col) {
-  switch (col) {
-    case 'agent_id':  return agent.agent_id;
-    case 'status':    return agentState(agent);
-    case 'host':      return metaField(agent, 'hostname', 'host');
-    case 'uptime':    return agent.status?.uptime_s ?? -1;
-    case 'last_seen': return agent.last_seen_ts ? new Date(agent.last_seen_ts).getTime() : 0;
-    default:          return '';
+// ── Component summary ────────────────────────────────────────────────
+// Generate a human-readable one-liner from component state
+function compSummary(compId, comp) {
+  const s = comp.state?.payload || comp.state || {};
+  const status = comp.status?.state || 'unknown';
+
+  if (compId === 'exec') {
+    const active = s.active_runs ?? s['active runs'] ?? 0;
+    return active > 0 ? `${active} active run(s)` : 'No active runs';
   }
+  if (compId === 'ros_bridge') {
+    const rl = s.roslaunch ?? s.roslaunch_state ?? '';
+    const pubs = s.publishers ?? '';
+    const subs = s.subscriptions ?? '';
+    if (status === 'error') return 'ROS master not reachable';
+    const parts = [];
+    if (rl) parts.push(`roslaunch: ${rl}`);
+    if (pubs !== '') parts.push(`${pubs} pub`);
+    if (subs !== '') parts.push(`${subs} sub`);
+    return parts.join(' · ') || status;
+  }
+  if (compId === 'led_strip') {
+    const count = s.led_count ?? s['led count'] ?? '';
+    const bright = s.brightness ?? '';
+    const effect = s.current_effect ?? s['current effect'] ?? '';
+    const parts = [];
+    if (count) parts.push(`${count} LEDs`);
+    if (bright !== '') parts.push(`Brightness: ${bright}`);
+    if (effect) parts.push(`Effect: ${effect}`);
+    return parts.join(' · ') || status;
+  }
+  if (compId === 'ndi') {
+    const rx = s.receive_active ?? s['receive active'] ?? 'false';
+    const tx = s.send_active ?? s['send active'] ?? 'false';
+    if (rx === 'true' || tx === 'true') {
+      const parts = [];
+      if (rx === 'true') parts.push('receiving');
+      if (tx === 'true') parts.push('sending');
+      return parts.join(' + ');
+    }
+    return 'Idle — not receiving or sending';
+  }
+  if (compId === 'projector') {
+    const conn = s.connected ?? '';
+    const port = s.serial_port ?? s['serial port'] ?? '';
+    if (conn === 'true') return `Connected${port ? ' · ' + port : ''}`;
+    return 'Not connected';
+  }
+  if (compId === 'viz') {
+    const arena = s.arena ?? 'unknown';
+    const td = s.touchdesigner ?? 'unknown';
+    return `Arena: ${arena} · TD: ${td}`;
+  }
+  // Fallback: show status
+  return status;
 }
 
-function sortAgents(list) {
-  return list.sort((a, b) => {
-    let va = sortValue(a, sortCol);
-    let vb = sortValue(b, sortCol);
-    if (typeof va === 'string') va = va.toLowerCase();
-    if (typeof vb === 'string') vb = vb.toLowerCase();
-    if (va < vb) return sortAsc ? -1 : 1;
-    if (va > vb) return sortAsc ? 1 : -1;
-    return 0;
+// ── Component icon ───────────────────────────────────────────────────
+function compIcon(compId) {
+  const map = {
+    exec: '⚙️', ros_bridge: '🔗', led_strip: '💡',
+    ndi: '📡', projector: '🎥', viz: '🖥️',
+  };
+  return map[compId] || '📦';
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = Object.values(agents);
+  const online = list.filter(a => agentState(a) === 'online');
+  const stale  = list.filter(a => agentState(a) !== 'online');
+
+  let html = '';
+  // Online agents first, sorted by id
+  online.sort((a,b) => a.agent_id.localeCompare(b.agent_id)).forEach(a => {
+    const hasErr = Object.values(a.components||{}).some(c => c.status?.state === 'error');
+    const dotCls = hasErr ? 'sd-warn' : 'sd-ok';
+    const active = a.agent_id === selectedId ? ' on' : '';
+    html += `<div class="si${active}" data-id="${esc(a.agent_id)}">
+      <div class="sd ${dotCls}"></div>
+      <span class="sn">${esc(a.agent_id)}</span>
+    </div>`;
   });
+
+  if (stale.length) {
+    html += '<hr class="sb-sep">';
+    stale.sort((a,b) => a.agent_id.localeCompare(b.agent_id)).forEach(a => {
+      const active = a.agent_id === selectedId ? ' on' : '';
+      html += `<div class="si stale${active}" data-id="${esc(a.agent_id)}">
+        <div class="sd sd-off"></div>
+        <span class="sn">${esc(a.agent_id)}</span>
+      </div>`;
+    });
+    html += `<button class="sb-clean" id="clean-stale-btn">✕ Clean up stale (${stale.length})</button>`;
+  }
+
+  sidebarList.innerHTML = html;
+  fleetCount.textContent = `${online.length} online`;
+
+  // Click handlers
+  sidebarList.querySelectorAll('.si[data-id]').forEach(el => {
+    el.addEventListener('click', () => selectAgent(el.dataset.id));
+  });
+  document.getElementById('clean-stale-btn')?.addEventListener('click', cleanStale);
 }
 
-// ── Render ───────────────────────────────────────────────────────────
-function renderRow(agent) {
-  const id = agent.agent_id;
-  const state = agentState(agent);
-  const isOnline = state === 'online';
-  const host = metaField(agent, 'hostname', 'host');
-  const ip = metaField(agent, 'ip', 'ip_address');
-  const comps = Object.values(agent.components || {});
+// ── Select agent ─────────────────────────────────────────────────────
+async function selectAgent(id) {
+  selectedId = id;
+  renderSidebar();
 
-  const compBadges = comps.map(c => {
-    const cs = c.status?.state || 'unknown';
-    return `<span class="comp-badge comp-badge-${cs}">● ${c.component_id}</span>`;
-  }).join('');
+  const a = agents[id];
+  if (!a) return;
 
-  const pingBtn = isOnline
-    ? `<button class="btn-sm" id="ping-${id}" onclick="quickPing(event,'${id}')">Ping</button>`
-    : '';
+  fleetEmpty.style.display = 'none';
+  agentPanel.style.display = 'flex';
 
-  return `
-    <tr class="${isOnline ? '' : 'is-offline'}" data-agent="${id}" onclick="navAgent(event, '${id}')">
-      <td><span class="fleet-agent-id">${id}</span></td>
-      <td><span class="status-badge status-${state}">${state}</span></td>
-      <td>
-        <div class="fleet-host">${host}</div>
-        <div class="fleet-ip">${ip}</div>
-      </td>
-      <td>${fmtUptime(agent.status)}</td>
-      <td>${fmtTs(agent.last_seen_ts)}</td>
-      <td><div class="fleet-comp-badges">${compBadges || '<span style="color:var(--muted)">—</span>'}</div></td>
-      <td>
-        <div class="fleet-actions" onclick="event.stopPropagation()">
-          ${pingBtn}
-          <button class="btn-danger" onclick="deleteAgent(event, '${id}')">Delete</button>
+  // Header
+  document.getElementById('h-name').textContent = a.agent_id;
+  const badge = document.getElementById('h-badge');
+  const state = agentState(a);
+  badge.textContent = state;
+  badge.className = `status-badge status-${state}`;
+  document.getElementById('h-meta').innerHTML =
+    `uptime ${fmtUptime(a.status)} · <span class="last-seen-warn">${fmtTs(a.last_seen_ts)}</span>`;
+
+  // Fetch command catalog if not cached
+  if (!catalogs[id]) {
+    try {
+      const r = await fetch(`/api/agents/${encodeURIComponent(id)}/command-catalog`);
+      if (r.ok) catalogs[id] = await r.json();
+    } catch { /* fallback to capabilities */ }
+  }
+
+  renderPanel(a);
+}
+
+// ── Render panel ─────────────────────────────────────────────────────
+function renderPanel(a) {
+  const catalog = catalogs[a.agent_id] || {};
+  let html = '';
+
+  // Agent info card (advanced only)
+  const meta = a.metadata || {};
+  const cfg = a.cfg || {};
+  html += `<div class="ainfo${advancedOn ? ' show' : ''}">
+    <div class="ainfo-title">Agent</div>
+    <table class="kv-tbl">
+      <tr><td class="kk">platform</td><td class="kvl">${esc(meta.platform || '—')} / ${esc(meta.architecture || '—')}</td></tr>
+      <tr><td class="kk">version</td><td class="kvl">${esc(meta.version || '—')}</td></tr>
+      <tr><td class="kk">heartbeat</td><td class="kvl">${cfg.heartbeat_s || '—'}s</td></tr>
+      <tr><td class="kk">first seen</td><td class="kvl">${a.first_seen_ts ? new Date(a.first_seen_ts).toLocaleDateString() : '—'}</td></tr>
+    </table>
+  </div>`;
+
+  // Component cards
+  const comps = Object.values(a.components || {});
+  comps.forEach(comp => {
+    const cid = comp.component_id;
+    const cState = comp.status?.state || 'unknown';
+    const isErr = cState === 'error';
+    const summary = compSummary(cid, comp);
+    const summaryWarn = isErr;
+    const icon = compIcon(cid);
+    const iconCls = isErr ? 'er' : (cState === 'running' ? 'ok' : 'dim');
+
+    // Action buttons from catalog or capabilities
+    const compCmds = catalog.components?.[cid] || [];
+    let actionsHtml = '';
+    if (compCmds.length) {
+      actionsHtml = compCmds.map((cmd, i) => {
+        const cls = i === 0 ? ' primary' : (cmd.category === 'danger' ? ' danger' : '');
+        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cmd.action)}">${esc(cmd.label || cmd.action)}</button>`;
+      }).join('');
+    } else {
+      // Fallback: use capabilities from metadata
+      const caps = comp.metadata?.capabilities || [];
+      actionsHtml = caps.map((cap, i) => {
+        const cls = i === 0 ? ' primary' : '';
+        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cap)}">${esc(cap)}</button>`;
+      }).join('');
+    }
+
+    // Advanced: state KV grid
+    const statePayload = comp.state?.payload || comp.state || {};
+    const kvHtml = Object.entries(statePayload).map(([k, v]) => {
+      return `<div class="sg-kv"><div class="sg-k">${esc(String(k))}</div><div class="sg-v">${esc(String(v ?? '—'))}</div></div>`;
+    }).join('');
+
+    // Advanced: capability pills
+    const caps = comp.metadata?.capabilities || [];
+    const pillsHtml = caps.map(c => `<span class="pill">${esc(c)}</span>`).join('');
+
+    // Advanced: data age
+    const stateTs = comp.state?.ts || comp.state?.last_seen_ts;
+    let ageHtml = '';
+    if (stateTs) {
+      const ageStr = fmtTs(stateTs);
+      const ageS = Math.floor((Date.now() - new Date(stateTs)) / 1000);
+      if (ageS > 3600) {
+        ageHtml = `<div class="data-age">state last updated ${ageStr}</div>`;
+      }
+    }
+
+    html += `<div class="cc${isErr ? ' err' : ''}">
+      <div class="cc-row">
+        <div class="cc-icon ${iconCls}">${icon}</div>
+        <div class="cc-txt">
+          <div class="cc-name">${esc(cid)}</div>
+          <div class="cc-sub${summaryWarn ? ' warn' : ''}">${esc(summary)}</div>
         </div>
-      </td>
-    </tr>`;
-}
-
-function renderTable() {
-  const allAgents = Object.values(agents);
-  const filtered = allAgents.filter(agent => {
-    const state = agentState(agent);
-    if (activeFilter === 'online')  return state === 'online';
-    if (activeFilter === 'offline') return state !== 'online';
-    return true;
+        <span class="status-badge status-${cState}">${cState}</span>
+      </div>
+      ${actionsHtml ? `<div class="cc-acts">${actionsHtml}</div>` : ''}
+      <div class="cc-adv${advancedOn ? ' show' : ''}">
+        ${kvHtml ? `<div class="sg">${kvHtml}</div>` : ''}
+        ${pillsHtml ? `<div class="pills">${pillsHtml}</div>` : ''}
+        ${ageHtml}
+      </div>
+    </div>`;
   });
 
-  const sorted = sortAgents(filtered);
+  // Logs section (advanced only)
+  html += `<div class="logs-section${advancedOn ? ' show' : ''}" id="logs-section">
+    <div class="logs-hdr">
+      <span class="logs-hdr-title">Logs</span>
+      <button class="btn-sm" id="logs-clear-btn">Clear</button>
+    </div>
+    <div class="lf-wrap"><div class="lf" id="log-feed"></div></div>
+  </div>`;
 
-  if (!sorted.length) {
-    fleetBody.innerHTML = '';
-    fleetEmpty.style.display = '';
-    fleetEmpty.textContent = `No ${activeFilter === 'all' ? '' : activeFilter + ' '}agents found`;
-  } else {
-    fleetEmpty.style.display = 'none';
-    fleetBody.innerHTML = sorted.map(renderRow).join('');
-  }
+  agentScroll.innerHTML = html;
 
-  const onlineCount = allAgents.filter(a => agentState(a) === 'online').length;
-  countEl.textContent = `${allAgents.length} agent${allAgents.length !== 1 ? 's' : ''}, ${onlineCount} online`;
+  // Wire up action buttons
+  agentScroll.querySelectorAll('.act[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => sendCmd(btn));
+  });
+
+  // Wire up logs clear
+  document.getElementById('logs-clear-btn')?.addEventListener('click', () => {
+    const feed = document.getElementById('log-feed');
+    if (feed) feed.innerHTML = '';
+  });
 }
 
-// ── Navigation ───────────────────────────────────────────────────────
-window.navAgent = function(e, id) {
-  if (e.target.closest('.fleet-actions')) return;
-  location.href = `/agent/${id}`;
-};
+// ── Send command ─────────────────────────────────────────────────────
+async function sendCmd(btn) {
+  const agentId = btn.dataset.agent;
+  const compId  = btn.dataset.comp;
+  const action  = btn.dataset.action;
 
-// ── In-place row patch (avoids detaching rows mid-click) ──────────────
-function patchRow(id) {
-  const agent = agents[id];
-  const existing = fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
-
-  if (!existing) {
-    // New agent — fall back to full render to insert in sorted position
-    renderTable();
-    return;
-  }
-
-  const state = agentState(agent);
-  const isOnline = state === 'online';
-  const host = metaField(agent, 'hostname', 'host');
-  const ip   = metaField(agent, 'ip', 'ip_address');
-  const comps = Object.values(agent.components || {});
-  const compBadges = comps.map(c => {
-    const cs = c.status?.state || 'unknown';
-    return `<span class="comp-badge comp-badge-${cs}">● ${c.component_id}</span>`;
-  }).join('');
-
-  existing.className = isOnline ? '' : 'is-offline';
-
-  const cells = existing.querySelectorAll('td');
-  // td[0] agent_id — never changes
-  cells[1].innerHTML = `<span class="status-badge status-${state}">${state}</span>`;
-  cells[2].innerHTML = `<div class="fleet-host">${host}</div><div class="fleet-ip">${ip}</div>`;
-  cells[3].textContent = fmtUptime(agent.status);
-  cells[4].textContent = fmtTs(agent.last_seen_ts);
-  cells[5].innerHTML   = `<div class="fleet-comp-badges">${compBadges || '<span style="color:var(--muted)">—</span>'}</div>`;
-
-  const pingBtn = isOnline
-    ? `<button class="btn-sm" id="ping-${id}" onclick="quickPing(event,'${id}')">Ping</button>`
-    : '';
-  const actionsDiv = cells[6].querySelector('.fleet-actions');
-  if (actionsDiv) {
-    actionsDiv.innerHTML = `${pingBtn}<button class="btn-danger" onclick="deleteAgent(event, '${id}')">Delete</button>`;
-  }
-}
-
-// ── Actions ──────────────────────────────────────────────────────────
-window.quickPing = async function(e, id) {
-  e.stopPropagation();
-  const btn = document.getElementById(`ping-${id}`);
-  if (!btn) return;
+  const origText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '…';
+
   try {
-    const res = await fetch(`/api/agents/${encodeURIComponent(id)}/cmd/ping`, {
+    const url = compId
+      ? `/api/agents/${encodeURIComponent(agentId)}/components/${encodeURIComponent(compId)}/cmd/${encodeURIComponent(action)}`
+      : `/api/agents/${encodeURIComponent(agentId)}/cmd/${encodeURIComponent(action)}`;
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
@@ -198,68 +308,85 @@ window.quickPing = async function(e, id) {
     btn.textContent = '✗';
     btn.style.color = 'var(--red)';
   }
+
   setTimeout(() => {
-    btn.textContent = 'Ping';
+    btn.textContent = origText;
     btn.style.color = '';
     btn.disabled = false;
   }, 2000);
-};
+}
 
-window.deleteAgent = async function(e, id) {
-  e.stopPropagation();
-  if (!confirm(`Delete agent "${id}" and all its data?`)) return;
-  const r = await fetch(`/api/agents/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (!r.ok) {
-    const d = await r.json().catch(() => ({}));
-    alert('Delete failed: ' + (d.detail || r.status));
-    return;
+// ── Advanced toggle ──────────────────────────────────────────────────
+advChk.addEventListener('change', () => {
+  advancedOn = advChk.checked;
+  document.querySelectorAll('.cc-adv').forEach(el => el.classList.toggle('show', advancedOn));
+  document.querySelectorAll('.ainfo').forEach(el => el.classList.toggle('show', advancedOn));
+  document.querySelectorAll('.logs-section').forEach(el => el.classList.toggle('show', advancedOn));
+});
+
+// ── Clean up stale agents ────────────────────────────────────────────
+async function cleanStale() {
+  const stale = Object.values(agents).filter(a => agentState(a) !== 'online');
+  if (!stale.length) return;
+  if (!confirm(`Delete ${stale.length} stale agent(s) and all their data?`)) return;
+
+  for (const a of stale) {
+    try {
+      const r = await fetch(`/api/agents/${encodeURIComponent(a.agent_id)}`, { method: 'DELETE' });
+      if (r.ok) delete agents[a.agent_id];
+    } catch { /* skip */ }
   }
-  delete agents[id];
-  renderTable();
-};
 
-// ── Filters ──────────────────────────────────────────────────────────
-function setFilter(filter) {
-  activeFilter = filter;
-  Object.entries(filterButtons).forEach(([name, button]) => {
-    if (!button) return;
-    button.classList.toggle('is-active', name === filter);
-  });
-  renderTable();
+  if (selectedId && !agents[selectedId]) {
+    selectedId = null;
+    agentPanel.style.display = 'none';
+    fleetEmpty.style.display = '';
+  }
+  renderSidebar();
 }
 
-Object.entries(filterButtons).forEach(([name, button]) => {
-  if (!button) return;
-  button.addEventListener('click', () => setFilter(name));
-});
+// ── Log appending ────────────────────────────────────────────────────
+function appendLog(evt) {
+  if (!advancedOn) return;
+  const feed = document.getElementById('log-feed');
+  if (!feed) return;
 
-// ── Column sorting ───────────────────────────────────────────────────
-document.querySelectorAll('.fleet-table thead th.sortable').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.sort;
-    if (sortCol === col) {
-      sortAsc = !sortAsc;
-    } else {
-      sortCol = col;
-      sortAsc = true;
-    }
-    document.querySelectorAll('.fleet-table thead th').forEach(h => {
-      h.classList.remove('sort-asc', 'sort-desc');
-    });
-    th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
-    renderTable();
-  });
-});
+  const p = evt.payload || {};
+  const ts = evt.ts ? new Date(evt.ts).toLocaleTimeString() : '';
+  const level = p.level || p.levelname || 'INFO';
+  const comp = evt.component_id || 'agent';
+  const msg = p.message || p.msg || JSON.stringify(p);
 
-// ── Load & live updates ──────────────────────────────────────────────
+  const line = document.createElement('div');
+  line.className = 'll';
+  line.innerHTML = `<span class="lt">${esc(ts)}</span><span class="lv ${esc(level)}">${esc(level)}</span><span class="lc">${esc(comp)}</span><span class="lm">${esc(msg)}</span>`;
+  feed.prepend(line);
+
+  // Keep max 200 lines
+  while (feed.children.length > 200) feed.lastChild.remove();
+}
+
+// ── Load data ────────────────────────────────────────────────────────
 async function loadAgents() {
-  const res = await fetch('/api/agents');
-  const data = await res.json();
-  agents = {};
-  data.forEach(a => { agents[a.agent_id] = a; });
-  renderTable();
+  try {
+    const res = await fetch('/api/agents');
+    const data = await res.json();
+    agents = {};
+    data.forEach(a => { agents[a.agent_id] = a; });
+    renderSidebar();
+    // Auto-select first agent if nothing selected
+    if (!selectedId && data.length) {
+      const online = data.filter(a => agentState(a) === 'online');
+      if (online.length) selectAgent(online[0].agent_id);
+    } else if (selectedId && agents[selectedId]) {
+      selectAgent(selectedId);
+    }
+  } catch (e) {
+    console.error('Failed to load agents:', e);
+  }
 }
 
+// ── WebSocket live updates ───────────────────────────────────────────
 onWsEvent(evt => {
   if (evt.type !== 'mqtt') return;
   const id = evt.agent_id;
@@ -273,31 +400,45 @@ onWsEvent(evt => {
     if (evt.topic_type === 'status')   a.status   = evt.payload;
     if (evt.topic_type === 'metadata') a.metadata = evt.payload;
     if (evt.topic_type === 'state')    a.state    = evt.payload;
+    if (evt.topic_type === 'cfg')      a.cfg      = evt.payload;
   }
   if (evt.scope === 'component' && evt.component_id) {
     if (!a.components[evt.component_id]) {
       a.components[evt.component_id] = { component_id: evt.component_id };
     }
     const comp = a.components[evt.component_id];
-    if (evt.topic_type === 'status') comp.status = evt.payload;
+    if (evt.topic_type === 'status')   comp.status   = evt.payload;
+    if (evt.topic_type === 'state')    comp.state    = evt.payload;
+    if (evt.topic_type === 'metadata') comp.metadata = evt.payload;
+    if (evt.topic_type === 'cfg')      comp.cfg      = evt.payload;
   }
 
-  const isNew = !fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
-  patchRow(id);
+  // Logs go to the log feed if this is the selected agent
+  if (evt.topic_type === 'logs' && id === selectedId) {
+    appendLog(evt);
+  }
 
-  const onlineCount = Object.values(agents).filter(a => agentState(a) === 'online').length;
-  countEl.textContent = `${Object.keys(agents).length} agent${Object.keys(agents).length !== 1 ? 's' : ''}, ${onlineCount} online`;
+  renderSidebar();
 
-  if (!isNew) {
-    // Flash the updated row (only if it was patched in-place, not a full re-render)
-    const row = fleetBody.querySelector(`tr[data-agent="${CSS.escape(id)}"]`);
-    if (row) {
-      row.classList.remove('row-flash');
-      void row.offsetWidth; // reflow to restart animation
-      row.classList.add('row-flash');
-    }
+  // Re-render panel if this is the selected agent
+  if (id === selectedId) {
+    // Update header meta live
+    document.getElementById('h-meta').innerHTML =
+      `uptime ${fmtUptime(a.status)} · <span class="last-seen-warn">${fmtTs(a.last_seen_ts)}</span>`;
+    const badge = document.getElementById('h-badge');
+    const state = agentState(a);
+    badge.textContent = state;
+    badge.className = `status-badge status-${state}`;
+    renderPanel(a);
   }
 });
 
+// ── Boot ─────────────────────────────────────────────────────────────
 loadAgents();
-setInterval(renderTable, 30_000);
+// Refresh relative timestamps every 30s
+setInterval(() => {
+  if (selectedId && agents[selectedId]) {
+    document.getElementById('h-meta').innerHTML =
+      `uptime ${fmtUptime(agents[selectedId].status)} · <span class="last-seen-warn">${fmtTs(agents[selectedId].last_seen_ts)}</span>`;
+  }
+}, 30_000);

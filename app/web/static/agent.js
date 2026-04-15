@@ -277,7 +277,7 @@ function renderOverview(agent) {
 
       // Logging config
       const logging = cfg.logging || {};
-      if (logging.level) detailRows += kvRow('log level', logging.level);
+      if (logging.log_level) detailRows += kvRow('log level', logging.log_level);
 
       const hasDetails = detailRows || capsHtml || stateHtml || cfgHtml;
 
