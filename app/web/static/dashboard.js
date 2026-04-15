@@ -328,58 +328,164 @@ async function fireCmd(btn, body) {
 }
 
 // ── Payload editor popup ─────────────────────────────────────────────
+
+// Infer control type from key name and value
+function inferControl(key, val, parentKey) {
+  const k = key.toLowerCase();
+  const pk = (parentKey || '').toLowerCase();
+  // RGB color components
+  if (pk === 'color' && (k === 'r' || k === 'g' || k === 'b')) {
+    return { type: 'slider', min: 0, max: 255, step: 1 };
+  }
+  // Brightness
+  if (k === 'brightness') return { type: 'slider', min: 0, max: 255, step: 1 };
+  // Speed, interval
+  if (k === 'speed') return { type: 'slider', min: 0.1, max: 5.0, step: 0.1 };
+  if (k.includes('interval') || k.includes('timeout')) return { type: 'number', min: 0, max: 3600, step: 1 };
+  // Booleans
+  if (typeof val === 'boolean') return { type: 'toggle' };
+  if (val === 'true' || val === 'false') return { type: 'toggle' };
+  // Numbers
+  if (typeof val === 'number') {
+    if (Number.isInteger(val)) return { type: 'number', min: 0, max: 10000, step: 1 };
+    return { type: 'number', min: 0, max: 1000, step: 0.1 };
+  }
+  // Strings
+  return { type: 'text' };
+}
+
+// Flatten a template object into form fields: [{path, key, value, control}]
+function flattenTemplate(obj, prefix, parentKey) {
+  const fields = [];
+  for (const [key, val] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+      fields.push(...flattenTemplate(val, path, key));
+    } else {
+      fields.push({ path, key, value: val, control: inferControl(key, val, parentKey) });
+    }
+  }
+  return fields;
+}
+
+// Build nested object from flat path-value pairs
+function buildPayload(fields) {
+  const obj = {};
+  for (const { path, value } of fields) {
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!cur[parts[i]]) cur[parts[i]] = {};
+      cur = cur[parts[i]];
+    }
+    cur[parts[parts.length - 1]] = value;
+  }
+  return obj;
+}
+
 function showPayloadEditor(btn) {
-  // Remove any existing popup
   document.querySelector('.cmd-popup')?.remove();
 
-  let template = '{}';
-  try { template = JSON.stringify(JSON.parse(btn.dataset.template || '{}'), null, 2); }
-  catch { template = btn.dataset.template || '{}'; }
+  let tplObj = {};
+  try { tplObj = JSON.parse(btn.dataset.template || '{}'); } catch {}
+
+  const fields = flattenTemplate(tplObj, '', '');
 
   const popup = document.createElement('div');
   popup.className = 'cmd-popup';
+
+  let formHtml = '';
+  if (fields.length) {
+    formHtml = '<div class="cmd-fields">';
+    fields.forEach((f, i) => {
+      const c = f.control;
+      const id = `cmd-f-${i}`;
+      let inputHtml = '';
+      if (c.type === 'slider') {
+        const val = typeof f.value === 'number' ? f.value : (c.min + c.max) / 2;
+        inputHtml = `<div class="cmd-slider-row">
+          <input type="range" id="${id}" class="cmd-slider" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}"
+            oninput="this.nextElementSibling.textContent=this.value">
+          <span class="cmd-slider-val">${val}</span>
+        </div>`;
+      } else if (c.type === 'number') {
+        inputHtml = `<input type="number" id="${id}" class="cmd-input" min="${c.min}" max="${c.max}" step="${c.step}" value="${f.value ?? 0}">`;
+      } else if (c.type === 'toggle') {
+        const checked = f.value === true || f.value === 'true' ? 'checked' : '';
+        inputHtml = `<label class="cmd-toggle-label"><input type="checkbox" id="${id}" class="cmd-toggle" ${checked}><span class="cmd-toggle-text">${f.value === true || f.value === 'true' ? 'on' : 'off'}</span></label>`;
+      } else {
+        inputHtml = `<input type="text" id="${id}" class="cmd-input" value="${esc(String(f.value ?? ''))}">`;
+      }
+      formHtml += `<div class="cmd-field">
+        <label class="cmd-field-label" for="${id}">${esc(f.path)}</label>
+        ${inputHtml}
+      </div>`;
+    });
+    formHtml += '</div>';
+  } else {
+    // No fields — show raw textarea
+    formHtml = `<textarea class="cmd-popup-body" spellcheck="false">{}</textarea>`;
+  }
+
   popup.innerHTML = `
     <div class="cmd-popup-header">
       <span class="cmd-popup-title">${esc(btn.dataset.action)}</span>
       <span class="cmd-popup-target">${esc(btn.dataset.comp || btn.dataset.agent)}</span>
       <button class="cmd-popup-close">✕</button>
     </div>
-    <textarea class="cmd-popup-body" spellcheck="false">${esc(template)}</textarea>
+    ${formHtml}
     <div class="cmd-popup-footer">
       <button class="cmd-popup-send">Send</button>
-      <span class="cmd-popup-hint">Ctrl+Enter to send</span>
     </div>`;
 
-  // Position near the button
   const card = btn.closest('.cc') || btn.parentElement;
   card.style.position = 'relative';
   card.appendChild(popup);
 
-  const textarea = popup.querySelector('.cmd-popup-body');
   const sendBtn = popup.querySelector('.cmd-popup-send');
   const closeBtn = popup.querySelector('.cmd-popup-close');
 
-  textarea.focus();
-  // Select all text for easy replacement
-  textarea.select();
+  // Toggle text update
+  popup.querySelectorAll('.cmd-toggle').forEach(chk => {
+    chk.addEventListener('change', () => {
+      chk.nextElementSibling.textContent = chk.checked ? 'on' : 'off';
+    });
+  });
 
   function doSend() {
-    let body = textarea.value.trim() || '{}';
-    try { JSON.parse(body); } catch {
-      textarea.style.borderColor = 'var(--red)';
-      return;
+    if (fields.length) {
+      // Read values from form controls
+      const out = fields.map((f, i) => {
+        const el = popup.querySelector(`#cmd-f-${i}`);
+        let val;
+        if (f.control.type === 'slider' || f.control.type === 'number') {
+          val = Number(el.value);
+        } else if (f.control.type === 'toggle') {
+          val = el.checked;
+        } else {
+          val = el.value;
+        }
+        return { path: f.path, value: val };
+      });
+      const body = JSON.stringify(buildPayload(out));
+      popup.remove();
+      fireCmd(btn, body);
+    } else {
+      const textarea = popup.querySelector('.cmd-popup-body');
+      let body = textarea.value.trim() || '{}';
+      try { JSON.parse(body); } catch {
+        textarea.style.borderColor = 'var(--red)';
+        return;
+      }
+      popup.remove();
+      fireCmd(btn, body);
     }
-    popup.remove();
-    fireCmd(btn, body);
   }
 
   sendBtn.addEventListener('click', doSend);
   closeBtn.addEventListener('click', () => popup.remove());
-  textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      doSend();
-    }
+  popup.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
     if (e.key === 'Escape') popup.remove();
   });
 }

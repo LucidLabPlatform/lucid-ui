@@ -352,7 +352,40 @@ main:not(:has(.fleet-layout)) { padding: 1.5rem; }
   font-size: 0.78rem; font-weight: 600; cursor: pointer;
 }
 .cmd-popup-send:hover { opacity: 0.88; }
-.cmd-popup-hint { font-size: 0.65rem; color: var(--muted); }
+
+/* Command form fields */
+.cmd-fields { padding: 0.5rem 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.cmd-field { display: flex; align-items: center; gap: 0.7rem; }
+.cmd-field-label {
+  font-size: 0.72rem; color: var(--muted); min-width: 80px;
+  font-family: var(--font-mono); flex-shrink: 0;
+}
+.cmd-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.35rem 0.6rem;
+  color: var(--text); font-size: 0.78rem; font-family: var(--font-mono);
+  outline: none; min-width: 0;
+}
+.cmd-input:focus { border-color: var(--accent); }
+input[type="number"].cmd-input { width: 90px; flex: 0; }
+.cmd-slider-row { flex: 1; display: flex; align-items: center; gap: 0.6rem; }
+.cmd-slider {
+  flex: 1; height: 4px; -webkit-appearance: none; appearance: none;
+  background: var(--border); border-radius: 2px; outline: none;
+}
+.cmd-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: var(--accent); cursor: pointer;
+}
+.cmd-slider-val {
+  font-size: 0.75rem; font-family: var(--font-mono); color: var(--text);
+  min-width: 32px; text-align: right;
+}
+.cmd-toggle-label {
+  display: flex; align-items: center; gap: 0.45rem; cursor: pointer;
+}
+.cmd-toggle { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.cmd-toggle-text { font-size: 0.75rem; color: var(--text); }
 
 /* ── Status badge ─────────────────────────────────────────────────── */
 .status-badge {
