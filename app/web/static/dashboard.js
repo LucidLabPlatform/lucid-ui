@@ -210,7 +210,9 @@ function renderPanel(a) {
     if (compCmds.length) {
       actionsHtml = compCmds.map((cmd, i) => {
         const cls = i === 0 ? ' primary' : (cmd.category === 'danger' ? ' danger' : '');
-        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cmd.action)}">${esc(cmd.label || cmd.action)}</button>`;
+        const hb = cmd.has_body ? ' data-has-body="1"' : '';
+        const tpl = cmd.template ? ` data-template="${esc(JSON.stringify(cmd.template))}"` : '';
+        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cmd.action)}"${hb}${tpl}>${esc(cmd.label || cmd.action)}</button>`;
       }).join('');
     } else {
       // Fallback: use capabilities from metadata
@@ -284,7 +286,16 @@ function renderPanel(a) {
 }
 
 // ── Send command ─────────────────────────────────────────────────────
-async function sendCmd(btn) {
+function sendCmd(btn) {
+  const hasBody = btn.dataset.hasBody === '1';
+  if (hasBody) {
+    showPayloadEditor(btn);
+    return;
+  }
+  fireCmd(btn, '{}');
+}
+
+async function fireCmd(btn, body) {
   const agentId = btn.dataset.agent;
   const compId  = btn.dataset.comp;
   const action  = btn.dataset.action;
@@ -300,7 +311,7 @@ async function sendCmd(btn) {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+      body: body,
     });
     btn.textContent = res.ok ? '✓' : '✗';
     btn.style.color = res.ok ? 'var(--green)' : 'var(--red)';
@@ -314,6 +325,63 @@ async function sendCmd(btn) {
     btn.style.color = '';
     btn.disabled = false;
   }, 2000);
+}
+
+// ── Payload editor popup ─────────────────────────────────────────────
+function showPayloadEditor(btn) {
+  // Remove any existing popup
+  document.querySelector('.cmd-popup')?.remove();
+
+  let template = '{}';
+  try { template = JSON.stringify(JSON.parse(btn.dataset.template || '{}'), null, 2); }
+  catch { template = btn.dataset.template || '{}'; }
+
+  const popup = document.createElement('div');
+  popup.className = 'cmd-popup';
+  popup.innerHTML = `
+    <div class="cmd-popup-header">
+      <span class="cmd-popup-title">${esc(btn.dataset.action)}</span>
+      <span class="cmd-popup-target">${esc(btn.dataset.comp || btn.dataset.agent)}</span>
+      <button class="cmd-popup-close">✕</button>
+    </div>
+    <textarea class="cmd-popup-body" spellcheck="false">${esc(template)}</textarea>
+    <div class="cmd-popup-footer">
+      <button class="cmd-popup-send">Send</button>
+      <span class="cmd-popup-hint">Ctrl+Enter to send</span>
+    </div>`;
+
+  // Position near the button
+  const card = btn.closest('.cc') || btn.parentElement;
+  card.style.position = 'relative';
+  card.appendChild(popup);
+
+  const textarea = popup.querySelector('.cmd-popup-body');
+  const sendBtn = popup.querySelector('.cmd-popup-send');
+  const closeBtn = popup.querySelector('.cmd-popup-close');
+
+  textarea.focus();
+  // Select all text for easy replacement
+  textarea.select();
+
+  function doSend() {
+    let body = textarea.value.trim() || '{}';
+    try { JSON.parse(body); } catch {
+      textarea.style.borderColor = 'var(--red)';
+      return;
+    }
+    popup.remove();
+    fireCmd(btn, body);
+  }
+
+  sendBtn.addEventListener('click', doSend);
+  closeBtn.addEventListener('click', () => popup.remove());
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      doSend();
+    }
+    if (e.key === 'Escape') popup.remove();
+  });
 }
 
 // ── Advanced toggle ──────────────────────────────────────────────────
