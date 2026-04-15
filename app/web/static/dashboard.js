@@ -38,6 +38,11 @@ function esc(s) {
   return el.innerHTML;
 }
 
+// Escape for use inside HTML attribute values (also escapes quotes)
+function escAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 // ── Component summary ────────────────────────────────────────────────
 // Generate a human-readable one-liner from component state
 function compSummary(compId, comp) {
@@ -211,15 +216,15 @@ function renderPanel(a) {
       actionsHtml = compCmds.map((cmd, i) => {
         const cls = i === 0 ? ' primary' : (cmd.category === 'danger' ? ' danger' : '');
         const hb = cmd.has_body ? ' data-has-body="1"' : '';
-        const tpl = cmd.template ? ` data-template="${esc(JSON.stringify(cmd.template))}"` : '';
-        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cmd.action)}"${hb}${tpl}>${esc(cmd.label || cmd.action)}</button>`;
+        const tpl = cmd.template ? ` data-template="${escAttr(JSON.stringify(cmd.template))}"` : '';
+        return `<button class="act${cls}" data-agent="${escAttr(a.agent_id)}" data-comp="${escAttr(cid)}" data-action="${escAttr(cmd.action)}"${hb}${tpl}>${esc(cmd.label || cmd.action)}</button>`;
       }).join('');
     } else {
       // Fallback: use capabilities from metadata
       const caps = comp.metadata?.capabilities || [];
       actionsHtml = caps.map((cap, i) => {
         const cls = i === 0 ? ' primary' : '';
-        return `<button class="act${cls}" data-agent="${esc(a.agent_id)}" data-comp="${esc(cid)}" data-action="${esc(cap)}">${esc(cap)}</button>`;
+        return `<button class="act${cls}" data-agent="${escAttr(a.agent_id)}" data-comp="${escAttr(cid)}" data-action="${escAttr(cap)}">${esc(cap)}</button>`;
       }).join('');
     }
 
