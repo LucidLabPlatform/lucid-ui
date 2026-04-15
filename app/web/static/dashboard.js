@@ -198,6 +198,17 @@ function renderPanel(a) {
     </table>
   </div>`;
 
+  // Agent commands (ping, restart, etc.)
+  const agentCmds = (catalog.agent || []).filter(c => c.category === 'lifecycle');
+  if (agentCmds.length) {
+    const agentBtns = agentCmds.map(cmd => {
+      const hb = cmd.has_body ? ' data-has-body="1"' : '';
+      const tpl = cmd.template ? ` data-template="${escAttr(JSON.stringify(cmd.template))}"` : '';
+      return `<button class="act" data-agent="${escAttr(a.agent_id)}" data-action="${escAttr(cmd.action)}"${hb}${tpl}>${esc(cmd.label || cmd.action)}</button>`;
+    }).join('');
+    html += `<div class="agent-cmds"><div class="agent-cmds-label">Agent</div>${agentBtns}</div>`;
+  }
+
   // Component cards
   const comps = Object.values(a.components || {});
   comps.forEach(comp => {

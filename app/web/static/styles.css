@@ -226,6 +226,17 @@ main:not(:has(.fleet-layout)) { padding: 1.5rem; }
 .kk { color: var(--muted); width: 42%; }
 .kvl { color: var(--text); font-family: var(--font-mono); font-size: 0.72rem; }
 
+/* Agent commands bar */
+.agent-cmds {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  padding: 0.5rem 0.85rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.agent-cmds-label {
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted); margin-right: 0.3rem;
+}
+
 /* Component card */
 .cc {
   background: var(--surface); border: 1px solid var(--border);
