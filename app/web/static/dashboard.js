@@ -198,8 +198,8 @@ function renderPanel(a) {
     </table>
   </div>`;
 
-  // Agent commands (ping, restart, etc.)
-  const agentCmds = (catalog.agent || []).filter(c => c.category === 'lifecycle');
+  // Agent commands (ping, restart, component management, etc.)
+  const agentCmds = (catalog.agent || []).filter(c => c.category !== 'config' && c.category !== 'upgrade');
   if (agentCmds.length) {
     const agentBtns = agentCmds.map(cmd => {
       const hb = cmd.has_body ? ' data-has-body="1"' : '';
