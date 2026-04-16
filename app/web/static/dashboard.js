@@ -141,12 +141,6 @@ function renderSidebar() {
 
   sidebarList.innerHTML = html;
   fleetCount.textContent = `${online.length} online`;
-
-  // Click handlers
-  sidebarList.querySelectorAll('.si[data-id]').forEach(el => {
-    el.addEventListener('click', () => selectAgent(el.dataset.id));
-  });
-  document.getElementById('clean-stale-btn')?.addEventListener('click', cleanStale);
 }
 
 // ── Select agent ─────────────────────────────────────────────────────
@@ -288,17 +282,6 @@ function renderPanel(a) {
   </div>`;
 
   agentScroll.innerHTML = html;
-
-  // Wire up action buttons
-  agentScroll.querySelectorAll('.act[data-action]').forEach(btn => {
-    btn.addEventListener('click', () => sendCmd(btn));
-  });
-
-  // Wire up logs clear
-  document.getElementById('logs-clear-btn')?.addEventListener('click', () => {
-    const feed = document.getElementById('log-feed');
-    if (feed) feed.innerHTML = '';
-  });
 }
 
 // ── Send command ─────────────────────────────────────────────────────
@@ -627,6 +610,22 @@ onWsEvent(evt => {
         renderPanel(sa);
       }
     });
+  }
+});
+
+// ── Event delegation (set up once, survives DOM replacement) ─────────
+sidebarList.addEventListener('click', e => {
+  const si = e.target.closest('.si[data-id]');
+  if (si) { selectAgent(si.dataset.id); return; }
+  if (e.target.closest('#clean-stale-btn')) { cleanStale(); return; }
+});
+
+agentScroll.addEventListener('click', e => {
+  const btn = e.target.closest('.act[data-action]');
+  if (btn) { sendCmd(btn); return; }
+  if (e.target.closest('#logs-clear-btn')) {
+    const feed = document.getElementById('log-feed');
+    if (feed) feed.innerHTML = '';
   }
 });
 
