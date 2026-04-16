@@ -577,6 +577,7 @@ async function loadAgents() {
 }
 
 // ── WebSocket live updates ───────────────────────────────────────────
+let _renderQueued = false;
 onWsEvent(evt => {
   if (evt.type !== 'mqtt') return;
   const id = evt.agent_id;
@@ -608,18 +609,24 @@ onWsEvent(evt => {
     appendLog(evt);
   }
 
-  renderSidebar();
-
-  // Re-render panel if this is the selected agent
-  if (id === selectedId) {
-    // Update header meta live
-    document.getElementById('h-meta').innerHTML =
-      `uptime ${fmtUptime(a.status)} · <span class="last-seen-warn">${fmtTs(a.last_seen_ts)}</span>`;
-    const badge = document.getElementById('h-badge');
-    const state = agentState(a);
-    badge.textContent = state;
-    badge.className = `status-badge status-${state}`;
-    renderPanel(a);
+  // Debounce DOM rendering — coalesce rapid MQTT messages into one
+  // render per animation frame to keep the UI responsive.
+  if (!_renderQueued) {
+    _renderQueued = true;
+    requestAnimationFrame(() => {
+      _renderQueued = false;
+      renderSidebar();
+      if (selectedId && agents[selectedId]) {
+        const sa = agents[selectedId];
+        document.getElementById('h-meta').innerHTML =
+          `uptime ${fmtUptime(sa.status)} · <span class="last-seen-warn">${fmtTs(sa.last_seen_ts)}</span>`;
+        const badge = document.getElementById('h-badge');
+        const state = agentState(sa);
+        badge.textContent = state;
+        badge.className = `status-badge status-${state}`;
+        renderPanel(sa);
+      }
+    });
   }
 });
 
