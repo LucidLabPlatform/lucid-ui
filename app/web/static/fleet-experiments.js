@@ -37,6 +37,8 @@
     updateStats();
   }
 
+  var GROUP_ORDER = ['setup', 'ros', 'rosbot', 'foraging', 'recording', 'diagnostic'];
+
   function renderTemplates() {
     if (!templatesEl) return;
 
@@ -54,34 +56,95 @@
       return;
     }
 
-    var html = '<div class="exp-grid">';
+    // Group by first tag
+    var groups = {};
     filtered.forEach(function (t) {
+      var key = (t.tags && t.tags.length) ? t.tags[0] : 'other';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    });
+
+    // Sort group keys: predefined order first, then alphabetical, 'other' last
+    var keys = Object.keys(groups).sort(function (a, b) {
+      var ai = GROUP_ORDER.indexOf(a), bi = GROUP_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return a === 'other' ? 1 : b === 'other' ? -1 : a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+    function cardHtml(t) {
       var steps = (t.definition && t.definition.steps) || t.steps || [];
       var params = t.parameters_schema || t.parameters || {};
       var paramCount = Object.keys(params).length;
-
-      html += '<a class="exp-card" href="/experiments/' + encodeURIComponent(t.id) + '">';
-      html += '<div class="exp-card-header">';
-      html += '<span class="exp-card-name">' + L.esc(t.name || t.id) + '</span>';
-      if (t.version) html += '<span class="card-version">v' + L.esc(t.version) + '</span>';
-      html += '</div>';
-      if (t.description) html += '<div class="exp-card-desc">' + L.esc(t.description) + '</div>';
-      html += '<div class="exp-card-meta">';
-      html += '<span>' + steps.length + ' step' + (steps.length !== 1 ? 's' : '') + '</span>';
-      if (paramCount) html += ' \u00B7 <span>' + paramCount + ' param' + (paramCount !== 1 ? 's' : '') + '</span>';
-      html += '</div>';
+      var h = '<div class="exp-card-wrap">';
+      h += '<a class="exp-card" href="/experiments/' + encodeURIComponent(t.id) + '">';
+      h += '<div class="exp-card-header">';
+      h += '<span class="exp-card-name">' + L.esc(t.name || t.id) + '</span>';
+      if (t.version) h += '<span class="card-version">v' + L.esc(t.version) + '</span>';
+      h += '</div>';
+      if (t.description) h += '<div class="exp-card-desc">' + L.esc(t.description) + '</div>';
+      h += '<div class="exp-card-meta">';
+      h += '<span>' + steps.length + ' step' + (steps.length !== 1 ? 's' : '') + '</span>';
+      if (paramCount) h += ' \u00B7 <span>' + paramCount + ' param' + (paramCount !== 1 ? 's' : '') + '</span>';
+      h += '</div>';
       if (t.tags && t.tags.length) {
-        html += '<div class="exp-card-tags">';
-        t.tags.forEach(function (tag) {
-          html += '<span class="pill">' + L.esc(tag) + '</span>';
-        });
-        html += '</div>';
+        h += '<div class="exp-card-tags">';
+        t.tags.forEach(function (tag) { h += '<span class="pill">' + L.esc(tag) + '</span>'; });
+        h += '</div>';
       }
-      html += '</a>';
+      h += '</a>';
+      h += '<div class="exp-card-actions">';
+      h += '<button class="act act-quick exp-edit-btn" data-id="' + L.escAttr(t.id) + '">Edit</button>';
+      h += '<button class="act act-quick act-danger exp-del-btn" data-id="' + L.escAttr(t.id) + '" data-name="' + L.escAttr(t.name || t.id) + '">Delete</button>';
+      h += '</div>';
+      h += '</div>';
+      return h;
+    }
+
+    var html = '';
+    keys.forEach(function (key) {
+      var label = key.charAt(0).toUpperCase() + key.slice(1);
+      html += '<div class="tier2-section">';
+      html += '<div class="tier2-label">' + L.esc(label) + '</div>';
+      html += '<div class="exp-grid">';
+      groups[key].forEach(function (t) { html += cardHtml(t); });
+      html += '</div>';
+      html += '</div>';
     });
-    html += '</div>';
 
     templatesEl.innerHTML = html;
+
+    // Wire Edit buttons
+    templatesEl.querySelectorAll('.exp-edit-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id = btn.dataset.id;
+        var tpl = templates.find(function (t) { return t.id === id; });
+        if (tpl && window.TemplateEditor) {
+          TemplateEditor.open(tpl, function () { loadData(); });
+        }
+      });
+    });
+
+    // Wire Delete buttons
+    templatesEl.querySelectorAll('.exp-del-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id   = btn.dataset.id;
+        var name = btn.dataset.name;
+        if (!confirm('Delete template \u201c' + name + '\u201d? This also deletes all its runs.')) return;
+        L.apiFetch('/api/experiments/templates/' + encodeURIComponent(id), { method: 'DELETE' })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Delete failed');
+            L.toast({ message: 'Template deleted', type: 'success' });
+            loadData();
+          })
+          .catch(function (e) {
+            L.toast({ message: e.message, type: 'error' });
+          });
+      });
+    });
   }
 
   function renderRecentRuns() {
@@ -123,6 +186,15 @@
     searchEl.addEventListener('input', function () {
       searchQuery = searchEl.value;
       renderTemplates();
+    });
+  }
+
+  var newTplBtn = document.getElementById('exp-new-tpl-btn');
+  if (newTplBtn) {
+    newTplBtn.addEventListener('click', function () {
+      if (window.TemplateEditor) {
+        TemplateEditor.open(null, function () { loadData(); });
+      }
     });
   }
 

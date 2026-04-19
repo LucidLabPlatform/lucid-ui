@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Experiments · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/experiments" class="bc-view active">Templates</a>
+</div>
+{% endblock %}
 {% block content %}
 <div class="fleet-header" id="fleet-header">
   <div class="fleet-stats" id="fleet-stats">
@@ -13,6 +18,7 @@
     <button class="filter-pill" data-filter="completed">Completed</button>
   </div>
   <input type="text" class="fleet-search" id="exp-search" placeholder="Search templates&hellip;">
+  <button class="act act-primary" id="exp-new-tpl-btn">+ New Template</button>
 </div>
 <div class="exp-templates" id="exp-templates">
   <div class="fleet-empty">Loading experiments&hellip;</div>
@@ -20,5 +26,6 @@
 <div class="exp-recent-runs" id="exp-recent-runs"></div>
 {% endblock %}
 {% block page_scripts %}
+<script src="/static/fleet-template-editor.js"></script>
 <script src="/static/fleet-experiments.js"></script>
 {% endblock %}

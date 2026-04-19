@@ -44,9 +44,11 @@
 
   function renderHeader() {
     if (!headerEl) return;
-    var html = '<div class="detail-header">';
-    html += '<h1 class="detail-name">' + L.esc(template.name || template.id) + '</h1>';
+    var html = '<div class="detail-header" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">';
+    html += '<h1 class="detail-name" style="flex:1;">' + L.esc(template.name || template.id) + '</h1>';
     if (template.version) html += '<span class="card-version">v' + L.esc(template.version) + '</span>';
+    html += '<button class="act act-quick" id="tpl-edit-btn">Edit</button>';
+    html += '<button class="act act-quick act-danger" id="tpl-del-btn">Delete</button>';
     html += '</div>';
     if (template.description) html += '<div class="exp-description">' + L.esc(template.description) + '</div>';
     if (template.tags && template.tags.length) {
@@ -55,6 +57,30 @@
       html += '</div>';
     }
     headerEl.innerHTML = html;
+
+    var editBtn = document.getElementById('tpl-edit-btn');
+    if (editBtn && window.TemplateEditor) {
+      editBtn.addEventListener('click', function () {
+        TemplateEditor.open(template, function () { loadData(); });
+      });
+    }
+
+    var delBtn = document.getElementById('tpl-del-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', function () {
+        var name = template.name || template.id;
+        if (!confirm('Delete template \u201c' + name + '\u201d? This also deletes all its runs.')) return;
+        L.apiFetch('/api/experiments/templates/' + encodeURIComponent(template.id), { method: 'DELETE' })
+          .then(function (res) {
+            if (!res.ok) throw new Error('Delete failed');
+            L.toast({ message: 'Template deleted', type: 'success' });
+            window.location.href = '/experiments';
+          })
+          .catch(function (e) {
+            L.toast({ message: e.message, type: 'error' });
+          });
+      });
+    }
   }
 
   function renderBody() {
