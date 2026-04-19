@@ -120,7 +120,7 @@
     loadActivityFeed();
 
     // Render sparklines
-    L.renderSparklines(agentId, bodyEl);
+    L.renderSparklines(bodyEl);
 
     // Scroll to component if hash present
     if (location.hash && location.hash.startsWith('#comp-')) {

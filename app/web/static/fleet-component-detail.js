@@ -129,6 +129,7 @@
     }
 
     bodyEl.innerHTML = html;
+    L.renderSparklines(bodyEl);
   }
 
   // ── Targeted update ───────────────────────────────────────────────

@@ -233,7 +233,9 @@
       if (evt.topic_type === 'status') a.status = evt.payload;
       else if (evt.topic_type === 'metadata') a.metadata = evt.payload;
       else if (evt.topic_type === 'state') a.state = evt.payload;
-      else if (evt.topic_type === 'cfg') a.cfg = evt.payload;
+      else if (evt.topic_type === 'cfg') a.cfg = Object.assign({}, a.cfg, evt.payload);
+      else if (evt.topic_type === 'cfg/logging') a.cfg = Object.assign({}, a.cfg, { logging: evt.payload });
+      else if (evt.topic_type === 'cfg/telemetry') a.cfg = Object.assign({}, a.cfg, { telemetry: evt.payload });
       else if (evt.topic_type === 'schema') {
         if (!L.schemas[id]) L.schemas[id] = { components: {} };
         L.schemas[id].publishes = evt.payload.publishes;
@@ -253,7 +255,9 @@
       if (evt.topic_type === 'status') comp.status = evt.payload;
       else if (evt.topic_type === 'state') comp.state = evt.payload;
       else if (evt.topic_type === 'metadata') comp.metadata = evt.payload;
-      else if (evt.topic_type === 'cfg') comp.cfg = evt.payload;
+      else if (evt.topic_type === 'cfg') comp.cfg = Object.assign({}, comp.cfg, evt.payload);
+      else if (evt.topic_type === 'cfg/logging') comp.cfg = Object.assign({}, comp.cfg, { logging: evt.payload });
+      else if (evt.topic_type === 'cfg/telemetry') comp.cfg = Object.assign({}, comp.cfg, { telemetry: evt.payload });
       else if (evt.topic_type === 'schema') {
         if (!L.schemas[id]) L.schemas[id] = { components: {} };
         L.schemas[id].components[cid] = evt.payload;

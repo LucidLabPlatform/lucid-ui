@@ -21,21 +21,21 @@
 
   // ── Sparkline rendering ────────────────────────────────────────────
 
-  L.renderSparklines = function (agentId, containerEl) {
-    var metrics = ['cpu_percent', 'memory_percent', 'disk_percent'];
-    metrics.forEach(function (metric) {
-      var key = agentId + '/' + metric;
-      var wrapId = 'spark-' + agentId + '-' + metric;
-      var wrap = containerEl.querySelector('#' + CSS.escape(wrapId));
-      if (!wrap) return;
+  L.renderSparklines = function (containerEl) {
+    var wraps = containerEl.querySelectorAll('.chart-container[data-agent][data-metric]');
+    wraps.forEach(function (wrap) {
+      var agentId = wrap.dataset.agent;
+      var componentId = wrap.dataset.component || null;
+      var metric = wrap.dataset.metric;
+      var cacheKey = componentId ? agentId + '/' + componentId : agentId;
+      var instanceKey = cacheKey + '/' + metric;
 
-      // Destroy existing instance
-      if (sparkInstances[key]) {
-        sparkInstances[key].destroy();
-        delete sparkInstances[key];
+      if (sparkInstances[instanceKey]) {
+        sparkInstances[instanceKey].destroy();
+        delete sparkInstances[instanceKey];
       }
 
-      var buf = (L.telemetryCache[agentId] && L.telemetryCache[agentId][metric]) || [];
+      var buf = (L.telemetryCache[cacheKey] && L.telemetryCache[cacheKey][metric]) || [];
       if (buf.length < 2) {
         wrap.innerHTML = '<span class="spark-empty">—</span>';
         return;
@@ -43,26 +43,23 @@
 
       var times = buf.map(function (p) { return p.ts; });
       var values = buf.map(function (p) { return p.value; });
+      var color = SPARK_COLORS[metric] || '#60a5fa';
 
       var opts = {
-        width: 120,
-        height: 30,
+        width: wrap.clientWidth || 300,
+        height: 60,
         cursor: { show: false },
         legend: { show: false },
         axes: [{ show: false }, { show: false }],
         scales: { y: { min: 0, max: 100 } },
         series: [
           {},
-          {
-            stroke: SPARK_COLORS[metric] || '#60a5fa',
-            width: 1.5,
-            fill: (SPARK_COLORS[metric] || '#60a5fa') + '18',
-          },
+          { stroke: color, width: 1.5, fill: color + '18' },
         ],
       };
 
       wrap.innerHTML = '';
-      sparkInstances[key] = new uPlot(opts, [times, values], wrap);
+      sparkInstances[instanceKey] = new uPlot(opts, [times, values], wrap);
     });
   };
 
