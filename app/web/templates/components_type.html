@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ component_type }} · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/" class="bc-view">Agents</a>
+  <a href="/components" class="bc-view active">Components</a>
+  <nav class="breadcrumbs">
+    <a href="/components" class="bc-link">Components</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current bc-selector" data-dropdown-type="type"
+          data-nav-pattern="/components/{value}"
+          data-current="{{ component_type }}">{{ component_type }}</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.componentType = "{{ component_type }}";</script>
+{% endblock %}
+{% block content %}
+<div id="bulk-bar"></div>
+<div class="fleet-header" id="fleet-header">
+  <div class="fleet-stats" id="fleet-stats">
+    <span class="fleet-stat" id="stat-total">0 components</span>
+    <span class="fleet-stat stat-online" id="stat-running">0 running</span>
+    <span class="fleet-stat stat-offline" id="stat-error">0 error</span>
+  </div>
+  <div class="fleet-filters">
+    <button class="filter-pill active" data-filter="all">All</button>
+    <button class="filter-pill" data-filter="running">Running</button>
+    <button class="filter-pill" data-filter="error">Error</button>
+  </div>
+  <input type="text" class="fleet-search" id="comp-search" placeholder="Search&hellip;">
+</div>
+<div class="components-page" id="components-page">
+  <div class="fleet-empty">Loading&hellip;</div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-components-type.js"></script>
+{% endblock %}

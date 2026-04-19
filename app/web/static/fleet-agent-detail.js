@@ -1,0 +1,262 @@
+// fleet-agent-detail.js — Agent detail page renderer
+// Depends on: fleet-utils.js, fleet.js, fleet-components.js, fleet-sparklines.js
+
+(function (L) {
+  'use strict';
+
+  var agentId = L.agentId;
+  if (!agentId) return; // not on agent detail page
+
+  var headerEl, bodyEl;
+
+  // ── Full render ───────────────────────────────────────────────────
+
+  function renderDetail() {
+    var a = L.agents[agentId];
+    if (!a) {
+      headerEl = headerEl || document.getElementById('agent-detail-header');
+      if (headerEl) headerEl.innerHTML = '<div class="fleet-empty">Agent "' + L.esc(agentId) + '" not found</div>';
+      return;
+    }
+    renderHeader(a);
+    renderBody(a);
+  }
+
+  function renderHeader(a) {
+    headerEl = headerEl || document.getElementById('agent-detail-header');
+    if (!headerEl) return;
+
+    var state = L.agentState(a);
+    var meta = a.metadata || {};
+
+    var html = '<div class="detail-header">';
+    html += '<span class="agent-dot dot-' + state + '"></span>';
+    html += '<h1 class="detail-name">' + L.esc(a.agent_id) + '</h1>';
+    html += '<span class="status-badge status-' + state + '">' + state + '</span>';
+    html += '<span class="detail-meta">';
+    html += 'Uptime: <span class="detail-uptime">' + L.fmtUptime(a.status) + '</span>';
+    html += ' \u00B7 Last seen: <span class="detail-lastseen" data-ts="' + L.escAttr(a.last_seen_ts || '') + '">' + L.fmtTs(a.last_seen_ts) + '</span>';
+    html += '</span>';
+    html += '<span class="detail-meta">';
+    if (meta.platform) html += L.esc(meta.platform) + ' / ' + L.esc(meta.architecture || '');
+    if (meta.version) html += ' \u00B7 v' + L.esc(meta.version);
+    html += '</span>';
+    html += '</div>';
+
+    headerEl.innerHTML = html;
+  }
+
+  async function renderBody(a) {
+    bodyEl = bodyEl || document.getElementById('agent-detail-body');
+    if (!bodyEl) return;
+
+    await L.loadCatalog(agentId);
+    var catalog = L.catalogs[agentId] || {};
+
+    var html = '';
+
+    // Component cards
+    var comps = Object.values(a.components || {});
+    if (comps.length) {
+      html += '<div class="tier2-section"><div class="tier2-label"><a href="/agent/' + encodeURIComponent(agentId) + '/components">Components</a></div>';
+      html += '<div class="comp-cards">';
+      comps.forEach(function (c) {
+        html += '<a class="comp-card-link" id="comp-' + L.escAttr(c.component_id) + '" href="/agent/' + encodeURIComponent(agentId) + '/components/' + encodeURIComponent(c.component_id) + '">';
+        html += L.renderComponent(agentId, c.component_id, c, catalog);
+        html += '</a>';
+      });
+      html += '</div></div>';
+    }
+
+    // Telemetry charts
+    html += '<div class="tier2-section">';
+    html += '<div class="tier2-label">Telemetry</div>';
+    html += '<div class="chart-containers">';
+    ['cpu_percent', 'memory_percent', 'disk_percent'].forEach(function (m) {
+      html += '<div class="chart-container" id="chart-container-' + L.escAttr(agentId) + '-' + m + '" data-agent="' + L.escAttr(agentId) + '" data-metric="' + m + '"></div>';
+    });
+    html += '</div></div>';
+
+    // Activity feed
+    html += '<div class="tier2-section"><div class="tier2-label">Recent Activity</div>';
+    html += '<div class="activity-feed" id="activity-' + L.escAttr(agentId) + '">Loading…</div>';
+    html += '</div>';
+
+    // Config + metadata
+    var cfg = a.cfg || {};
+    var meta = a.metadata || {};
+    html += '<div class="tier2-section tier2-info-grid">';
+    html += '<div class="info-block"><div class="tier2-label">Config</div>';
+    html += '<div class="kv-mini">';
+    html += kvLine('heartbeat', cfg.heartbeat_s ? cfg.heartbeat_s + 's' : '\u2014');
+    var logging = cfg.logging || {};
+    html += kvLine('log_level', logging.log_level || '\u2014');
+    html += '</div></div>';
+    html += '<div class="info-block"><div class="tier2-label">Metadata</div>';
+    html += '<div class="kv-mini">';
+    html += kvLine('version', meta.version || '\u2014');
+    html += kvLine('platform', (meta.platform || '\u2014') + ' / ' + (meta.architecture || '\u2014'));
+    html += kvLine('first seen', a.first_seen_ts ? new Date(a.first_seen_ts).toLocaleDateString() : '\u2014');
+    html += '</div></div>';
+    html += '</div>';
+
+    // Agent commands
+    var agentCmds = (catalog.agent || []).filter(function (c) { return c.category !== 'config'; });
+    if (agentCmds.length) {
+      html += '<div class="tier2-section"><div class="tier2-label">Agent Commands</div>';
+      html += '<div class="tier2-actions">';
+      agentCmds.forEach(function (cmd) {
+        var hb = cmd.has_body ? ' data-has-body="1"' : '';
+        var tpl = cmd.template ? ' data-template="' + L.escAttr(JSON.stringify(cmd.template)) + '"' : '';
+        html += '<button class="act" data-agent="' + L.escAttr(agentId) + '" data-action="' + L.escAttr(cmd.action) + '"' + hb + tpl + '>' + L.esc(cmd.label || cmd.action) + '</button>';
+      });
+      html += '<button class="act act-primary" data-open-panel="' + L.escAttr(agentId) + '">Full command form \u2192</button>';
+      html += '</div></div>';
+    }
+
+    bodyEl.innerHTML = html;
+
+    // Load activity feed
+    loadActivityFeed();
+
+    // Render sparklines
+    L.renderSparklines(agentId, bodyEl);
+
+    // Scroll to component if hash present
+    if (location.hash && location.hash.startsWith('#comp-')) {
+      var compEl = document.getElementById(location.hash.substring(1));
+      if (compEl) compEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ── Targeted update ───────────────────────────────────────────────
+
+  function updateDetail(dirtyIds) {
+    if (dirtyIds.indexOf(agentId) === -1) return;
+    var a = L.agents[agentId];
+    if (!a) return;
+
+    renderHeader(a);
+
+    // Update component cards
+    var catalog = L.catalogs[agentId] || {};
+    var cardsEl = bodyEl && bodyEl.querySelector('.comp-cards');
+    if (cardsEl) {
+      var comps = Object.values(a.components || {});
+      cardsEl.innerHTML = comps.map(function (c) {
+        return '<div id="comp-' + L.escAttr(c.component_id) + '">' +
+          L.renderComponent(agentId, c.component_id, c, catalog) + '</div>';
+      }).join('');
+    }
+
+    // Update sparklines
+    ['cpu_percent', 'memory_percent', 'disk_percent'].forEach(function (m) {
+      L.updateSparkline(agentId, m);
+    });
+  }
+
+  // ── Activity feed ─────────────────────────────────────────────────
+
+  async function loadActivityFeed() {
+    var feedEl = document.getElementById('activity-' + CSS.escape(agentId));
+    if (!feedEl) return;
+
+    var cmds = await L.loadCommands(agentId, 10);
+    if (!cmds || !cmds.length) {
+      feedEl.innerHTML = '<div class="comp-empty">No recent commands</div>';
+      return;
+    }
+
+    feedEl.innerHTML = cmds.map(function (cmd) {
+      var ok = cmd.result_ok;
+      var icon = ok === true ? '\u2713' : ok === false ? '\u2717' : '\u2026';
+      var cls = ok === true ? 'act-ok' : ok === false ? 'act-err' : 'act-pending';
+      var target = cmd.component_id ? cmd.component_id + '/' : '';
+      return '<div class="activity-row"><span class="activity-icon ' + cls + '">' + icon + '</span>' +
+        '<span class="activity-action">' + L.esc(target + cmd.action) + '</span>' +
+        '<span class="activity-ts" data-ts="' + L.escAttr(cmd.sent_ts || cmd.received_ts || '') + '">' + L.fmtTs(cmd.sent_ts || cmd.received_ts) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function kvLine(key, value) {
+    return '<div class="kv-line"><span class="kv-k">' + L.esc(key) + '</span><span class="kv-v">' + L.esc(value) + '</span></div>';
+  }
+
+  // ── Event delegation ──────────────────────────────────────────────
+
+  document.addEventListener('click', function (e) {
+    // Action buttons
+    var actBtn = e.target.closest('.act[data-action]');
+    if (actBtn) {
+      handleActionClick(actBtn);
+      return;
+    }
+
+    // Open command panel
+    var panelBtn = e.target.closest('[data-open-panel]');
+    if (panelBtn) {
+      if (typeof L.openCommandPanel === 'function') L.openCommandPanel({ agentId: panelBtn.dataset.openPanel });
+      return;
+    }
+
+    // Chart range button
+    var rangeBtn = e.target.closest('.chart-range-btn');
+    if (rangeBtn) {
+      L.handleChartRangeClick(rangeBtn);
+      return;
+    }
+
+    // Sparkline click → toggle full chart
+    var sparkEl = e.target.closest('.spark-canvas');
+    if (sparkEl) {
+      var met = sparkEl.dataset.metric;
+      var chartContainer = document.getElementById('chart-container-' + CSS.escape(agentId) + '-' + CSS.escape(met));
+      if (chartContainer) L.toggleFullChart(agentId, met, chartContainer);
+      return;
+    }
+  });
+
+  function handleActionClick(btn) {
+    var aid = btn.dataset.agent;
+    var compId = btn.dataset.comp || null;
+    var action = btn.dataset.action;
+    var hasBody = btn.dataset.hasBody === '1';
+
+    if (hasBody) {
+      var tpl = {};
+      try { tpl = JSON.parse(btn.dataset.template || '{}'); } catch (e) {}
+      if (Object.keys(tpl).length === 0) {
+        hasBody = false;
+      } else {
+        if (typeof L.openCommandPanel === 'function') {
+          L.openCommandPanel({ agentId: aid, componentId: compId, action: action, template: tpl });
+        }
+        return;
+      }
+    }
+
+    var origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '\u2026';
+
+    L.fireCmd(aid, compId, action, {}).then(function (result) {
+      btn.textContent = result.ok ? '\u2713' : '\u2717';
+      btn.style.color = result.ok ? 'var(--green)' : 'var(--red)';
+      setTimeout(function () {
+        btn.textContent = origText;
+        btn.style.color = '';
+        btn.disabled = false;
+      }, 2000);
+    });
+  }
+
+  // ── Register with core render loop ────────────────────────────────
+
+  L.registerPageRenderer({
+    renderFull: renderDetail,
+    renderDirty: updateDetail,
+    renderStats: null,
+  });
+
+})(window.LUCID);

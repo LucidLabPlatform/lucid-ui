@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ agent_id }} · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/" class="bc-view">Agents</a>
+  <a href="/components" class="bc-view">Components</a>
+  <nav class="breadcrumbs">
+    <a href="/" class="bc-link">Agents</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current bc-selector" data-dropdown-type="agent"
+          data-nav-pattern="/agent/{value}"
+          data-current="{{ agent_id }}">{{ agent_id }}</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.agentId = "{{ agent_id }}";</script>
+{% endblock %}
+{% block content %}
+<div class="agent-detail" id="agent-detail">
+  <div class="agent-detail-header" id="agent-detail-header">Loading…</div>
+  <div class="agent-detail-body" id="agent-detail-body"></div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-agent-detail.js"></script>
+{% endblock %}

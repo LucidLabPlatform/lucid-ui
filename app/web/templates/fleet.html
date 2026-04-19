@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Fleet · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/" class="bc-view active">Agents</a>
+  <a href="/components" class="bc-view">Components</a>
+</div>
+{% endblock %}
+{% block content %}
+<div id="bulk-bar"></div>
+<div class="fleet-header" id="fleet-header">
+  <div class="fleet-stats" id="fleet-stats">
+    <span class="fleet-stat" id="stat-total">0 agents</span>
+    <span class="fleet-stat stat-online" id="stat-online">0 online</span>
+    <span class="fleet-stat stat-offline" id="stat-offline">0 offline</span>
+  </div>
+  <div class="fleet-filters">
+    <button class="filter-pill active" data-filter="all">All</button>
+    <button class="filter-pill" data-filter="online">Online</button>
+    <button class="filter-pill" data-filter="offline">Offline</button>
+  </div>
+  <input type="text" class="fleet-search" id="fleet-search" placeholder="Search&hellip;">
+</div>
+<div class="fleet-grid" id="fleet-grid">
+  <div class="fleet-empty" id="fleet-empty">Loading fleet&hellip;</div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-cards.js"></script>
+{% endblock %}

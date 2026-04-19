@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run_id }} · Experiments · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <nav class="breadcrumbs" style="border-left:none">
+    <a href="/experiments" class="bc-link">Experiments</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current">Run {{ run_id[:8] }}</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.runId = "{{ run_id }}";</script>
+{% endblock %}
+{% block content %}
+<div class="exp-run" id="exp-run">
+  <div class="exp-run-header" id="exp-run-header">Loading&hellip;</div>
+  <div class="exp-run-timeline" id="exp-run-timeline"></div>
+</div>
+<!-- Approval modal -->
+<div class="exp-approval-overlay hidden" id="exp-approval-overlay">
+  <div class="exp-approval-modal" id="exp-approval-modal">
+    <div class="exp-approval-message" id="exp-approval-message"></div>
+    <div class="exp-approval-actions">
+      <button class="act act-primary" id="exp-approve-btn">Approve</button>
+      <button class="act" id="exp-approval-dismiss">Dismiss</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-experiment-run.js"></script>
+{% endblock %}

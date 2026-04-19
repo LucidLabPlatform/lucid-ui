@@ -5,77 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}LUCID{% endblock %}</title>
   <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/uplot@1.6.30/dist/uPlot.min.css">
 </head>
 <body>
   <nav class="topnav">
     <a href="/" class="brand">LUCID</a>
     <span class="nav-sep">Central Command</span>
-    <div class="nav-links">
-      <a href="/" class="nav-link">Fleet</a>
-      {% if show_experiments %}<a href="/experiments/templates" class="nav-link">Experiments</a>{% endif %}
-      {% if show_ai %}<a href="/ai" class="nav-link">AI Assistant</a>{% endif %}
-      <div class="nav-tools-wrap">
-        <span class="nav-tools" id="tools-btn">Tools ▾</span>
-        <div class="tools-dropdown" id="tools-dropdown">
-          <a href="/topic-tree" class="tools-item">Topic Tree</a>
-          <a href="/topic-links" class="tools-item">Topic Links</a>
-          <a href="/users" class="tools-item">Users</a>
-          <a href="/auth-log" class="tools-item">Auth Log</a>
-          <a href="/schema" class="tools-item">Schema</a>
-        </div>
-      </div>
-    </div>
+    <a href="/" class="nav-tab{% if page_id in ('fleet', 'agent_detail', 'agent_components', 'component_detail', 'components', 'components_type') %} active{% endif %}">Fleet</a>
+    <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run') %} active{% endif %}">Experiments</a>
+    <div class="nav-spacer"></div>
+    <kbd class="kbd-hint" id="palette-hint">&#8984;K</kbd>
     <div class="nav-user">
       {% if user %}<span class="nav-username">{{ user }}</span>
       <a href="/logout" class="nav-logout">Logout</a>{% endif %}
-      <span id="ws-status" class="ws-badge ws-disconnected">⬤ disconnected</span>
+      <span id="ws-status" class="ws-badge ws-disconnected">&#x2B24; disconnected</span>
     </div>
   </nav>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-  <script>
-    // Shared WebSocket with auto-reconnect
-    let ws, wsReady = false;
-    const wsHandlers = [];
+  {% block subnav %}{% endblock %}
+  <main>{% block content %}{% endblock %}</main>
 
-    function wsConnect() {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}/api/ws`);
-      ws.onopen = () => {
-        wsReady = true;
-        document.getElementById('ws-status').className = 'ws-badge ws-connected';
-        document.getElementById('ws-status').textContent = '⬤ live';
-      };
-      ws.onclose = () => {
-        wsReady = false;
-        document.getElementById('ws-status').className = 'ws-badge ws-disconnected';
-        document.getElementById('ws-status').textContent = '⬤ disconnected';
-        setTimeout(wsConnect, 3000);
-      };
-      ws.onmessage = (e) => {
-        let evt;
-        try { evt = JSON.parse(e.data); } catch { return; }
-        wsHandlers.forEach(h => h(evt));
-      };
-    }
+  <!-- Global overlays (available on all pages) -->
+  <div class="cmd-panel-overlay hidden" id="cmd-panel-overlay"></div>
+  <div class="cmd-panel hidden" id="cmd-panel"></div>
+  <div class="palette-overlay hidden" id="palette-overlay">
+    <div class="palette" id="palette">
+      <input type="text" class="palette-input" id="palette-input" placeholder="Search agents, components, commands…" autocomplete="off">
+      <div class="palette-results" id="palette-results"></div>
+    </div>
+  </div>
+  <div class="toast-container" id="toast-container"></div>
 
-    function onWsEvent(handler) { wsHandlers.push(handler); }
-
-    wsConnect();
-
-    // Tools dropdown
-    document.getElementById('tools-btn')?.addEventListener('click', function() {
-      this.classList.toggle('open');
-      document.getElementById('tools-dropdown').classList.toggle('open');
-    });
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.nav-tools-wrap')) {
-        document.getElementById('tools-btn')?.classList.remove('open');
-        document.getElementById('tools-dropdown')?.classList.remove('open');
-      }
-    });
-  </script>
-  {% block scripts %}{% endblock %}
+  <!-- Shared JS -->
+  <script>window.LUCID = window.LUCID || {}; LUCID.apiBase = "";</script>
+  {% block page_data %}{% endblock %}
+  <script src="https://unpkg.com/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+  <script src="/static/fleet-utils.js"></script>
+  <script src="/static/fleet.js"></script>
+  <script src="/static/fleet-toasts.js"></script>
+  <script src="/static/fleet-components.js"></script>
+  <script src="/static/fleet-sparklines.js"></script>
+  <script src="/static/fleet-command-panel.js"></script>
+  <script src="/static/fleet-command-palette.js"></script>
+  <script src="/static/fleet-breadcrumb.js"></script>
+  <script src="/static/fleet-bulk-commands.js"></script>
+  {% block page_scripts %}{% endblock %}
 </body>
 </html>

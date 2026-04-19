@@ -11,8 +11,6 @@ router = APIRouter()
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "web", "templates")
 templates = Jinja2Templates(directory=_TEMPLATE_DIR)
-SHOW_EXPERIMENTS = os.environ.get("LUCID_UI_ENABLE_EXPERIMENTS", "false").lower() == "true"
-SHOW_AI = os.environ.get("LUCID_UI_ENABLE_AI", "false").lower() == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -60,117 +58,78 @@ def _ctx(request: Request, **extra) -> dict:
     return {
         "request": request,
         "user": result,
-        "show_experiments": SHOW_EXPERIMENTS,
-        "show_ai": SHOW_AI,
+        "orchestrator_url": os.environ.get("ORCHESTRATOR_URL", "http://localhost:8000"),
         **extra,
     }
 
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request):
-    ctx = _ctx(request)
+def fleet_dashboard(request: Request):
+    ctx = _ctx(request, page_id="fleet")
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="fleet.html", context=ctx)
+
+
+@router.get("/agent/{agent_id}/components/{component_id}", response_class=HTMLResponse)
+def component_detail(request: Request, agent_id: str, component_id: str):
+    ctx = _ctx(request, page_id="component_detail", agent_id=agent_id, component_id=component_id)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="component_detail.html", context=ctx)
+
+
+@router.get("/agent/{agent_id}/components", response_class=HTMLResponse)
+def agent_components(request: Request, agent_id: str):
+    ctx = _ctx(request, page_id="agent_components", agent_id=agent_id)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="agent_components.html", context=ctx)
 
 
 @router.get("/agent/{agent_id}", response_class=HTMLResponse)
-def agent_detail(agent_id: str, request: Request):
-    ctx = _ctx(request, agent_id=agent_id)
+def agent_detail(request: Request, agent_id: str):
+    ctx = _ctx(request, page_id="agent_detail", agent_id=agent_id)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="agent.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="agent_detail.html", context=ctx)
 
 
-@router.get("/agent/{agent_id}/component/{component_id}", response_class=HTMLResponse)
-def component_detail(agent_id: str, component_id: str, request: Request):
-    ctx = _ctx(request, agent_id=agent_id, component_id=component_id)
+@router.get("/experiments/runs/{run_id}", response_class=HTMLResponse)
+def experiment_run(request: Request, run_id: str):
+    ctx = _ctx(request, page_id="experiment_run", run_id=run_id)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="component.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="experiment_run.html", context=ctx)
 
 
-@router.get("/users", response_class=HTMLResponse)
-def users_page(request: Request):
-    ctx = _ctx(request)
+@router.get("/experiments/{template_id}", response_class=HTMLResponse)
+def experiment_template(request: Request, template_id: str):
+    ctx = _ctx(request, page_id="experiment_template", template_id=template_id)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="users.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="experiment_template.html", context=ctx)
 
 
-@router.get("/auth-log", response_class=HTMLResponse)
-def auth_log_page(request: Request):
-    ctx = _ctx(request)
+@router.get("/experiments", response_class=HTMLResponse)
+def experiments_page(request: Request):
+    ctx = _ctx(request, page_id="experiments")
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="auth_log.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="experiments.html", context=ctx)
 
 
-@router.get("/schema", response_class=HTMLResponse)
-def schema_page(request: Request):
-    ctx = _ctx(request)
+@router.get("/components/{component_type}", response_class=HTMLResponse)
+def components_by_type(request: Request, component_type: str):
+    ctx = _ctx(request, page_id="components_type", component_type=component_type)
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="schema.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="components_type.html", context=ctx)
 
 
-if SHOW_EXPERIMENTS:
-    @router.get("/experiments/templates", response_class=HTMLResponse)
-    def experiments_templates_page(request: Request):
-        ctx = _ctx(request)
-        if ctx is None:
-            return require_login(request)
-        return templates.TemplateResponse(
-            request=request,
-            name="experiments_templates.html",
-            context=ctx,
-        )
-
-
-    @router.get("/experiments/runs", response_class=HTMLResponse)
-    def experiments_runs_page(request: Request):
-        ctx = _ctx(request)
-        if ctx is None:
-            return require_login(request)
-        return templates.TemplateResponse(
-            request=request,
-            name="experiments_runs.html",
-            context=ctx,
-        )
-
-
-    @router.get("/experiments/runs/{run_id}", response_class=HTMLResponse)
-    def experiments_run_detail_page(run_id: str, request: Request):
-        ctx = _ctx(request, run_id=run_id)
-        if ctx is None:
-            return require_login(request)
-        return templates.TemplateResponse(
-            request=request,
-            name="experiments_run_detail.html",
-            context=ctx,
-        )
-
-
-@router.get("/topic-tree", response_class=HTMLResponse)
-def topic_tree_page(request: Request):
-    ctx = _ctx(request)
+@router.get("/components", response_class=HTMLResponse)
+def components_page(request: Request):
+    ctx = _ctx(request, page_id="components")
     if ctx is None:
         return require_login(request)
-    return templates.TemplateResponse(request=request, name="topic_tree.html", context=ctx)
-
-
-@router.get("/topic-links", response_class=HTMLResponse)
-def topic_links_page(request: Request):
-    ctx = _ctx(request)
-    if ctx is None:
-        return require_login(request)
-    return templates.TemplateResponse(request=request, name="topic_links.html", context=ctx)
-
-
-if SHOW_AI:
-    @router.get("/ai", response_class=HTMLResponse)
-    def ai_chat_page(request: Request):
-        ctx = _ctx(request)
-        if ctx is None:
-            return require_login(request)
-        return templates.TemplateResponse(request=request, name="ai_chat.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="components.html", context=ctx)

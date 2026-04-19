@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ component_id }} · {{ agent_id }} · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/" class="bc-view">Agents</a>
+  <a href="/components" class="bc-view">Components</a>
+  <nav class="breadcrumbs">
+    <a href="/" class="bc-link">Agents</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-selector" data-dropdown-type="agent"
+          data-nav-pattern="/agent/{value}/components"
+          data-current="{{ agent_id }}">{{ agent_id }}</span>
+    <span class="bc-sep">&gt;</span>
+    <a href="/agent/{{ agent_id }}/components" class="bc-link">Components</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current bc-selector" data-dropdown-type="component"
+          data-agent-id="{{ agent_id }}"
+          data-nav-pattern="/agent/{{ agent_id }}/components/{value}"
+          data-current="{{ component_id }}">{{ component_id }}</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.agentId = "{{ agent_id }}"; LUCID.componentId = "{{ component_id }}";</script>
+{% endblock %}
+{% block content %}
+<div class="component-detail" id="component-detail">
+  <div class="component-detail-header" id="component-detail-header">Loading&hellip;</div>
+  <div class="component-detail-body" id="component-detail-body"></div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-component-detail.js"></script>
+{% endblock %}

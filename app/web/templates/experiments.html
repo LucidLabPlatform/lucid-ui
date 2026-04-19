@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Experiments · LUCID{% endblock %}
+{% block content %}
+<div class="fleet-header" id="fleet-header">
+  <div class="fleet-stats" id="fleet-stats">
+    <span class="fleet-stat" id="stat-templates">0 templates</span>
+    <span class="fleet-stat stat-online" id="stat-runs-active">0 active</span>
+    <span class="fleet-stat" id="stat-runs-total">0 runs</span>
+  </div>
+  <div class="fleet-filters">
+    <button class="filter-pill active" data-filter="all">All</button>
+    <button class="filter-pill" data-filter="running">Running</button>
+    <button class="filter-pill" data-filter="completed">Completed</button>
+  </div>
+  <input type="text" class="fleet-search" id="exp-search" placeholder="Search templates&hellip;">
+</div>
+<div class="exp-templates" id="exp-templates">
+  <div class="fleet-empty">Loading experiments&hellip;</div>
+</div>
+<div class="exp-recent-runs" id="exp-recent-runs"></div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-experiments.js"></script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Components · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/" class="bc-view">Agents</a>
+  <a href="/components" class="bc-view active">Components</a>
+</div>
+{% endblock %}
+{% block content %}
+<div id="bulk-bar"></div>
+<div class="fleet-header" id="fleet-header">
+  <div class="fleet-stats">
+    <span class="fleet-stat" id="stat-total-comps">0 components</span>
+    <span class="fleet-stat stat-online" id="stat-running-comps">0 running</span>
+    <span class="fleet-stat stat-offline" id="stat-error-comps">0 error</span>
+  </div>
+  <div class="fleet-filters">
+    <button class="filter-pill active" data-filter="all">All</button>
+    <button class="filter-pill" data-filter="running">Running</button>
+    <button class="filter-pill" data-filter="error">Error</button>
+  </div>
+  <input type="text" class="fleet-search" id="comp-search" placeholder="Search components…">
+</div>
+<div class="components-page" id="components-page">
+  <div class="fleet-empty">Loading components…</div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-components-page.js"></script>
+{% endblock %}
