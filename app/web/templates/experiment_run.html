@@ -2,7 +2,8 @@
 {% block title %}Run {{ run_id }} · Experiments · LUCID{% endblock %}
 {% block subnav %}
 <div class="subnav">
-  <nav class="breadcrumbs" style="border-left:none">
+  <a href="/experiments" class="bc-view">Templates</a>
+  <nav class="breadcrumbs">
     <a href="/experiments" class="bc-link">Experiments</a>
     <span class="bc-sep">&gt;</span>
     <span class="bc-current">Run {{ run_id[:8] }}</span>

@@ -12,6 +12,22 @@
     return renderer(agentId, compId, comp, catalog);
   };
 
+  // ── Quick-command filter ────────────────────────────────────────────
+  // Card only shows the most important commands; detail page shows all.
+
+  function quickCommands(commands) {
+    if (!commands || !commands.length) return [];
+    return commands.filter(function (cmd) {
+      var a = cmd.action.toLowerCase();
+      if (a.indexOf('cfg') !== -1) return false;
+      if (a.indexOf('navigate') !== -1) return false;
+      if (a.indexOf('keystone') !== -1) return false;
+      if (a.indexOf('image_shift') !== -1) return false;
+      if (a.indexOf('aspect') !== -1) return false;
+      return true;
+    });
+  }
+
   // ── Action buttons HTML ────────────────────────────────────────────
 
   function actionsHtml(agentId, compId, commands) {
@@ -91,8 +107,7 @@
     html += '</div>';
     html += '</div>';
     html += '</div>';
-    html += actionsHtml(agentId, compId, commands);
-    html += capsHtml(comp);
+    html += actionsHtml(agentId, compId, quickCommands(commands));
 
     return '<div class="comp-card comp-led-strip">' + html + '</div>';
   }
@@ -145,8 +160,7 @@
       html += '</div>';
     }
     html += '</div></div>';
-    html += actionsHtml(agentId, compId, commands);
-    html += capsHtml(comp);
+    html += actionsHtml(agentId, compId, quickCommands(commands));
 
     return '<div class="comp-card comp-cpu-monitor">' + html + '</div>';
   }
@@ -166,8 +180,7 @@
     html += metricRow('Subscribers', s.subscriptions != null ? s.subscriptions : '—');
     if (s.active_topics != null) html += metricRow('Active Topics', s.active_topics);
     html += '</div></div>';
-    html += actionsHtml(agentId, compId, commands);
-    html += capsHtml(comp);
+    html += actionsHtml(agentId, compId, quickCommands(commands));
 
     return '<div class="comp-card comp-ros-bridge">' + html + '</div>';
   }
@@ -186,7 +199,7 @@
     html += '<span class="comp-badge ' + (rx === 'true' ? 'badge-active' : 'badge-inactive') + '">Receive: ' + (rx === 'true' ? 'Active' : 'Off') + '</span>';
     html += '<span class="comp-badge ' + (tx === 'true' ? 'badge-active' : 'badge-inactive') + '">Send: ' + (tx === 'true' ? 'Active' : 'Off') + '</span>';
     html += '</div></div>';
-    html += actionsHtml(agentId, compId, commands);
+    html += actionsHtml(agentId, compId, quickCommands(commands));
 
     return '<div class="comp-card">' + html + '</div>';
   }
@@ -212,8 +225,7 @@
       html += '<div class="comp-empty">No state data</div>';
     }
     html += '</div>';
-    html += actionsHtml(agentId, compId, commands);
-    html += capsHtml(comp);
+    html += actionsHtml(agentId, compId, quickCommands(commands));
 
     return '<div class="comp-card">' + html + '</div>';
   }

@@ -127,11 +127,14 @@
       L.commandHistory.unshift(entry);
       if (L.commandHistory.length > 50) L.commandHistory.length = 50;
 
+      var target = agentId + (componentId ? '/' + componentId : '');
+      var details = { target: target, request: payload, response: result };
+
       if (ok) {
-        L.toast({ message: action + ' \u2713 ' + L.fmtDuration(elapsed), type: 'success' });
+        L.toast({ message: action + ' \u2713 ' + L.fmtDuration(elapsed), type: 'success', details: details });
       } else {
         var errMsg = (result && result.error) || (result && result.detail) || 'failed';
-        L.toast({ message: action + ' \u2717 ' + errMsg, type: 'error' });
+        L.toast({ message: action + ' \u2717 ' + errMsg, type: 'error', details: details });
       }
 
       return entry;
@@ -174,12 +177,12 @@
 
     ws.onopen = function () {
       var el = document.getElementById('ws-status');
-      if (el) { el.className = 'ws-badge ws-connected'; el.textContent = '\u2B24 live'; }
+      if (el) { el.className = 'ws-dot ws-dot-connected'; }
     };
 
     ws.onclose = function () {
       var el = document.getElementById('ws-status');
-      if (el) { el.className = 'ws-badge ws-disconnected'; el.textContent = '\u2B24 disconnected'; }
+      if (el) { el.className = 'ws-dot ws-dot-disconnected'; }
       clearTimeout(wsReconnectTimeout);
       wsReconnectTimeout = setTimeout(wsConnect, 3000);
     };
@@ -306,6 +309,20 @@
       els[i].textContent = L.fmtTs(els[i].dataset.ts);
     }
   }
+
+  // ── Avatar dropdown ────────────────────────────────────────────────
+  (function () {
+    var avatarBtn = document.getElementById('nav-avatar');
+    var dropdown = document.getElementById('nav-avatar-dropdown');
+    if (!avatarBtn || !dropdown) return;
+    avatarBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function () {
+      dropdown.classList.add('hidden');
+    });
+  })();
 
   // ── Boot ───────────────────────────────────────────────────────────
   // Page-specific JS registers its renderer, then the render loop picks it up.

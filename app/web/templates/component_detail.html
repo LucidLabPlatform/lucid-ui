@@ -7,9 +7,10 @@
   <nav class="breadcrumbs">
     <a href="/" class="bc-link">Agents</a>
     <span class="bc-sep">&gt;</span>
+    <a href="/agent/{{ agent_id }}" class="bc-link">{{ agent_id }}</a>
     <span class="bc-selector" data-dropdown-type="agent"
           data-nav-pattern="/agent/{value}/components"
-          data-current="{{ agent_id }}">{{ agent_id }}</span>
+          data-current="{{ agent_id }}"></span>
     <span class="bc-sep">&gt;</span>
     <a href="/agent/{{ agent_id }}/components" class="bc-link">Components</a>
     <span class="bc-sep">&gt;</span>

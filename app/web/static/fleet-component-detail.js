@@ -105,19 +105,7 @@
       html += '</div></div>';
     }
 
-    // Section 5: Metadata & capabilities
-    var meta = comp.metadata || {};
-    if (meta.capabilities && meta.capabilities.length) {
-      html += '<div class="tier2-section">';
-      html += '<div class="tier2-label">Capabilities</div>';
-      html += '<div class="caps-list">';
-      meta.capabilities.forEach(function (cap) {
-        html += '<span class="pill">' + L.esc(cap) + '</span>';
-      });
-      html += '</div></div>';
-    }
-
-    // Section 6: Schema
+    // Section 5: Schema
     var schema = L.schemas[agentId] && L.schemas[agentId].components && L.schemas[agentId].components[componentId];
     if (schema) {
       html += '<div class="tier2-section">';

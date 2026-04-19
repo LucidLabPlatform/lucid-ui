@@ -133,3 +133,11 @@ def components_page(request: Request):
     if ctx is None:
         return require_login(request)
     return templates.TemplateResponse(request=request, name="components.html", context=ctx)
+
+
+@router.get("/users", response_class=HTMLResponse)
+def users_page(request: Request):
+    ctx = _ctx(request, page_id="users")
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="users.html", context=ctx)

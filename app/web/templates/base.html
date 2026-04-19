@@ -9,17 +9,28 @@
 </head>
 <body>
   <nav class="topnav">
+    <span id="ws-status" class="ws-dot ws-dot-disconnected"></span>
     <a href="/" class="brand">LUCID</a>
-    <span class="nav-sep">Central Command</span>
     <a href="/" class="nav-tab{% if page_id in ('fleet', 'agent_detail', 'agent_components', 'component_detail', 'components', 'components_type') %} active{% endif %}">Fleet</a>
     <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run') %} active{% endif %}">Experiments</a>
+    <a href="/users" class="nav-tab{% if page_id == 'users' %} active{% endif %}">Users</a>
     <div class="nav-spacer"></div>
-    <kbd class="kbd-hint" id="palette-hint">&#8984;K</kbd>
-    <div class="nav-user">
-      {% if user %}<span class="nav-username">{{ user }}</span>
-      <a href="/logout" class="nav-logout">Logout</a>{% endif %}
-      <span id="ws-status" class="ws-badge ws-disconnected">&#x2B24; disconnected</span>
+    <button class="nav-search-btn" id="palette-hint" aria-label="Search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    {% if user %}
+    <div class="nav-avatar-wrap" id="nav-avatar-wrap">
+      <button class="nav-avatar" id="nav-avatar">{{ user[0]|upper }}</button>
+      <div class="nav-avatar-dropdown hidden" id="nav-avatar-dropdown">
+        <div class="nav-avatar-info">
+          <span class="nav-avatar-name">{{ user }}</span>
+          <span class="nav-avatar-role">Administrator</span>
+        </div>
+        <div class="nav-avatar-divider"></div>
+        <a href="/logout" class="nav-avatar-action">Logout</a>
+      </div>
     </div>
+    {% endif %}
   </nav>
   {% block subnav %}{% endblock %}
   <main>{% block content %}{% endblock %}</main>
@@ -39,6 +50,7 @@
   <script>window.LUCID = window.LUCID || {}; LUCID.apiBase = "";</script>
   {% block page_data %}{% endblock %}
   <script src="https://unpkg.com/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
+  <script src="https://unpkg.com/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="/static/fleet-utils.js"></script>
   <script src="/static/fleet.js"></script>
   <script src="/static/fleet-toasts.js"></script>
