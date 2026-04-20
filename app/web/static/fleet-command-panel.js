@@ -224,6 +224,29 @@
     buildPayloadForm(tpl);
   }
 
+  function renderFieldInput(c, value, id) {
+    if (c.type === 'enum') {
+      var out = '<select class="panel-input" id="' + id + '">';
+      (c.options || []).forEach(function (opt) {
+        var sel = opt === value ? ' selected' : '';
+        out += '<option value="' + L.escAttr(opt) + '"' + sel + '>' + L.esc(opt) + '</option>';
+      });
+      return out + '</select>';
+    }
+    if (c.type === 'slider') {
+      var v = typeof value === 'number' ? value : Math.round((c.min + c.max) / 2);
+      return '<div class="slider-row"><input type="range" id="' + id + '" class="panel-slider" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '" value="' + v + '" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">' + v + '</span></div>';
+    }
+    if (c.type === 'number') {
+      return '<input type="number" id="' + id + '" class="panel-input" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '" value="' + (value != null ? value : 0) + '">';
+    }
+    if (c.type === 'toggle') {
+      var checked = value === true || value === 'true' ? ' checked' : '';
+      return '<label class="toggle-label"><input type="checkbox" id="' + id + '" class="panel-toggle"' + checked + '><span>' + (value === true || value === 'true' ? 'on' : 'off') + '</span></label>';
+    }
+    return '<input type="text" id="' + id + '" class="panel-input" value="' + L.escAttr(value != null ? value : '') + '">';
+  }
+
   function buildPayloadForm(template) {
     var formEl = document.getElementById('panel-payload-form');
     var jsonEl = document.getElementById('panel-json');
@@ -248,41 +271,52 @@
       return;
     }
 
-    var html = '';
-    fields.forEach(function (f, i) {
-      var c = f.control;
-      var id = 'pf-' + i;
-      var inputHtml = '';
-
-      if (c.type === 'enum') {
-        inputHtml = '<select class="panel-input" id="' + id + '">';
-        (c.options || []).forEach(function (opt) {
-          var sel = opt === f.value ? ' selected' : '';
-          inputHtml += '<option value="' + L.escAttr(opt) + '"' + sel + '>' + L.esc(opt) + '</option>';
-        });
-        inputHtml += '</select>';
-      } else if (c.type === 'slider') {
-        var val = typeof f.value === 'number' ? f.value : Math.round((c.min + c.max) / 2);
-        inputHtml = '<div class="slider-row"><input type="range" id="' + id + '" class="panel-slider" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '" value="' + val + '" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">' + val + '</span></div>';
-      } else if (c.type === 'number') {
-        inputHtml = '<input type="number" id="' + id + '" class="panel-input" min="' + c.min + '" max="' + c.max + '" step="' + c.step + '" value="' + (f.value != null ? f.value : 0) + '">';
-      } else if (c.type === 'toggle') {
-        var checked = f.value === true || f.value === 'true' ? ' checked' : '';
-        inputHtml = '<label class="toggle-label"><input type="checkbox" id="' + id + '" class="panel-toggle"' + checked + '><span>' + (f.value === true || f.value === 'true' ? 'on' : 'off') + '</span></label>';
+    // Group fields by top-level key. Nested fields (path contains '.') are grouped
+    // under their first path segment; top-level fields stand alone.
+    var groups = [];
+    var groupMap = {};
+    fields.forEach(function (f) {
+      var dotIdx = f.path.indexOf('.');
+      if (dotIdx === -1) {
+        groups.push({ key: null, fields: [f] });
       } else {
-        inputHtml = '<input type="text" id="' + id + '" class="panel-input" value="' + L.escAttr(f.value != null ? f.value : '') + '">';
+        var topKey = f.path.substring(0, dotIdx);
+        if (!groupMap[topKey]) {
+          groupMap[topKey] = { key: topKey, fields: [] };
+          groups.push(groupMap[topKey]);
+        }
+        groupMap[topKey].fields.push(f);
       }
+    });
 
-      html += '<div class="payload-field">';
-      html += '<label class="payload-label" for="' + id + '">' + L.esc(f.path) + '</label>';
-      if (f.description) html += '<div class="payload-desc">' + L.esc(f.description) + '</div>';
-      html += inputHtml;
-      html += '</div>';
+    var html = '';
+    var allFields = [];
+
+    groups.forEach(function (group) {
+      if (group.key !== null) {
+        html += '<details class="payload-group" open>';
+        html += '<summary class="payload-group-label">' + L.esc(group.key) + '</summary>';
+        html += '<div class="payload-group-body">';
+      }
+      group.fields.forEach(function (f) {
+        var i = allFields.length;
+        var id = 'pf-' + i;
+        var label = group.key !== null ? f.path.substring(group.key.length + 1) : f.path;
+        html += '<div class="payload-field">';
+        html += '<label class="payload-label" for="' + id + '">' + L.esc(label) + '</label>';
+        if (f.description) html += '<div class="payload-desc">' + L.esc(f.description) + '</div>';
+        html += renderFieldInput(f.control, f.value, id);
+        html += '</div>';
+        allFields.push({ path: f.path, control: f.control });
+      });
+      if (group.key !== null) {
+        html += '</div></details>';
+      }
     });
 
     formEl.innerHTML = html;
-    formEl.dataset.fieldCount = fields.length;
-    formEl.dataset.fields = JSON.stringify(fields.map(function (f) { return { path: f.path, control: f.control }; }));
+    formEl.dataset.fieldCount = allFields.length;
+    formEl.dataset.fields = JSON.stringify(allFields);
 
     // Sync JSON
     syncFormToJson();

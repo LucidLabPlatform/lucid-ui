@@ -68,14 +68,40 @@
       html += '</div></div>';
     }
 
-    // Telemetry charts
+    // Telemetry charts + config
     html += '<div class="tier2-section">';
     html += '<div class="tier2-label">Telemetry</div>';
     html += '<div class="chart-containers">';
     ['cpu_percent', 'memory_percent', 'disk_percent'].forEach(function (m) {
       html += '<div class="chart-container" id="chart-container-' + L.escAttr(agentId) + '-' + m + '" data-agent="' + L.escAttr(agentId) + '" data-metric="' + m + '"></div>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    var telCfg = (a.cfg || {}).telemetry;
+    if (telCfg) {
+      html += '<table class="telemetry-cfg-table">';
+      html += '<thead><tr><th>Metric</th><th>Enabled</th><th>Interval</th><th>Threshold</th></tr></thead><tbody>';
+      Object.keys(telCfg).forEach(function (metric) {
+        var m = telCfg[metric] || {};
+        var enabled = m.enabled != null ? (m.enabled ? '\u2713' : '\u2717') : '\u2014';
+        var interval = m.interval_s != null ? m.interval_s + 's' : '\u2014';
+        var threshold = m.change_threshold_percent != null ? m.change_threshold_percent + '%' : '\u2014';
+        html += '<tr><td>' + L.esc(metric) + '</td><td>' + enabled + '</td><td>' + interval + '</td><td>' + threshold + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // Installed components (from agent state)
+    var installedComps = (a.state || {}).components;
+    if (installedComps && installedComps.length) {
+      html += '<div class="tier2-section"><div class="tier2-label">Installed Components</div>';
+      html += '<div class="comp-pills">';
+      installedComps.forEach(function (c) {
+        var cid = typeof c === 'object' ? c.component_id : c;
+        html += '<span class="pill">' + L.esc(cid) + '</span>';
+      });
+      html += '</div></div>';
+    }
 
     // Activity feed
     html += '<div class="tier2-section"><div class="tier2-label">Recent Activity</div>';
@@ -99,6 +125,23 @@
     html += kvLine('first seen', a.first_seen_ts ? new Date(a.first_seen_ts).toLocaleDateString() : '\u2014');
     html += '</div></div>';
     html += '</div>';
+
+    // Agent schema
+    var agentSchema = L.schemas[agentId];
+    if (agentSchema && (agentSchema.publishes || agentSchema.subscribes)) {
+      html += '<div class="tier2-section"><div class="tier2-label">Schema</div>';
+      if (agentSchema.publishes && agentSchema.publishes.length) {
+        html += '<div class="schema-group"><span class="schema-group-label">Publishes</span><div class="comp-pills">';
+        agentSchema.publishes.forEach(function (t) { html += '<span class="pill pill-pub">' + L.esc(t) + '</span>'; });
+        html += '</div></div>';
+      }
+      if (agentSchema.subscribes && agentSchema.subscribes.length) {
+        html += '<div class="schema-group"><span class="schema-group-label">Subscribes</span><div class="comp-pills">';
+        agentSchema.subscribes.forEach(function (t) { html += '<span class="pill pill-sub">' + L.esc(t) + '</span>'; });
+        html += '</div></div>';
+      }
+      html += '</div>';
+    }
 
     // Agent commands
     var agentCmds = (catalog.agent || []).filter(function (c) { return c.category !== 'config'; });
@@ -226,12 +269,8 @@
     if (hasBody) {
       var tpl = {};
       try { tpl = JSON.parse(btn.dataset.template || '{}'); } catch (e) {}
-      if (Object.keys(tpl).length === 0) {
-        hasBody = false;
-      } else {
-        if (typeof L.openCommandPanel === 'function') {
-          L.openCommandPanel({ agentId: aid, componentId: compId, action: action, template: tpl });
-        }
+      if (typeof L.openCommandPanel === 'function') {
+        L.openCommandPanel({ agentId: aid, componentId: compId, action: action, template: tpl });
         return;
       }
     }

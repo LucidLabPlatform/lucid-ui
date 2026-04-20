@@ -170,10 +170,8 @@
     if (hasBody) {
       var tpl = {};
       try { tpl = JSON.parse(btn.dataset.template || '{}'); } catch (e) {}
-      if (Object.keys(tpl).length === 0) { hasBody = false; }
-      else {
-        if (typeof L.openCommandPanel === 'function')
-          L.openCommandPanel({ agentId: agentId, componentId: compId, action: action, template: tpl });
+      if (typeof L.openCommandPanel === 'function') {
+        L.openCommandPanel({ agentId: agentId, componentId: compId, action: action, template: tpl });
         return;
       }
     }

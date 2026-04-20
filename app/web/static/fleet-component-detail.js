@@ -110,7 +110,19 @@
     if (schema) {
       html += '<div class="tier2-section">';
       html += '<div class="tier2-label">Schema</div>';
-      html += '<pre class="schema-dump">' + L.esc(JSON.stringify(schema, null, 2)) + '</pre>';
+      if (schema.publishes && schema.publishes.length) {
+        html += '<div class="schema-group"><span class="schema-group-label">Publishes</span><div class="comp-pills">';
+        schema.publishes.forEach(function (t) { html += '<span class="pill pill-pub">' + L.esc(t) + '</span>'; });
+        html += '</div></div>';
+      }
+      if (schema.subscribes && schema.subscribes.length) {
+        html += '<div class="schema-group"><span class="schema-group-label">Subscribes</span><div class="comp-pills">';
+        schema.subscribes.forEach(function (t) { html += '<span class="pill pill-sub">' + L.esc(t) + '</span>'; });
+        html += '</div></div>';
+      }
+      if ((!schema.publishes || !schema.publishes.length) && (!schema.subscribes || !schema.subscribes.length)) {
+        html += '<pre class="schema-dump">' + L.esc(JSON.stringify(schema, null, 2)) + '</pre>';
+      }
       html += '</div>';
     }
 
@@ -126,6 +138,22 @@
         html += '<button class="act" data-agent="' + L.escAttr(agentId) + '" data-comp="' + L.escAttr(componentId) + '" data-action="' + L.escAttr(cmd.action) + '"' + hb + tpl + '>' + L.esc(cmd.label || cmd.action) + '</button>';
       });
       html += '</div></div>';
+    }
+
+    // Section 8: Component logs
+    var allLogs = await L.loadLogs(agentId, 100);
+    var compLogs = allLogs.filter(function (l) { return l.component_id === componentId; });
+    if (compLogs.length) {
+      html += '<div class="tier2-section">';
+      html += '<div class="tier2-label">Logs</div>';
+      html += '<pre class="log-output">';
+      compLogs.slice(0, 30).reverse().forEach(function (l) {
+        var ts = l.ts ? new Date(l.ts).toISOString().replace('T', ' ').substring(0, 19) : '';
+        var level = l.level || l.levelname || '';
+        var msg = l.message || l.msg || JSON.stringify(l);
+        html += L.esc((ts ? ts + '  ' : '') + (level ? '[' + level + '] ' : '') + msg) + '\n';
+      });
+      html += '</pre></div>';
     }
 
     bodyEl.innerHTML = html;
@@ -163,10 +191,8 @@
     if (hasBody) {
       var tpl = {};
       try { tpl = JSON.parse(btn.dataset.template || '{}'); } catch (ex) {}
-      if (Object.keys(tpl).length === 0) hasBody = false;
-      else {
-        if (typeof L.openCommandPanel === 'function')
-          L.openCommandPanel({ agentId: aid, componentId: cid, action: action, template: tpl });
+      if (typeof L.openCommandPanel === 'function') {
+        L.openCommandPanel({ agentId: aid, componentId: cid, action: action, template: tpl });
         return;
       }
     }

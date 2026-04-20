@@ -561,6 +561,11 @@ main { padding: 0; }
 .payload-field { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.5rem; }
 .payload-label { font-size: 0.72rem; color: var(--subtle); font-family: var(--font-mono); }
 .payload-desc { font-size: 0.65rem; color: var(--muted); }
+.payload-group { border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); margin-bottom: 0.5rem; }
+.payload-group-label { font-size: 0.72rem; font-family: var(--font-mono); color: var(--accent); padding: 0.3rem 0.5rem; cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 0.3rem; }
+.payload-group-label::before { content: '\25BC'; font-size: 0.55rem; transition: transform 0.15s; }
+details.payload-group:not([open]) .payload-group-label::before { transform: rotate(-90deg); }
+.payload-group-body { padding: 0.4rem 0.6rem 0.2rem; }
 
 .slider-row { display: flex; align-items: center; gap: 0.5rem; }
 .panel-slider {
@@ -790,6 +795,35 @@ main { padding: 0; }
   overflow-x: auto; max-height: 300px; overflow-y: auto; border: 1px solid var(--border);
 }
 .caps-list { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+/* ── Log output ───────────────────────────────────────────────────── */
+.log-output {
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted);
+  background: var(--bg); padding: 0.75rem; border-radius: var(--radius-sm);
+  overflow-x: auto; max-height: 280px; overflow-y: auto;
+  border: 1px solid var(--border); white-space: pre-wrap; word-break: break-all;
+}
+
+/* ── Telemetry config table ───────────────────────────────────────── */
+.telemetry-cfg-table {
+  width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 0.75rem;
+}
+.telemetry-cfg-table th {
+  text-align: left; padding: 0.3rem 0.6rem; font-size: 0.68rem;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.telemetry-cfg-table td { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--border-subtle); }
+.telemetry-cfg-table tr:hover td { background: var(--surface-hover); }
+
+/* ── Schema groups ────────────────────────────────────────────────── */
+.schema-group { margin-bottom: 0.6rem; }
+.schema-group-label {
+  display: block; font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); margin-bottom: 0.3rem;
+}
+.pill-pub { background: rgba(96,165,250,0.1); color: var(--accent); }
+.pill-sub { background: rgba(74,222,128,0.1); color: var(--green); }
 
 /* ── Experiments ──────────────────────────────────────────────────── */
 .exp-grid {
