@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Topic Links · LUCID{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Topic Links</h1>
+</div>
+
+<div class="users-layout">
+
+  <!-- Create form -->
+  <section class="panel add-panel">
+    <h2>Create Link</h2>
+    <div class="form-body">
+      <input id="tl-name" class="cmd-input" placeholder="Name (e.g. perception-to-led)">
+      <input id="tl-source" class="cmd-input" placeholder="Source topic (MQTT wildcards ok)">
+      <input id="tl-target" class="cmd-input" placeholder="Target topic">
+      <input id="tl-payload" class="cmd-input" placeholder='Payload template — optional'>
+      <select id="tl-qos" class="cmd-select">
+        <option value="0">QoS 0 — At most once</option>
+        <option value="1">QoS 1 — At least once</option>
+      </select>
+      <div id="tl-error" style="color:#ff8f8f;font-size:0.78rem;display:none"></div>
+      <button id="tl-create-btn" class="btn-primary">+ Create Link</button>
+    </div>
+  </section>
+
+  <!-- Links table -->
+  <section class="panel" style="min-width:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+      <h2 style="margin:0">Active Links</h2>
+      <div id="tl-sync-badge" style="font-size:0.75rem;color:var(--muted)">Checking sync…</div>
+    </div>
+    <div id="tl-table-wrap">
+      <div class="empty">Loading…</div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+const tlEl = id => document.getElementById(id);
+
+async function loadLinks() {
+  const resp = await fetch('/api/topic-links');
+  const links = await resp.json();
+  const wrap = tlEl('tl-table-wrap');
+  if (!links.length) {
+    wrap.innerHTML = '<div class="empty">No topic links yet.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="users-table">
+    <thead><tr>
+      <th>Name</th>
+      <th>Source → Target</th>
+      <th>Status</th>
+      <th>Owner</th>
+      <th>Actions</th>
+    </tr></thead>
+    <tbody>${links.map(l => {
+      const badge = l.enabled
+        ? '<span class="status-badge status-online">enabled</span>'
+        : '<span class="status-badge status-offline">disabled</span>';
+      const owner = l.owner_type === 'experiment-run'
+        ? `<span style="font-size:0.72rem;color:var(--muted)">run&nbsp;${esc((l.owner_id||'').slice(0,8))}</span>`
+        : `<span style="font-size:0.72rem;color:var(--muted)">${esc(l.owner_type||'manual')}</span>`;
+      const toggleBtn = l.enabled
+        ? `<button class="btn-sm" onclick="tlPause('${l.id}')">Pause</button>`
+        : `<button class="btn-sm" onclick="tlResume('${l.id}')">Resume</button>`;
+      return `<tr>
+        <td><strong style="font-size:0.8rem">${esc(l.name)}</strong></td>
+        <td style="font-family:var(--font-mono);font-size:0.72rem;max-width:320px;word-break:break-all">
+          ${esc(l.source_topic)}<br>
+          <span style="color:var(--muted)">→</span>&nbsp;${esc(l.target_topic)}
+        </td>
+        <td>${badge}</td>
+        <td>${owner}</td>
+        <td style="display:flex;gap:0.3rem;flex-wrap:wrap">
+          ${toggleBtn}
+          <button class="btn-sm" style="color:#ff8f8f;border-color:#ff8f8f44"
+                  onclick="tlDelete('${l.id}','${esc(l.name)}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+async function loadSync() {
+  try {
+    const resp = await fetch('/api/sync-state');
+    const state = await resp.json();
+    const s = state['topic-links'];
+    if (!s) return;
+    const cls = s.status === 'synced' ? 'status-online' : 'status-offline';
+    const last = s.last_synced_at ? new Date(s.last_synced_at).toLocaleTimeString() : '—';
+    tlEl('tl-sync-badge').innerHTML =
+      `<span class="status-badge ${cls}">${esc(s.status||'?')}</span>&nbsp;<span style="color:var(--muted)">synced ${last}</span>`;
+  } catch (_) {}
+}
+
+async function tlPause(id)  { await fetch(`/api/topic-links/${id}/deactivate`,{method:'PUT'}); loadLinks(); }
+async function tlResume(id) { await fetch(`/api/topic-links/${id}/activate`,  {method:'PUT'}); loadLinks(); }
+async function tlDelete(id, name) {
+  if (!confirm(`Delete "${name}"?\nThis also removes the EMQX rule.`)) return;
+  await fetch(`/api/topic-links/${id}`, {method:'DELETE'});
+  loadLinks(); loadSync();
+}
+
+tlEl('tl-create-btn').addEventListener('click', async () => {
+  const name    = tlEl('tl-name').value.trim();
+  const source  = tlEl('tl-source').value.trim();
+  const target  = tlEl('tl-target').value.trim();
+  const payload = tlEl('tl-payload').value.trim() || null;
+  const qos     = parseInt(tlEl('tl-qos').value);
+  const errEl   = tlEl('tl-error');
+  errEl.style.display = 'none';
+
+  if (!name || !source || !target) {
+    errEl.textContent = 'Name, source topic, and target topic are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = tlEl('tl-create-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const r = await fetch('/api/topic-links', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, source_topic: source, target_topic: target, payload_template: payload, qos}),
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      errEl.textContent = d.detail || 'Create failed';
+      errEl.style.display = 'block';
+    } else {
+      ['tl-name','tl-source','tl-target','tl-payload'].forEach(id => tlEl(id).value = '');
+      loadLinks(); loadSync();
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = '+ Create Link';
+  }
+});
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadLinks();
+loadSync();
+
+onWsEvent(evt => {
+  if (['topic_link_created','topic_link_updated','topic_link_deleted'].includes(evt.type)) {
+    loadLinks(); loadSync();
+  }
+});
+</script>
+{% endblock %}

@@ -141,3 +141,11 @@ def users_page(request: Request):
     if ctx is None:
         return require_login(request)
     return templates.TemplateResponse(request=request, name="users.html", context=ctx)
+
+
+@router.get("/topic-links", response_class=HTMLResponse)
+def topic_links_page(request: Request):
+    ctx = _ctx(request, page_id="topic_links")
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="topic_links.html", context=ctx)

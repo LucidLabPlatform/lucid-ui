@@ -206,7 +206,18 @@
     L._experimentListeners.push(fn);
   };
 
+  // ── General WS event listeners ──────────────────────────────────
+  L._wsListeners = [];
+
+  L.onWsEvent = function (fn) {
+    L._wsListeners.push(fn);
+  };
+
+  // Expose as global for convenience
+  window.onWsEvent = L.onWsEvent.bind(L);
+
   function handleWsEvent(evt) {
+    L._wsListeners.forEach(function (fn) { try { fn(evt); } catch (_) {} });
     // Experiment engine events (non-mqtt)
     if (evt.type === 'experiment_started' || evt.type === 'experiment_completed' ||
         evt.type === 'step_started' || evt.type === 'step_completed' ||
