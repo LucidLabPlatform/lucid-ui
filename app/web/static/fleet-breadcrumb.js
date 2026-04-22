@@ -4,12 +4,7 @@
 (function (L) {
   'use strict';
 
-  var TYPE_ORDER = ['projector', 'ndi', 'led_strip', 'ros_bridge', 'cpu_monitor', 'exec', 'viz', 'generic'];
-  var TYPE_LABELS = {
-    projector: 'Projectors', ndi: 'NDI', led_strip: 'LED Strips',
-    ros_bridge: 'ROS Bridges', cpu_monitor: 'CPU Monitors',
-    exec: 'Exec', viz: 'Visualization', generic: 'Other',
-  };
+  // Type ordering/labels come from the shared registry in fleet-utils.js
 
   var activeDropdown = null; // currently open dropdown element
 
@@ -39,7 +34,7 @@
         label: c.component_id,
         secondary: cState,
         dotClass: 'dot-' + cState,
-        icon: L.compIcon(c.component_id),
+        icon: L.compIcon(c.component_id, c),
       };
     }).sort(function (a, b) { return a.label.localeCompare(b.label); });
   }
@@ -52,16 +47,14 @@
         typeCounts[t] = (typeCounts[t] || 0) + 1;
       });
     });
-    var items = [];
-    TYPE_ORDER.forEach(function (t) {
-      if (!typeCounts[t]) return;
-      items.push({
+    var items = L.sortCompTypes(Object.keys(typeCounts)).map(function (t) {
+      return {
         value: t,
-        label: TYPE_LABELS[t] || t,
+        label: L.compTypeLabel(t),
         secondary: typeCounts[t] + ' total',
         dotClass: '',
         icon: L.compIcon(t === 'generic' ? '' : t),
-      });
+      };
     });
     return items;
   }

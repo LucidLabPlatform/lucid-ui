@@ -22,15 +22,11 @@
   --transition: 150ms ease;
 }
 
-html {
-  zoom: 1.1;
-}
-
 body {
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
 }
 
@@ -189,6 +185,7 @@ main { padding: 0; }
 }
 .stat-online { color: var(--green); }
 .stat-offline { color: var(--subtle); }
+.stat-error { color: var(--red); }
 
 .fleet-filters { display: flex; gap: 0.3rem; margin-left: auto; }
 .filter-pill {
@@ -331,6 +328,7 @@ main { padding: 0; }
 .spark-label { font-size: 0.58rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .spark-canvas { width: 120px; height: 30px; }
 .spark-empty { font-size: 0.68rem; color: #374151; line-height: 30px; }
+.spark-waiting { color: var(--muted); font-size: 0.75rem; padding: 0.5rem 0; }
 
 /* Component pills */
 .comp-pills { display: flex; gap: 0.3rem; flex-wrap: wrap; flex-shrink: 0; max-width: 280px; }
@@ -455,9 +453,18 @@ main { padding: 0; }
 .kv-cell:last-child .kv-v, .kv-cell:last-child .kv-val { border-bottom: none; }
 
 .kv-mini { }
-.kv-line { display: flex; justify-content: space-between; padding: 0.15rem 0; font-size: 0.75rem; }
+.kv-line { display: flex; justify-content: space-between; align-items: center; padding: 0.15rem 0; font-size: 0.75rem; }
 .kv-k { color: var(--muted); }
 .kv-v { color: var(--text); font-family: var(--font-mono); font-size: 0.72rem; }
+.kv-v-edit { display: flex; align-items: center; gap: 0.35rem; }
+.kv-input {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font-family: var(--font-mono); font-size: 0.72rem;
+  padding: 0.15rem 0.35rem; width: 8rem;
+}
+.kv-input:focus { outline: none; border-color: var(--accent); }
+.kv-select { width: auto; }
+.act-xs { font-size: 0.65rem; padding: 0.12rem 0.4rem; }
 
 /* ── Activity feed ─────────────────────────────────────────────────── */
 .activity-feed { display: flex; flex-direction: column; }

@@ -100,7 +100,7 @@
     if (!comps.length) return '<div class="no-comps">no components</div>';
     return comps.map(function (c) {
       var cState = (c.status && c.status.state) || 'unknown';
-      var icon = L.compIcon(c.component_id);
+      var icon = L.compIcon(c.component_id, c);
       var summary = L.compSummary(c.component_id, c);
       return '<div class="card-comp-row">' +
         '<span class="pill-dot dot-' + cState + '"></span>' +
@@ -118,9 +118,19 @@
   function updateStats() {
     var all = Object.values(L.agents);
     var online = all.filter(function (a) { return L.agentState(a) === 'online'; });
+    var errored = all.filter(function (a) {
+      return Object.values(a.components || {}).some(function (c) {
+        return (c.status && c.status.state) === 'error';
+      });
+    });
     setStatText('stat-total', all.length + ' agent' + (all.length !== 1 ? 's' : ''));
     setStatText('stat-online', online.length + ' online');
     setStatText('stat-offline', (all.length - online.length) + ' offline');
+    var errEl = document.getElementById('stat-error');
+    if (errEl) {
+      errEl.textContent = errored.length + ' error' + (errored.length !== 1 ? 's' : '');
+      errEl.style.display = errored.length > 0 ? '' : 'none';
+    }
   }
 
   function setStatText(id, text) {

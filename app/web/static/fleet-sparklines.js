@@ -7,17 +7,48 @@
   var sparkInstances = {};  // "agentId/metric" → uPlot instance
   var chartInstances = {};  // "agentId/metric" → uPlot instance (full chart)
 
-  var SPARK_COLORS = {
-    cpu_percent: '#60a5fa',
+  // Well-known metrics get stable colors; unknown metrics pull from palette
+  var KNOWN_COLORS = {
+    cpu_percent:    '#60a5fa',
     memory_percent: '#4ade80',
-    disk_percent: '#fb923c',
+    disk_percent:   '#fb923c',
   };
 
-  var METRIC_LABELS = {
-    cpu_percent: 'CPU',
-    memory_percent: 'Mem',
-    disk_percent: 'Disk',
+  var KNOWN_LABELS = {
+    cpu_percent:    'CPU',
+    memory_percent: 'Memory',
+    disk_percent:   'Disk',
   };
+
+  var COLOR_PALETTE = ['#f472b6', '#a78bfa', '#34d399', '#fbbf24', '#38bdf8', '#fb7185', '#818cf8', '#e879f9'];
+  var _paletteIndex = {};
+
+  function metricColor(metric) {
+    if (KNOWN_COLORS[metric]) return KNOWN_COLORS[metric];
+    if (_paletteIndex[metric] == null) {
+      _paletteIndex[metric] = Object.keys(_paletteIndex).length;
+    }
+    return COLOR_PALETTE[_paletteIndex[metric] % COLOR_PALETTE.length];
+  }
+
+  function metricLabel(metric) {
+    if (KNOWN_LABELS[metric]) return KNOWN_LABELS[metric];
+    // snake_case → Title Case, strip trailing _percent/_pct
+    return metric
+      .replace(/_(percent|pct)$/i, ' %')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+
+  // Percentage metrics get fixed 0-100 scale; everything else auto-scales
+  function metricYScale(metric) {
+    if (/(^|_)(percent|pct|usage)($|_)/i.test(metric)) return { min: 0, max: 100 };
+    return {};
+  }
+
+  // Expose for use in other modules (e.g. chart container labels)
+  L.metricLabel = metricLabel;
+  L.metricColor = metricColor;
 
   // ── Sparkline rendering ────────────────────────────────────────────
 
@@ -43,7 +74,7 @@
 
       var times = buf.map(function (p) { return p.ts; });
       var values = buf.map(function (p) { return p.value; });
-      var color = SPARK_COLORS[metric] || '#60a5fa';
+      var color = metricColor(metric);
 
       var opts = {
         width: wrap.clientWidth || 300,
@@ -51,15 +82,19 @@
         cursor: { show: false },
         legend: { show: false },
         axes: [{ show: false }, { show: false }],
-        scales: { y: { min: 0, max: 100 } },
+        scales: { y: metricYScale(metric) },
         series: [
           {},
           { stroke: color, width: 1.5, fill: color + '18' },
         ],
       };
 
-      wrap.innerHTML = '';
-      sparkInstances[instanceKey] = new uPlot(opts, [times, values], wrap);
+      wrap.innerHTML = '<div class="spark-label">' + metricLabel(metric) + '</div>';
+      var canvasWrap = document.createElement('div');
+      canvasWrap.className = 'spark-canvas';
+      canvasWrap.dataset.metric = metric;
+      wrap.appendChild(canvasWrap);
+      sparkInstances[instanceKey] = new uPlot(opts, [times, values], canvasWrap);
     });
   };
 
@@ -172,14 +207,14 @@
         { show: true, stroke: '#8494ab', font: '10px system-ui', grid: { stroke: '#283044', width: 1 } },
         { show: true, stroke: '#8494ab', font: '10px system-ui', grid: { stroke: '#283044', width: 1 }, scale: 'y' },
       ],
-      scales: { y: { min: 0, max: 100 } },
+      scales: { y: metricYScale(metric) },
       series: [
         { label: 'Time' },
         {
-          label: (METRIC_LABELS[metric] || metric) + ' %',
-          stroke: SPARK_COLORS[metric] || '#60a5fa',
+          label: metricLabel(metric),
+          stroke: metricColor(metric),
           width: 2,
-          fill: (SPARK_COLORS[metric] || '#60a5fa') + '20',
+          fill: metricColor(metric) + '20',
         },
       ],
     };

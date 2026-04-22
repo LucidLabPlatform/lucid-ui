@@ -9,6 +9,7 @@
   var runs = [];
   var activeFilter = 'all';
   var searchQuery = '';
+  var runsLimit = 10;
 
   // ── Load data ─────────────────────────────────────────────────────
 
@@ -147,15 +148,21 @@
     });
   }
 
+  function getFilteredRuns() {
+    if (activeFilter === 'all') return runs;
+    return runs.filter(function (r) { return r.status === activeFilter; });
+  }
+
   function renderRecentRuns() {
     if (!runsEl) return;
-    if (!runs.length) { runsEl.innerHTML = ''; return; }
+    var filtered = getFilteredRuns();
+    if (!filtered.length) { runsEl.innerHTML = ''; return; }
 
-    var recent = runs.slice(0, 10);
+    var visible = filtered.slice(0, runsLimit);
     var html = '<div class="tier2-section">';
     html += '<div class="tier2-label">Recent Runs</div>';
     html += '<div class="exp-runs-list">';
-    recent.forEach(function (r) {
+    visible.forEach(function (r) {
       var statusCls = 'status-' + (r.status || 'unknown');
       html += '<a class="exp-run-row" href="/experiments/runs/' + encodeURIComponent(r.id) + '">';
       html += '<span class="status-badge ' + statusCls + '">' + L.esc(r.status || 'unknown') + '</span>';
@@ -163,9 +170,21 @@
       if (r.started_at) html += '<span class="exp-run-ts" data-ts="' + L.escAttr(r.started_at) + '">' + L.fmtTs(r.started_at) + '</span>';
       html += '</a>';
     });
-    html += '</div></div>';
+    html += '</div>';
+    if (filtered.length > runsLimit) {
+      html += '<button class="act act-quick exp-runs-more-btn" style="margin:0.5rem 0">Show more (' + (filtered.length - runsLimit) + ' remaining)</button>';
+    }
+    html += '</div>';
 
     runsEl.innerHTML = html;
+
+    var moreBtn = runsEl.querySelector('.exp-runs-more-btn');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function () {
+        runsLimit += 20;
+        renderRecentRuns();
+      });
+    }
   }
 
   function updateStats() {
@@ -197,6 +216,18 @@
       }
     });
   }
+
+  // ── Filter pills ──────────────────────────────────────────────────
+
+  document.querySelectorAll('.filter-pill').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filter-pill').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      runsLimit = 10;
+      renderRecentRuns();
+    });
+  });
 
   // ── Boot ──────────────────────────────────────────────────────────
 

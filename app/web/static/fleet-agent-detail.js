@@ -71,10 +71,15 @@
     // Telemetry charts + config
     html += '<div class="tier2-section">';
     html += '<div class="tier2-label">Telemetry</div>';
-    html += '<div class="chart-containers">';
-    ['cpu_percent', 'memory_percent', 'disk_percent'].forEach(function (m) {
-      html += '<div class="chart-container" id="chart-container-' + L.escAttr(agentId) + '-' + m + '" data-agent="' + L.escAttr(agentId) + '" data-metric="' + m + '"></div>';
-    });
+    html += '<div class="chart-containers" id="telemetry-charts-' + L.escAttr(agentId) + '">';
+    var agentMetrics = Object.keys(L.telemetryCache[agentId] || {});
+    if (agentMetrics.length) {
+      agentMetrics.forEach(function (m) {
+        html += '<div class="chart-container" id="chart-container-' + L.escAttr(agentId) + '-' + L.escAttr(m) + '" data-agent="' + L.escAttr(agentId) + '" data-metric="' + L.escAttr(m) + '"></div>';
+      });
+    } else {
+      html += '<div class="spark-empty spark-waiting">Waiting for telemetry\u2026</div>';
+    }
     html += '</div>';
     var telCfg = (a.cfg || {}).telemetry;
     if (telCfg) {
@@ -114,9 +119,11 @@
     html += '<div class="tier2-section tier2-info-grid">';
     html += '<div class="info-block"><div class="tier2-label">Config</div>';
     html += '<div class="kv-mini">';
-    html += kvLine('heartbeat', cfg.heartbeat_s ? cfg.heartbeat_s + 's' : '\u2014');
+    var heartbeat = cfg.heartbeat_s != null ? cfg.heartbeat_s : '';
+    html += kvEditable('heartbeat_s', heartbeat, 'number', 'cfg/set');
     var logging = cfg.logging || {};
-    html += kvLine('log_level', logging.log_level || '\u2014');
+    var logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
+    html += kvEditableSelect('log_level', logging.log_level || 'INFO', logLevelOptions, 'cfg/logging/set');
     html += '</div></div>';
     html += '<div class="info-block"><div class="tier2-label">Metadata</div>';
     html += '<div class="kv-mini">';
@@ -192,10 +199,29 @@
       }).join('');
     }
 
-    // Update sparklines
-    ['cpu_percent', 'memory_percent', 'disk_percent'].forEach(function (m) {
-      L.updateSparkline(agentId, m);
-    });
+    // Update sparklines for all cached metrics; add containers for new ones
+    var currentMetrics = Object.keys(L.telemetryCache[agentId] || {});
+    var chartsEl = bodyEl && document.getElementById('telemetry-charts-' + agentId);
+    if (chartsEl && currentMetrics.length) {
+      // Remove "waiting" placeholder if present
+      var waiting = chartsEl.querySelector('.spark-waiting');
+      if (waiting) waiting.remove();
+      // Add containers for any new metrics
+      currentMetrics.forEach(function (m) {
+        var containerId = 'chart-container-' + agentId + '-' + m;
+        if (!document.getElementById(containerId)) {
+          var div = document.createElement('div');
+          div.className = 'chart-container';
+          div.id = containerId;
+          div.dataset.agent = agentId;
+          div.dataset.metric = m;
+          chartsEl.appendChild(div);
+          L.renderSparklines(chartsEl);
+        } else {
+          L.updateSparkline(agentId, m);
+        }
+      });
+    }
   }
 
   // ── Activity feed ─────────────────────────────────────────────────
@@ -226,9 +252,58 @@
     return '<div class="kv-line"><span class="kv-k">' + L.esc(key) + '</span><span class="kv-v">' + L.esc(value) + '</span></div>';
   }
 
+  function kvEditable(key, value, inputType, action) {
+    return '<div class="kv-line kv-editable">' +
+      '<span class="kv-k">' + L.esc(key) + '</span>' +
+      '<span class="kv-v kv-v-edit">' +
+        '<input class="kv-input" type="' + L.escAttr(inputType) + '" value="' + L.escAttr(value) + '" data-key="' + L.escAttr(key) + '" data-action="' + L.escAttr(action) + '">' +
+        '<button class="kv-save-btn act act-xs" data-key="' + L.escAttr(key) + '" data-action="' + L.escAttr(action) + '">Save</button>' +
+      '</span>' +
+    '</div>';
+  }
+
+  function kvEditableSelect(key, value, options, action) {
+    var opts = options.map(function (o) {
+      return '<option value="' + L.escAttr(o) + '"' + (o === value ? ' selected' : '') + '>' + L.esc(o) + '</option>';
+    }).join('');
+    return '<div class="kv-line kv-editable">' +
+      '<span class="kv-k">' + L.esc(key) + '</span>' +
+      '<span class="kv-v kv-v-edit">' +
+        '<select class="kv-input kv-select" data-key="' + L.escAttr(key) + '" data-action="' + L.escAttr(action) + '">' + opts + '</select>' +
+        '<button class="kv-save-btn act act-xs" data-key="' + L.escAttr(key) + '" data-action="' + L.escAttr(action) + '">Save</button>' +
+      '</span>' +
+    '</div>';
+  }
+
   // ── Event delegation ──────────────────────────────────────────────
 
   document.addEventListener('click', function (e) {
+    // Inline config save
+    var saveBtn = e.target.closest('.kv-save-btn');
+    if (saveBtn) {
+      var key = saveBtn.dataset.key;
+      var action = saveBtn.dataset.action;
+      var inputEl = saveBtn.closest('.kv-v-edit').querySelector('.kv-input');
+      if (!inputEl) return;
+      var rawVal = inputEl.value;
+      var val = (inputEl.type === 'number') ? Number(rawVal) : rawVal;
+      var payload = { set: {} };
+      payload.set[key] = val;
+      var origText = saveBtn.textContent;
+      saveBtn.disabled = true;
+      saveBtn.textContent = '\u2026';
+      L.fireCmd(agentId, null, action, payload).then(function (result) {
+        saveBtn.textContent = result.ok ? '\u2713' : '\u2717';
+        saveBtn.style.color = result.ok ? 'var(--green)' : 'var(--red)';
+        setTimeout(function () {
+          saveBtn.textContent = origText;
+          saveBtn.style.color = '';
+          saveBtn.disabled = false;
+        }, 2000);
+      });
+      return;
+    }
+
     // Action buttons
     var actBtn = e.target.closest('.act[data-action]');
     if (actBtn) {

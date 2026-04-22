@@ -8,13 +8,7 @@
   var activeFilter = 'all';
   var searchQuery = '';
 
-  var TYPE_ORDER = ['projector', 'ndi', 'led_strip', 'ros_bridge', 'knx', 'optitrack', 'camera', 'cpu_monitor', 'exec', 'viz', 'generic'];
-  var TYPE_LABELS = {
-    projector: 'Projectors', ndi: 'NDI', led_strip: 'LED Strips',
-    ros_bridge: 'ROS Bridges', knx: 'KNX Lighting', optitrack: 'OptiTrack',
-    camera: 'Cameras', cpu_monitor: 'CPU Monitors',
-    exec: 'Exec', viz: 'Visualization', generic: 'Other',
-  };
+  // Type ordering and labels come from the shared registry in fleet-utils.js
 
   // ── Full render ───────────────────────────────────────────────────
 
@@ -33,13 +27,13 @@
     }
 
     var html = '';
-    TYPE_ORDER.forEach(function (type) {
+    L.sortCompTypes(Object.keys(groups)).forEach(function (type) {
       if (!groups[type] || !groups[type].length) return;
       var icon = L.compIcon(type === 'generic' ? '' : type);
       html += '<div class="comp-type-group" data-type="' + type + '">';
       html += '<a class="comp-type-header" href="/components/' + encodeURIComponent(type) + '">';
       html += '<span class="comp-type-icon">' + icon + '</span>';
-      html += '<span class="comp-type-name">' + (TYPE_LABELS[type] || type) + '</span>';
+      html += '<span class="comp-type-name">' + L.esc(L.compTypeLabel(type)) + '</span>';
       html += '<span class="comp-type-count">' + groups[type].length + '</span>';
       html += '</a>';
       html += '<div class="comp-cards">';
@@ -97,7 +91,8 @@
   function groupByType(comps) {
     var groups = {};
     comps.forEach(function (item) {
-      var t = TYPE_ORDER.indexOf(item.type) !== -1 ? item.type : 'generic';
+      // Unknown types get their own group by actual type name (not collapsed into 'generic')
+      var t = item.type || 'generic';
       if (!groups[t]) groups[t] = [];
       groups[t].push(item);
     });

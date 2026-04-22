@@ -149,3 +149,11 @@ def topic_links_page(request: Request):
     if ctx is None:
         return require_login(request)
     return templates.TemplateResponse(request=request, name="topic_links.html", context=ctx)
+
+
+@router.get("/mqtt", response_class=HTMLResponse)
+def mqtt_page(request: Request):
+    ctx = _ctx(request, page_id="mqtt")
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="mqtt.html", context=ctx)

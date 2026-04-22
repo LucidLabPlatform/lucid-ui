@@ -51,21 +51,68 @@
     return (a.status && a.status.state) || 'unknown';
   };
 
+  // ── Component type registry ────────────────────────────────────────
+  // Known types appear first in this order; unknown types sort alphabetically after.
+  // Adding a new type here gives it an icon, label, and sort position — but unknown
+  // types still render correctly without any code change.
+  L.COMP_TYPE_ORDER = ['projector', 'ndi', 'led_strip', 'ros_bridge', 'knx', 'optitrack', 'camera', 'cpu_monitor', 'exec', 'viz'];
+
+  L.COMP_TYPE_LABELS = {
+    projector:   'Projectors',
+    ndi:         'NDI',
+    led_strip:   'LED Strips',
+    ros_bridge:  'ROS Bridges',
+    knx:         'KNX Lighting',
+    optitrack:   'OptiTrack',
+    camera:      'Cameras',
+    cpu_monitor: 'CPU Monitors',
+    exec:        'Exec',
+    viz:         'Visualization',
+    generic:     'Other',
+  };
+
+  // Return a display label for any type, including unknown ones
+  L.compTypeLabel = function (type) {
+    if (L.COMP_TYPE_LABELS[type]) return L.COMP_TYPE_LABELS[type];
+    // Convert snake_case to Title Case
+    return type.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  };
+
+  // Sort an array of type strings: known types first (in COMP_TYPE_ORDER), then
+  // unknown types alphabetically, 'generic' always last
+  L.sortCompTypes = function (types) {
+    return types.slice().sort(function (a, b) {
+      if (a === 'generic') return 1;
+      if (b === 'generic') return -1;
+      var ai = L.COMP_TYPE_ORDER.indexOf(a);
+      var bi = L.COMP_TYPE_ORDER.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  };
+
   // ── Component icon ─────────────────────────────────────────────────
-  L.compIcon = function (compId) {
-    var map = {
-      exec: '\u2699\uFE0F',
-      ros_bridge: '\uD83D\uDD17',
-      led_strip: '\uD83D\uDCA1',
-      ndi: '\uD83D\uDCE1',
-      projector: '\uD83C\uDFA5',
-      viz: '\uD83D\uDDA5\uFE0F',
-      knx: '\uD83D\uDCA1',
-      optitrack: '\uD83C\uDFAF',
-      camera: '\uD83D\uDCF7',
-      cpu_monitor: '\uD83D\uDCBB',
-    };
-    return map[compId] || '\uD83D\uDCE6';
+  var _TYPE_ICONS = {
+    exec: '\u2699\uFE0F',
+    ros_bridge: '\uD83D\uDD17',
+    led_strip: '\uD83D\uDCA1',
+    ndi: '\uD83D\uDCE1',
+    projector: '\uD83C\uDFA5',
+    viz: '\uD83D\uDDA5\uFE0F',
+    knx: '\uD83D\uDCA1',
+    optitrack: '\uD83C\uDFAF',
+    camera: '\uD83D\uDCF7',
+    cpu_monitor: '\uD83D\uDCBB',
+  };
+
+  // Accepts a component ID string, optionally a component object as second arg.
+  // Routes through detectComponentType so partial-match naming works.
+  L.compIcon = function (compId, comp) {
+    var caps = comp && comp.metadata && comp.metadata.capabilities;
+    var type = L.detectComponentType(compId, caps);
+    return _TYPE_ICONS[type] || '\uD83D\uDCE6';
   };
 
   // ── Component type detection ───────────────────────────────────────
