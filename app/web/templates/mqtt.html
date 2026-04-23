@@ -54,7 +54,7 @@
 
   /* ── Topic tree panel ── */
   .mqtt-tree {
-    width: 230px; flex-shrink: 0; background: var(--bg);
+    width: 280px; flex-shrink: 0; background: var(--bg);
     border-right: 1px solid var(--border); display: flex; flex-direction: column;
   }
   .mqtt-panel-hdr {
@@ -81,7 +81,7 @@
     padding: 0 0.6rem; font-size: 0.75rem; font-family: var(--font-mono);
     color: var(--muted); cursor: pointer; border-radius: var(--radius-sm);
     margin: 1px 0.3rem; transition: background var(--transition), color var(--transition);
-    user-select: none; white-space: nowrap; overflow: hidden;
+    user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .mt-row:hover { background: var(--surface-hover); color: var(--text); }
   .mt-row.mt-open { color: var(--subtle); }
@@ -311,6 +311,7 @@
   }
   .md-mode-btn:hover { color: var(--text); }
   .md-mode-btn.md-mode-active { background: var(--accent-dim); border-color: rgba(124,156,255,0.3); color: var(--accent); }
+  .md-payload-hint { font-size: 0.62rem; color: var(--muted); font-style: italic; margin-left: 0.3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── Schema-driven form view ── */
   .md-form-view { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.2rem; min-height: 0; }
@@ -324,6 +325,7 @@
     letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.15rem;
   }
   .md-field-row { display: flex; align-items: center; gap: 0.45rem; min-height: 22px; }
+  .md-field-desc { font-size: 0.58rem; color: var(--muted); font-style: italic; padding-left: 76px; margin-top: -2px; margin-bottom: 2px; }
   .md-field-label {
     font-size: 0.66rem; color: var(--subtle); font-family: var(--font-mono);
     white-space: nowrap; min-width: 72px; flex-shrink: 0;
@@ -424,6 +426,7 @@
           <div class="md-payload-toolbar">
             <button class="md-mode-btn md-mode-active" id="md-mode-form" onclick="mdSetMode('form')">Form</button>
             <button class="md-mode-btn" id="md-mode-raw" onclick="mdSetMode('raw')">JSON</button>
+            <span class="md-payload-hint" id="md-payload-hint"></span>
           </div>
           <div id="md-form-view" class="md-form-view"></div>
           <textarea class="md-payload" id="md-payload" rows="3" spellcheck="false" style="display:none"></textarea>

@@ -369,7 +369,7 @@
         var isLive = !!viewerByTopic[fullTopic];
         var entry = mqttTree[agentId][sub];
         var rowCls = 'mt-row mt-l2' + (isLive ? ' mt-live' : '');
-        html += '<div class="' + rowCls + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(sub) + '\')">';
+        html += '<div class="' + rowCls + '" title="' + L.escAttr('lucid/agents/' + agentId + '/' + sub) + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(sub) + '\')">';
         if (!entry.retained) html += '<div class="mt-dot mt-dot-g" style="flex-shrink:0"></div> ';
         html += L.esc(sub);
         if (entry.retained) html += ' <span class="mt-badge">R</span>';
@@ -397,7 +397,7 @@
             var fullTopic = 'lucid/agents/' + agentId + '/' + ci.sub;
             var isLive = !!viewerByTopic[fullTopic];
             var rowCls = 'mt-row mt-l3' + (isLive ? ' mt-live' : '');
-            html += '<div class="' + rowCls + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(ci.sub) + '\')">';
+            html += '<div class="' + rowCls + '" title="' + L.escAttr('lucid/agents/' + agentId + '/' + ci.sub) + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(ci.sub) + '\')">';
             if (!ci.entry.retained) html += '<div class="mt-dot mt-dot-g" style="flex-shrink:0"></div> ';
             html += L.esc(ci.compSubtopic);
             if (ci.entry.retained) html += ' <span class="mt-badge">R</span>';
@@ -525,10 +525,11 @@
       return '<div class="mv-hdr"><div class="mv-topic" style="color:var(--border)">— empty pane —</div></div>'
         + '<div class="mv-empty"><div class="mv-empty-icon">📭</div><p>Click a topic in the tree</p><small>to stream live messages here</small></div>';
     }
+    var fullTopic = 'lucid/agents/' + v.agentId + '/' + v.topic;
     var topicHtml = 'lucid/agents/<em>' + L.esc(v.agentId) + '</em>/' + L.esc(v.topic);
     return '<div class="mv-hdr">'
       + '<div class="mv-live-dot"></div>'
-      + '<div class="mv-topic">' + topicHtml + '</div>'
+      + '<div class="mv-topic" title="' + L.escAttr(fullTopic) + '">' + topicHtml + '</div>'
       + '<span class="mv-count" id="mv-count-' + v.id + '">0 msgs</span>'
       + '<div class="mv-close" onclick="mqttCloseViewer(\'' + v.id + '\')">✕</div>'
       + '</div>'
@@ -665,7 +666,7 @@
       label = 'commands';
       var catalog = L.catalogs && L.catalogs[agent];
       if (catalog && catalog.agent) {
-        chips = catalog.agent.map(function (c) { return { label: c.action, dot: 'g' }; });
+        chips = catalog.agent.map(function (c) { return { label: c.action, dot: 'g', tip: c.help || c.label || '' }; });
       }
       if (chips.length === 0) chips = [{ label: 'loading…', ghost: true }];
       // Lazy load catalog if missing
@@ -681,12 +682,12 @@
     } else if (depth === 3 && level1 === 'components') {
       label = 'subtopic';
       chips = [{ label: 'cmd', dot: 'g' }, { label: 'status', dot: 'g' }, { label: 'state', dot: 'g' }];
-    } else if (depth === 4 && level1 === 'components' && level2 === 'cmd') {
+    } else if (depth === 4 && level1 === 'components' && pubCrumbs[3] === 'cmd') {
       label = 'commands';
       var compId = pubCrumbs[2];
       var catalog2 = L.catalogs && L.catalogs[agent];
       if (catalog2 && catalog2.components && catalog2.components[compId]) {
-        chips = catalog2.components[compId].map(function (c) { return { label: c.action, dot: 'g' }; });
+        chips = catalog2.components[compId].map(function (c) { return { label: c.action, dot: 'g', tip: c.help || c.label || '' }; });
       }
       if (chips.length === 0) chips = [{ label: 'loading…', ghost: true }];
       if (!(L.catalogs && L.catalogs[agent]) && L.loadCatalog) {
@@ -701,7 +702,8 @@
     chips.forEach(function (c, i) {
       var cls = 'md-chip' + (i === 0 && !c.ghost ? ' md-chip-hi' : '') + (c.ghost ? ' md-chip-ghost' : '');
       var dot = c.ghost ? '' : '<div class="md-chip-dot md-chip-dot-' + (c.dot || 'g') + '"></div> ';
-      html += '<div class="' + cls + '" onclick="mdPickChip(\'' + L.escAttr(c.label) + '\')">'
+      var tipAttr = c.tip ? ' title="' + L.escAttr(c.tip) + '"' : '';
+      html += '<div class="' + cls + '"' + tipAttr + ' onclick="mdPickChip(\'' + L.escAttr(c.label) + '\')">'
         + dot + L.esc(c.label) + '</div>';
     });
     row.innerHTML = html;
@@ -714,7 +716,14 @@
   };
 
   window.mdOnInput = function (val) {
-    // Could filter chips here — keeping it simple for now
+    var filter = val.toLowerCase();
+    var row = document.getElementById('md-ac-row');
+    if (!row) return;
+    var chips = row.querySelectorAll('.md-chip');
+    chips.forEach(function (chip) {
+      var text = chip.textContent.toLowerCase();
+      chip.style.display = (filter && text.indexOf(filter) === -1) ? 'none' : '';
+    });
   };
 
   window.mdOnKey = function (e) {
@@ -853,9 +862,10 @@
         var fid = 'mdf-' + idx;
         var label = group.key !== null ? f.path.substring(group.key.length + 1) : f.path;
         html += '<div class="md-field-row">'
-          + '<label class="md-field-label" for="' + fid + '">' + L.esc(label) + '</label>'
+          + '<label class="md-field-label" for="' + fid + '" title="' + L.escAttr(f.description || '') + '">' + L.esc(label) + '</label>'
           + mdRenderFieldInput(f.control, f.value, fid)
           + '</div>';
+        if (f.description) html += '<div class="md-field-desc">' + L.esc(f.description) + '</div>';
         allFieldMeta.push({ path: f.path, control: f.control });
       });
       if (group.key !== null) html += '</div>';
@@ -896,28 +906,43 @@
     ta.value = JSON.stringify(payload, null, 2);
   }
 
+  function mdFindCatalogCmd(agent, action) {
+    if (!agent || !action || !L.catalogs || !L.catalogs[agent]) return null;
+    var cat = L.catalogs[agent];
+    var allCmds = (cat.agent || []);
+    if (pubCrumbs[1] === 'components' && pubCrumbs[2] && cat.components) {
+      allCmds = allCmds.concat(cat.components[pubCrumbs[2]] || []);
+    }
+    return allCmds.find(function (c) { return c.action === action; }) || null;
+  }
+
   function mdUpdatePayload() {
     var action = pubCrumbs[pubCrumbs.length - 1] || '';
     var agent = pubCrumbs[0];
+
+    // Show command description hint
+    var hintEl = document.getElementById('md-payload-hint');
+    var match = mdFindCatalogCmd(agent, action);
+    if (hintEl) {
+      var hint = '';
+      if (match) {
+        hint = match.help || match.label || '';
+        if (match.has_body === false && !hint) hint = 'no payload required';
+      }
+      hintEl.textContent = hint;
+      hintEl.title = hint;
+    }
 
     // 1. Try schema fields first
     var schemaFields = mdGetSchemaFields(agent, action);
 
     // 2. Fall back to catalog template
     var tmpl = {};
-    if (!schemaFields && agent && L.catalogs && L.catalogs[agent]) {
-      var cat = L.catalogs[agent];
-      var allCmds = (cat.agent || []);
-      if (pubCrumbs[1] === 'components' && pubCrumbs[2] && cat.components) {
-        allCmds = allCmds.concat(cat.components[pubCrumbs[2]] || []);
-      }
-      var match = allCmds.find(function (c) { return c.action === action; });
-      if (match && match.template) {
-        try {
-          tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : match.template;
-          delete tmpl.request_id;
-        } catch (e) {}
-      }
+    if (!schemaFields && match && match.template) {
+      try {
+        tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : match.template;
+        delete tmpl.request_id;
+      } catch (e) {}
     }
 
     // 3. Build form fields
@@ -926,7 +951,7 @@
         var ctrl = (L.controlFromSchema && L.controlFromSchema({ type: sf.type, 'enum': sf['enum'], min: sf.min, max: sf.max }))
                 || (L.inferControl && L.inferControl(sf.name, sf.default_value, ''))
                 || { type: 'text' };
-        return { path: sf.name, key: sf.name, value: sf.default_value, control: ctrl };
+        return { path: sf.name, key: sf.name, value: sf.default_value, control: ctrl, description: sf.description };
       });
     } else {
       pubFormFields = L.flattenTemplate ? L.flattenTemplate(tmpl, '', '') : [];
