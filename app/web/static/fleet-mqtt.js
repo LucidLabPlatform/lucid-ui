@@ -22,8 +22,13 @@
   // result subscriptions: topic → {timer, viewerId?}
   var resultSubs = {};
 
+  // viewer message history (persisted across renderViewers calls)
+  var viewerMessages = {};  // viewerId → [{payload, qos, retained, ts}]
+
   // publisher state
   var pubCrumbs = [];
+  var pubFormMode = 'form'; // 'form' | 'raw'
+  var pubFormFields = [];   // [{path, key, value, control}]
 
   var SESSION_KEY = 'lucid_mqtt_conn';
 
@@ -54,20 +59,35 @@
     }
   }
 
-  function colorJson(obj) {
+  function strRepeat(str, n) {
+    var out = ''; for (var i = 0; i < n; i++) out += str; return out;
+  }
+
+  function colorJson(obj, indent) {
+    if (indent === undefined) indent = 0;
+    var pad = '  ';
     if (obj === null || obj === undefined) return '<span class="mn">null</span>';
-    var lines = [];
-    Object.entries(obj).forEach(function (kv) {
-      var k = kv[0], v = kv[1];
-      var valHtml;
-      if (v === null) valHtml = '<span class="mn">null</span>';
-      else if (typeof v === 'boolean') valHtml = '<span class="mb">' + v + '</span>';
-      else if (typeof v === 'number') valHtml = '<span class="mn">' + v + '</span>';
-      else if (typeof v === 'string') valHtml = '<span class="ms">"' + L.esc(v) + '"</span>';
-      else valHtml = '<span class="mn">' + L.esc(JSON.stringify(v)) + '</span>';
-      lines.push('<span class="mk">"' + L.esc(k) + '"</span>: ' + valHtml);
-    });
-    return lines.join(',<br>');
+    if (typeof obj === 'boolean') return '<span class="mb">' + obj + '</span>';
+    if (typeof obj === 'number') return '<span class="mn">' + obj + '</span>';
+    if (typeof obj === 'string') return '<span class="ms">"' + L.esc(obj) + '"</span>';
+    if (Array.isArray(obj)) {
+      if (obj.length === 0) return '[]';
+      var items = obj.map(function (v) {
+        return strRepeat(pad, indent + 1) + colorJson(v, indent + 1);
+      });
+      return '[\n' + items.join(',\n') + '\n' + strRepeat(pad, indent) + ']';
+    }
+    if (typeof obj === 'object') {
+      var entries = Object.entries(obj);
+      if (entries.length === 0) return '{}';
+      var lines = entries.map(function (kv) {
+        return strRepeat(pad, indent + 1)
+          + '<span class="mk">"' + L.esc(kv[0]) + '"</span>: '
+          + colorJson(kv[1], indent + 1);
+      });
+      return '{\n' + lines.join(',\n') + '\n' + strRepeat(pad, indent) + '}';
+    }
+    return L.esc(String(obj));
   }
 
   function agentStatus(agentId) {
@@ -82,6 +102,16 @@
   function isOnline(agentId) {
     var st = agentStatus(agentId);
     return st === 'online' || st === 'running';
+  }
+
+  // Extract component info from a subtopic that starts with 'components/'
+  function parseComponentSubtopic(subtopic) {
+    if (!subtopic.startsWith('components/')) return null;
+    var rest = subtopic.slice('components/'.length);
+    var slash = rest.indexOf('/');
+    return slash === -1
+      ? { compId: rest, compSubtopic: '' }
+      : { compId: rest.slice(0, slash), compSubtopic: rest.slice(slash + 1) };
   }
 
   // ── Connection ──────────────────────────────────────────────────────────
@@ -200,8 +230,11 @@
     mqttTree = {};
     mqttViewers = [];
     viewerByTopic = {};
+    viewerMessages = {};
     resultSubs = {};
     pubCrumbs = [];
+    pubFormMode = 'form';
+    pubFormFields = [];
     document.getElementById('mqtt-workspace').classList.add('hidden');
     document.getElementById('mqtt-connect-screen').classList.remove('hidden');
     document.getElementById('mqtt-connect-btn').disabled = false;
@@ -316,20 +349,62 @@
 
       var subtopics = Object.keys(mqttTree[agentId]).sort();
 
+      // Partition: flat topics vs component subtopics
+      var flatTopics = [];
+      var compGroups = {};
       subtopics.forEach(function (sub) {
-        if (f && !sub.includes(f) && !agentId.includes(f)) return;
+        var parsed = parseComponentSubtopic(sub);
+        if (parsed) {
+          if (!compGroups[parsed.compId]) compGroups[parsed.compId] = [];
+          compGroups[parsed.compId].push({ compSubtopic: parsed.compSubtopic, entry: mqttTree[agentId][sub], sub: sub });
+        } else {
+          flatTopics.push(sub);
+        }
+      });
 
+      // Render flat topics
+      flatTopics.forEach(function (sub) {
+        if (f && !sub.includes(f) && !agentId.includes(f)) return;
         var fullTopic = 'lucid/agents/' + agentId + '/' + sub;
         var isLive = !!viewerByTopic[fullTopic];
         var entry = mqttTree[agentId][sub];
         var rowCls = 'mt-row mt-l2' + (isLive ? ' mt-live' : '');
-
         html += '<div class="' + rowCls + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(sub) + '\')">';
         if (!entry.retained) html += '<div class="mt-dot mt-dot-g" style="flex-shrink:0"></div> ';
         html += L.esc(sub);
         if (entry.retained) html += ' <span class="mt-badge">R</span>';
         if (isLive) html += ' <span class="mt-live-badge">LIVE</span>';
         html += '</div>';
+      });
+
+      // Render component groups
+      Object.keys(compGroups).sort().forEach(function (compId) {
+        var compKey = agentId + '::comp::' + compId;
+        var compOpen = treeOpenNodes.has(compKey);
+        var compItems = compGroups[compId];
+        // Show group if any item matches filter
+        if (f && !compId.includes(f) && !agentId.includes(f)) {
+          var anyMatch = compItems.some(function (ci) { return ci.compSubtopic.includes(f); });
+          if (!anyMatch) return;
+        }
+        html += '<div class="mt-row mt-l2 mt-comp-hdr" onclick="mqttToggleComp(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(compId) + '\')">'
+          + (compOpen ? '▼' : '▶') + ' <span class="mt-comp-icon">◈</span> ' + L.esc(compId)
+          + '</div>';
+        if (compOpen) {
+          compItems.forEach(function (ci) {
+            if (!ci.compSubtopic) return; // skip bare 'components/{id}' with no subtopic
+            if (f && !ci.compSubtopic.includes(f) && !compId.includes(f) && !agentId.includes(f)) return;
+            var fullTopic = 'lucid/agents/' + agentId + '/' + ci.sub;
+            var isLive = !!viewerByTopic[fullTopic];
+            var rowCls = 'mt-row mt-l3' + (isLive ? ' mt-live' : '');
+            html += '<div class="' + rowCls + '" onclick="mqttOpenViewer(\'' + L.escAttr(agentId) + '\',\'' + L.escAttr(ci.sub) + '\')">';
+            if (!ci.entry.retained) html += '<div class="mt-dot mt-dot-g" style="flex-shrink:0"></div> ';
+            html += L.esc(ci.compSubtopic);
+            if (ci.entry.retained) html += ' <span class="mt-badge">R</span>';
+            if (isLive) html += ' <span class="mt-live-badge">LIVE</span>';
+            html += '</div>';
+          });
+        }
       });
 
       // cmd/ shortcut
@@ -344,6 +419,13 @@
   window.mqttToggleAgent = function (agentId) {
     if (treeOpenNodes.has(agentId)) treeOpenNodes.delete(agentId);
     else treeOpenNodes.add(agentId);
+    renderTree();
+  };
+
+  window.mqttToggleComp = function (agentId, compId) {
+    var key = agentId + '::comp::' + compId;
+    if (treeOpenNodes.has(key)) treeOpenNodes.delete(key);
+    else treeOpenNodes.add(key);
     renderTree();
   };
 
@@ -368,14 +450,10 @@
     }
 
     var id = uid();
-    // Replace an empty pane if one exists, otherwise add
-    var emptyIdx = mqttViewers.findIndex(function (v) { return !v.agentId; });
-    if (emptyIdx >= 0) {
-      mqttViewers[emptyIdx] = { id: id, agentId: agentId, topic: subtopic };
-    } else {
-      mqttViewers.push({ id: id, agentId: agentId, topic: subtopic });
-    }
+    // Always append a new pane (don't recycle empties — confusing UX)
+    mqttViewers.push({ id: id, agentId: agentId, topic: subtopic });
     viewerByTopic[fullTopic] = id;
+    viewerMessages[id] = [];
 
     renderViewers();
     renderTree();
@@ -396,7 +474,12 @@
       delete viewerByTopic[fullTopic];
     }
     mqttViewers = mqttViewers.filter(function (x) { return x.id !== id; });
-    renderViewers();
+    delete viewerMessages[id];
+    // Remove the pane DOM element directly (no full re-render needed)
+    var el = document.getElementById('viewer-' + id);
+    if (el) el.parentNode.removeChild(el);
+    // If now empty, show placeholder
+    if (mqttViewers.length === 0) renderViewers();
     renderTree();
   };
 
@@ -406,36 +489,58 @@
   };
 
   function pushMsgToViewer(viewerId, payload, qos, retained) {
+    // 1. Persist to state
+    if (!viewerMessages[viewerId]) viewerMessages[viewerId] = [];
+    var record = { payload: payload, qos: qos, retained: !!retained, ts: fmtTime() };
+    viewerMessages[viewerId].unshift(record);
+    if (viewerMessages[viewerId].length > 100) viewerMessages[viewerId].pop();
+
+    // 2. Update count badge directly
+    var countEl = document.getElementById('mv-count-' + viewerId);
+    if (countEl) countEl.textContent = viewerMessages[viewerId].length + ' msgs';
+
+    // 3. Append single message to DOM
+    appendMsgDOM(viewerId, record);
+  }
+
+  function appendMsgDOM(viewerId, record) {
     var body = document.getElementById('mv-body-' + viewerId);
     if (!body) return;
-
-    var countEl = document.getElementById('mv-count-' + viewerId);
-    if (countEl) {
-      var n = (parseInt(countEl.textContent) || 0) + 1;
-      countEl.textContent = n + ' msgs';
-    }
-
     var div = document.createElement('div');
     div.className = 'mv-msg mv-flash';
     div.innerHTML = '<div class="mv-msg-meta">'
-      + '<span class="mv-time">' + fmtTime() + '</span>'
-      + '<span class="mv-qos">QoS ' + qos + '</span>'
-      + (retained ? '<span class="mv-ret">retained</span>' : '')
+      + '<span class="mv-time">' + record.ts + '</span>'
+      + '<span class="mv-qos">QoS ' + record.qos + '</span>'
+      + (record.retained ? '<span class="mv-ret">retained</span>' : '')
       + '</div>'
-      + '<div class="mv-body-text">' + (payload !== null ? colorJson(payload) : '<span class="mn">—</span>') + '</div>';
-
+      + '<div class="mv-body-text">'
+      + (record.payload !== null ? colorJson(record.payload) : '<span class="mn">—</span>')
+      + '</div>';
     body.insertBefore(div, body.firstChild);
-
-    // Trim old messages
     while (body.children.length > 100) body.removeChild(body.lastChild);
+  }
+
+  function buildViewerHTML(v) {
+    if (!v.agentId) {
+      return '<div class="mv-hdr"><div class="mv-topic" style="color:var(--border)">— empty pane —</div></div>'
+        + '<div class="mv-empty"><div class="mv-empty-icon">📭</div><p>Click a topic in the tree</p><small>to stream live messages here</small></div>';
+    }
+    var topicHtml = 'lucid/agents/<em>' + L.esc(v.agentId) + '</em>/' + L.esc(v.topic);
+    return '<div class="mv-hdr">'
+      + '<div class="mv-live-dot"></div>'
+      + '<div class="mv-topic">' + topicHtml + '</div>'
+      + '<span class="mv-count" id="mv-count-' + v.id + '">0 msgs</span>'
+      + '<div class="mv-close" onclick="mqttCloseViewer(\'' + v.id + '\')">✕</div>'
+      + '</div>'
+      + '<div class="mv-body" id="mv-body-' + v.id + '"></div>';
   }
 
   function renderViewers() {
     var container = document.getElementById('mqtt-viewers');
     if (!container) return;
-    container.innerHTML = '';
 
     if (mqttViewers.length === 0) {
+      container.innerHTML = '';
       var ph = document.createElement('div');
       ph.className = 'mqtt-viewer';
       ph.innerHTML = '<div class="mv-empty"><div class="mv-empty-icon">📡</div>'
@@ -445,25 +550,33 @@
       return;
     }
 
+    // Keyed DOM diff: remove stale, add new — never touch existing viewers' children
+    var validIds = new Set(mqttViewers.map(function (v) { return v.id; }));
+    Array.from(container.children).forEach(function (child) {
+      if (!child.id || !child.id.startsWith('viewer-')) return;
+      var vid = child.id.slice('viewer-'.length);
+      if (!validIds.has(vid)) container.removeChild(child);
+    });
+
     mqttViewers.forEach(function (v) {
+      var existing = document.getElementById('viewer-' + v.id);
+      if (existing) return; // already in DOM with all its messages intact
+
       var el = document.createElement('div');
       el.className = 'mqtt-viewer';
       el.id = 'viewer-' + v.id;
-
-      if (!v.agentId) {
-        el.innerHTML = '<div class="mv-hdr"><div class="mv-topic" style="color:var(--border)">— empty pane —</div></div>'
-          + '<div class="mv-empty"><div class="mv-empty-icon">📭</div><p>Click a topic in the tree</p><small>to stream live messages here</small></div>';
-      } else {
-        var topicHtml = 'lucid/agents/<em>' + L.esc(v.agentId) + '</em>/' + L.esc(v.topic);
-        el.innerHTML = '<div class="mv-hdr">'
-          + '<div class="mv-live-dot"></div>'
-          + '<div class="mv-topic">' + topicHtml + '</div>'
-          + '<span class="mv-count" id="mv-count-' + v.id + '">0 msgs</span>'
-          + '<div class="mv-close" onclick="mqttCloseViewer(\'' + v.id + '\')">✕</div>'
-          + '</div>'
-          + '<div class="mv-body" id="mv-body-' + v.id + '"></div>';
-      }
+      el.innerHTML = buildViewerHTML(v);
       container.appendChild(el);
+
+      // Replay buffered messages (newest first, already in that order)
+      var msgs = viewerMessages[v.id] || [];
+      // Replay oldest-first so they end up in newest-first DOM order
+      for (var i = msgs.length - 1; i >= 0; i--) {
+        appendMsgDOM(v.id, msgs[i]);
+      }
+      // Update count
+      var countEl = document.getElementById('mv-count-' + v.id);
+      if (countEl) countEl.textContent = msgs.length + ' msgs';
     });
   }
 
@@ -629,40 +742,231 @@
     }
   };
 
-  function mdUpdatePayload() {
-    var ta = document.getElementById('md-payload');
-    if (!ta) return;
+  // ── Publisher form helpers ──────────────────────────────────────────────
 
+  window.mdSetMode = function (mode) {
+    pubFormMode = mode;
+    var formView = document.getElementById('md-form-view');
+    var rawView = document.getElementById('md-payload');
+    var formBtn = document.getElementById('md-mode-form');
+    var rawBtn = document.getElementById('md-mode-raw');
+    if (mode === 'form') {
+      if (formView) formView.style.display = '';
+      if (rawView) rawView.style.display = 'none';
+      if (formBtn) formBtn.classList.add('md-mode-active');
+      if (rawBtn) rawBtn.classList.remove('md-mode-active');
+    } else {
+      if (formView) formView.style.display = 'none';
+      if (rawView) rawView.style.display = '';
+      if (rawBtn) rawBtn.classList.add('md-mode-active');
+      if (formBtn) formBtn.classList.remove('md-mode-active');
+      mdSyncFormToJson();
+    }
+  };
+
+  function mdGetSchemaFields(agentId, action) {
+    if (!agentId || !action) return null;
+    var schema = L.schemas && L.schemas[agentId];
+    if (!schema) return null;
+    var subscribes;
+    if (pubCrumbs[1] === 'components' && pubCrumbs[2]) {
+      var compSchema = schema.components && schema.components[pubCrumbs[2]];
+      if (compSchema) subscribes = compSchema.subscribes;
+    } else {
+      subscribes = schema.subscribes;
+    }
+    if (!subscribes) return null;
+    var cmdSchema = subscribes['cmd/' + action];
+    if (!cmdSchema || !cmdSchema.fields) return null;
+    return Object.keys(cmdSchema.fields)
+      .filter(function (k) { return k !== 'request_id'; })
+      .map(function (k) {
+        var f = cmdSchema.fields[k];
+        return { name: k, type: f.type, description: f.description,
+                 default_value: f['default'], min: f.min, max: f.max, 'enum': f['enum'] };
+      });
+  }
+
+  function mdRenderFieldInput(c, value, id) {
+    if (!c) c = { type: 'text' };
+    if (c.type === 'enum') {
+      var out = '<select class="md-field-input" id="' + id + '">';
+      (c.options || []).forEach(function (opt) {
+        var sel = (opt === value) ? ' selected' : '';
+        out += '<option value="' + L.escAttr(String(opt)) + '"' + sel + '>' + L.esc(String(opt)) + '</option>';
+      });
+      return out + '</select>';
+    }
+    if (c.type === 'slider') {
+      var v = (typeof value === 'number') ? value : Math.round(((c.min || 0) + (c.max || 255)) / 2);
+      return '<div class="md-slider-row">'
+        + '<input type="range" id="' + id + '" class="md-slider" min="' + (c.min || 0)
+        + '" max="' + (c.max || 255) + '" step="' + (c.step || 1) + '" value="' + v + '"'
+        + ' oninput="this.nextElementSibling.textContent=this.value">'
+        + '<span class="md-slider-val">' + v + '</span></div>';
+    }
+    if (c.type === 'number') {
+      return '<input type="number" id="' + id + '" class="md-field-input" min="' + (c.min || 0)
+        + '" max="' + (c.max || 10000) + '" step="' + (c.step || 1)
+        + '" value="' + (value != null ? value : 0) + '">';
+    }
+    if (c.type === 'toggle') {
+      var checked = (value === true || value === 'true') ? ' checked' : '';
+      return '<label class="md-toggle-label"><input type="checkbox" id="' + id
+        + '" class="md-toggle"' + checked + '><span class="md-toggle-val">'
+        + (checked ? 'on' : 'off') + '</span></label>';
+    }
+    return '<input type="text" id="' + id + '" class="md-field-input" value="'
+      + L.escAttr(value != null ? String(value) : '') + '">';
+  }
+
+  function mdRenderFormView() {
+    var formEl = document.getElementById('md-form-view');
+    if (!formEl) return;
+
+    if (!pubFormFields.length) {
+      formEl.innerHTML = '<div class="md-no-fields">No parameters — only request_id will be sent</div>';
+      formEl.dataset.fields = '[]';
+      return;
+    }
+
+    // Group by top-level key
+    var groups = [];
+    var groupMap = {};
+    pubFormFields.forEach(function (f) {
+      var dotIdx = f.path.indexOf('.');
+      if (dotIdx === -1) {
+        groups.push({ key: null, fields: [f] });
+      } else {
+        var topKey = f.path.substring(0, dotIdx);
+        if (!groupMap[topKey]) { groupMap[topKey] = { key: topKey, fields: [] }; groups.push(groupMap[topKey]); }
+        groupMap[topKey].fields.push(f);
+      }
+    });
+
+    var html = '';
+    var allFieldMeta = [];
+    groups.forEach(function (group) {
+      if (group.key !== null) html += '<div class="md-field-group"><div class="md-field-group-label">' + L.esc(group.key) + '</div>';
+      group.fields.forEach(function (f) {
+        var idx = allFieldMeta.length;
+        var fid = 'mdf-' + idx;
+        var label = group.key !== null ? f.path.substring(group.key.length + 1) : f.path;
+        html += '<div class="md-field-row">'
+          + '<label class="md-field-label" for="' + fid + '">' + L.esc(label) + '</label>'
+          + mdRenderFieldInput(f.control, f.value, fid)
+          + '</div>';
+        allFieldMeta.push({ path: f.path, control: f.control });
+      });
+      if (group.key !== null) html += '</div>';
+    });
+
+    formEl.innerHTML = html;
+    formEl.dataset.fields = JSON.stringify(allFieldMeta);
+
+    formEl.querySelectorAll('input, select').forEach(function (el) {
+      el.addEventListener('input', mdSyncFormToJson);
+      el.addEventListener('change', mdSyncFormToJson);
+    });
+    formEl.querySelectorAll('.md-toggle').forEach(function (chk) {
+      chk.addEventListener('change', function () {
+        var span = chk.parentNode.querySelector('.md-toggle-val');
+        if (span) span.textContent = chk.checked ? 'on' : 'off';
+        mdSyncFormToJson();
+      });
+    });
+  }
+
+  function mdSyncFormToJson() {
+    var formEl = document.getElementById('md-form-view');
+    var ta = document.getElementById('md-payload');
+    if (!formEl || !ta) return;
+    var fieldMeta = JSON.parse(formEl.dataset.fields || '[]');
+    var fieldValues = fieldMeta.map(function (fm, i) {
+      var el = document.getElementById('mdf-' + i);
+      if (!el) return { path: fm.path, value: null };
+      var val;
+      if (fm.control && (fm.control.type === 'slider' || fm.control.type === 'number')) val = Number(el.value);
+      else if (fm.control && fm.control.type === 'toggle') val = el.checked;
+      else val = el.value;
+      return { path: fm.path, value: val };
+    });
+    var params = L.buildPayload ? L.buildPayload(fieldValues) : {};
+    var payload = Object.assign({ request_id: genRequestId() }, params);
+    ta.value = JSON.stringify(payload, null, 2);
+  }
+
+  function mdUpdatePayload() {
     var action = pubCrumbs[pubCrumbs.length - 1] || '';
     var agent = pubCrumbs[0];
 
-    // Find command schema from catalog
-    var params = {};
-    if (agent && L.catalogs && L.catalogs[agent]) {
+    // 1. Try schema fields first
+    var schemaFields = mdGetSchemaFields(agent, action);
+
+    // 2. Fall back to catalog template
+    var tmpl = {};
+    if (!schemaFields && agent && L.catalogs && L.catalogs[agent]) {
       var cat = L.catalogs[agent];
       var allCmds = (cat.agent || []);
-
-      // Also check component commands
       if (pubCrumbs[1] === 'components' && pubCrumbs[2] && cat.components) {
-        var compCmds = cat.components[pubCrumbs[2]] || [];
-        allCmds = allCmds.concat(compCmds);
+        allCmds = allCmds.concat(cat.components[pubCrumbs[2]] || []);
       }
-
       var match = allCmds.find(function (c) { return c.action === action; });
       if (match && match.template) {
-        // Build params from template, excluding request_id
         try {
-          var tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : match.template;
-          Object.entries(tmpl).forEach(function (kv) {
-            if (kv[0] !== 'request_id') params[kv[0]] = kv[1];
-          });
+          tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : match.template;
+          delete tmpl.request_id;
         } catch (e) {}
       }
     }
 
-    var payload = { request_id: genRequestId() };
-    Object.assign(payload, params);
-    ta.value = JSON.stringify(payload, null, 2);
+    // 3. Build form fields
+    if (schemaFields && schemaFields.length) {
+      pubFormFields = schemaFields.map(function (sf) {
+        var ctrl = (L.controlFromSchema && L.controlFromSchema({ type: sf.type, 'enum': sf['enum'], min: sf.min, max: sf.max }))
+                || (L.inferControl && L.inferControl(sf.name, sf.default_value, ''))
+                || { type: 'text' };
+        return { path: sf.name, key: sf.name, value: sf.default_value, control: ctrl };
+      });
+    } else {
+      pubFormFields = L.flattenTemplate ? L.flattenTemplate(tmpl, '', '') : [];
+    }
+
+    mdRenderFormView();
+
+    // Seed the textarea with request_id + defaults
+    var params = {};
+    pubFormFields.forEach(function (f) { var parts = f.path.split('.'); var cur = params; for (var j = 0; j < parts.length - 1; j++) { if (!cur[parts[j]]) cur[parts[j]] = {}; cur = cur[parts[j]]; } cur[parts[parts.length-1]] = f.value; });
+    var ta = document.getElementById('md-payload');
+    if (ta) ta.value = JSON.stringify(Object.assign({ request_id: genRequestId() }, params), null, 2);
+
+    // Wire JSON→form sync once
+    if (ta && !ta._mdSyncBound) {
+      ta._mdSyncBound = true;
+      ta.addEventListener('input', function () {
+        try {
+          var obj = JSON.parse(ta.value);
+          ta.style.borderColor = '';
+          var meta = JSON.parse((document.getElementById('md-form-view') || {}).dataset && document.getElementById('md-form-view').dataset.fields || '[]');
+          meta.forEach(function (fm, i) {
+            var el = document.getElementById('mdf-' + i);
+            if (!el) return;
+            var parts = fm.path.split('.'); var val = obj;
+            for (var j = 0; j < parts.length && val != null; j++) val = val[parts[j]];
+            if (val == null) return;
+            if (fm.control && fm.control.type === 'toggle') {
+              el.checked = (val === true || val === 'true');
+              var span = el.parentNode.querySelector('.md-toggle-val');
+              if (span) span.textContent = el.checked ? 'on' : 'off';
+            } else {
+              el.value = val;
+              var sv = el.nextElementSibling;
+              if (sv && sv.classList.contains('md-slider-val')) sv.textContent = val;
+            }
+          });
+        } catch (e) { ta.style.borderColor = 'var(--red)'; }
+      });
+    }
   }
 
   function getPayloadJson() {
