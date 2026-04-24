@@ -117,19 +117,10 @@
       html += '</div></div>';
     }
 
-    // Run experiment button
+    // Run experiment button — navigates to the run configurator
     html += '<div class="tier2-section">';
-    html += '<button class="act act-primary" id="run-experiment-btn">Run Experiment</button>';
+    html += '<a class="act act-primary" href="/experiments/' + encodeURIComponent(templateId) + '/run" id="run-experiment-btn">Configure &amp; Run</a>';
     html += '</div>';
-
-    // Run dialog (hidden)
-    html += '<div class="exp-run-dialog hidden" id="exp-run-dialog">';
-    html += '<div class="tier2-label">Run Parameters</div>';
-    html += '<div class="exp-run-form" id="exp-run-form"></div>';
-    html += '<div class="exp-run-actions">';
-    html += '<button class="act act-primary" id="exp-start-btn">Start</button>';
-    html += '<button class="act" id="exp-cancel-dialog-btn">Cancel</button>';
-    html += '</div></div>';
 
     // Run history
     if (runs.length) {
@@ -148,7 +139,6 @@
     }
 
     bodyEl.innerHTML = html;
-    setupRunDialog();
   }
 
   function renderSteps(steps, depth) {
@@ -190,98 +180,6 @@
     return html;
   }
 
-  // ── Run dialog ────────────────────────────────────────────────────
-
-  function setupRunDialog() {
-    var runBtn = document.getElementById('run-experiment-btn');
-    var dialog = document.getElementById('exp-run-dialog');
-    var startBtn = document.getElementById('exp-start-btn');
-    var cancelBtn = document.getElementById('exp-cancel-dialog-btn');
-    var formEl = document.getElementById('exp-run-form');
-
-    if (!runBtn || !dialog) return;
-
-    runBtn.addEventListener('click', function () {
-      dialog.classList.remove('hidden');
-      buildParamForm(formEl);
-    });
-
-    if (cancelBtn) cancelBtn.addEventListener('click', function () { dialog.classList.add('hidden'); });
-
-    if (startBtn) startBtn.addEventListener('click', function () {
-      var params = collectParams(formEl);
-      startBtn.disabled = true;
-      startBtn.textContent = 'Starting\u2026';
-
-      L.apiFetch('/api/experiments/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_id: templateId, params: params }),
-      }).then(function (res) {
-        if (res.ok) return res.json();
-        throw new Error('Failed to start experiment');
-      }).then(function (data) {
-        L.toast({ message: 'Experiment started', type: 'success' });
-        window.location.href = '/experiments/runs/' + encodeURIComponent(data.run_id || data.id);
-      }).catch(function (err) {
-        L.toast({ message: err.message, type: 'error' });
-        startBtn.disabled = false;
-        startBtn.textContent = 'Start';
-      });
-    });
-  }
-
-  function buildParamForm(formEl) {
-    if (!formEl) return;
-    var params = template.parameters_schema || template.parameters || {};
-    var keys = Object.keys(params);
-
-    if (!keys.length) {
-      formEl.innerHTML = '<div class="comp-empty">No parameters needed</div>';
-      return;
-    }
-
-    var html = '';
-    keys.forEach(function (key) {
-      var p = params[key];
-      var defaultVal = p.default !== undefined ? String(p.default) : '';
-      html += '<div class="exp-form-field">';
-      html += '<label class="exp-form-label">' + L.esc(key);
-      if (p.required) html += ' <span class="exp-param-req">*</span>';
-      html += '</label>';
-
-      if (p.type === 'boolean' || p.type === 'bool') {
-        html += '<input type="checkbox" class="exp-form-input" data-param="' + L.escAttr(key) + '" data-type="bool"' + (defaultVal === 'true' ? ' checked' : '') + '>';
-      } else if (p.enum) {
-        html += '<select class="exp-form-input" data-param="' + L.escAttr(key) + '">';
-        p.enum.forEach(function (opt) {
-          html += '<option value="' + L.escAttr(String(opt)) + '"' + (String(opt) === defaultVal ? ' selected' : '') + '>' + L.esc(String(opt)) + '</option>';
-        });
-        html += '</select>';
-      } else {
-        var inputType = (p.type === 'integer' || p.type === 'float' || p.type === 'number') ? 'number' : 'text';
-        html += '<input type="' + inputType + '" class="exp-form-input" data-param="' + L.escAttr(key) + '" value="' + L.escAttr(defaultVal) + '">';
-      }
-
-      if (p.description) html += '<div class="exp-form-help">' + L.esc(p.description) + '</div>';
-      html += '</div>';
-    });
-
-    formEl.innerHTML = html;
-  }
-
-  function collectParams(formEl) {
-    if (!formEl) return {};
-    var params = {};
-    var inputs = formEl.querySelectorAll('[data-param]');
-    inputs.forEach(function (inp) {
-      var key = inp.dataset.param;
-      if (inp.type === 'checkbox') params[key] = inp.checked;
-      else if (inp.type === 'number') params[key] = inp.value ? Number(inp.value) : null;
-      else params[key] = inp.value;
-    });
-    return params;
-  }
 
   // ── Boot ──────────────────────────────────────────────────────────
 

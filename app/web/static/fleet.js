@@ -121,21 +121,27 @@
         payload: payload,
         ok: ok,
         result: result,
+        request_id: (result && result.request_id) || null,
         elapsed: elapsed,
         ts: new Date().toISOString(),
+        result_received: false,
+        result_ok: null,
+        result_payload: null,
+        result_elapsed: null,
+        result_ts: null,
       };
       L.commandHistory.unshift(entry);
       if (L.commandHistory.length > 50) L.commandHistory.length = 50;
 
       var target = agentId + (componentId ? '/' + componentId : '');
-      var details = { target: target, request: payload, response: result };
 
-      if (ok) {
-        L.toast({ message: action + ' \u2713 ' + L.fmtDuration(elapsed), type: 'success', details: details });
-      } else {
+      if (!ok) {
+        // HTTP dispatch failed — show error toast immediately (no WS result will arrive)
         var errMsg = (result && result.error) || (result && result.detail) || 'failed';
-        L.toast({ message: action + ' \u2717 ' + errMsg, type: 'error', details: details });
+        L.toast({ message: action + ' \u2717 ' + errMsg, type: 'error',
+                  details: { target: target, request: payload, response: result } });
       }
+      // If ok: suppress dispatch toast — the WS evt/*/result handler shows the single result toast
 
       return entry;
     } catch (e) {
@@ -146,8 +152,14 @@
         payload: payload,
         ok: false,
         result: { error: e.message },
+        request_id: null,
         elapsed: Date.now() - startTime,
         ts: new Date().toISOString(),
+        result_received: false,
+        result_ok: null,
+        result_payload: null,
+        result_elapsed: null,
+        result_ts: null,
       };
       L.commandHistory.unshift(entry2);
       L.toast({ message: action + ' \u2717 ' + e.message, type: 'error' });
@@ -216,6 +228,33 @@
   // Expose as global for convenience
   window.onWsEvent = L.onWsEvent.bind(L);
 
+  // ── Live log buffer ───────────────────────────────────────────────
+  L.logBuffer = [];          // [{agent_id, component_id, level, message, ts, received_ts}]
+  L._logListeners = [];
+  var LOG_BUFFER_MAX = 2000;
+
+  L.onLog = function (fn) {
+    L._logListeners.push(fn);
+    return function () {
+      var idx = L._logListeners.indexOf(fn);
+      if (idx !== -1) L._logListeners.splice(idx, 1);
+    };
+  };
+
+  // ── Command result listeners ─────────────────────────────────────
+  // Each listener is called with (entry, evt) when an evt/*/result WS message
+  // arrives. Returns an unsubscribe function for cleanup.
+  L._cmdResultListeners = [];
+  L._panelWatchingRequestId = null;
+
+  L.onCmdResult = function (fn) {
+    L._cmdResultListeners.push(fn);
+    return function () {
+      var idx = L._cmdResultListeners.indexOf(fn);
+      if (idx !== -1) L._cmdResultListeners.splice(idx, 1);
+    };
+  };
+
   function handleWsEvent(evt) {
     L._wsListeners.forEach(function (fn) { try { fn(evt); } catch (_) {} });
     // Experiment engine events (non-mqtt)
@@ -239,6 +278,25 @@
     }
     var a = L.agents[id];
     a.last_seen_ts = evt.ts;
+
+    // Live log events
+    if (evt.topic_type === 'logs') {
+      var logPayload = evt.payload || {};
+      var lines = Array.isArray(logPayload.lines) ? logPayload.lines : [logPayload];
+      lines.forEach(function (line) {
+        var entry = {
+          agent_id: id,
+          component_id: evt.component_id || null,
+          level: (line.level || line.levelname || 'INFO').toUpperCase(),
+          message: line.message || line.msg || JSON.stringify(line),
+          ts: line.ts || evt.ts,
+          received_ts: evt.ts,
+        };
+        L.logBuffer.push(entry);
+        if (L.logBuffer.length > LOG_BUFFER_MAX) L.logBuffer.shift();
+        L._logListeners.forEach(function (fn) { try { fn(entry); } catch (_) {} });
+      });
+    }
 
     if (evt.scope === 'agent') {
       if (evt.topic_type === 'status') a.status = evt.payload;
@@ -275,6 +333,47 @@
       }
       else if (evt.topic_type && evt.topic_type.startsWith('telemetry/')) {
         bufferTelemetry(id, cid, evt.topic_type.substring(10), evt.payload, evt.ts);
+      }
+    }
+
+    // Handle command result events (evt/*/result)
+    if (evt.topic_type && evt.topic_type.startsWith('evt/') && evt.topic_type.endsWith('/result')) {
+      var reqId = evt.payload && evt.payload.request_id;
+      if (reqId) {
+        var matchEntry = null;
+        for (var hi = 0; hi < L.commandHistory.length; hi++) {
+          if (L.commandHistory[hi].request_id === reqId) { matchEntry = L.commandHistory[hi]; break; }
+        }
+        if (matchEntry) {
+          matchEntry.result_received = true;
+          matchEntry.result_ok = evt.payload.ok;
+          matchEntry.result_payload = evt.payload;
+          matchEntry.result_ts = evt.ts;
+          matchEntry.result_elapsed = matchEntry.ts
+            ? (new Date(evt.ts) - new Date(matchEntry.ts)) : null;
+        }
+        L._cmdResultListeners.forEach(function (fn) {
+          try { fn(matchEntry, evt); } catch (_) {}
+        });
+        // Show result toast only when command panel is not watching this request_id
+        if (L._panelWatchingRequestId !== reqId) {
+          var resAction = matchEntry ? matchEntry.action : (evt.topic_type.split('/')[1] || evt.topic_type);
+          var resTarget = matchEntry
+            ? matchEntry.agentId + (matchEntry.componentId ? '/' + matchEntry.componentId : '')
+            : evt.agent_id;
+          var resDetails = {
+            target: resTarget,
+            request: matchEntry ? matchEntry.payload : null,
+            response: evt.payload,
+          };
+          if (evt.payload && evt.payload.ok) {
+            L.toast({ message: resAction + ' \u2713 ' + L.fmtDuration(matchEntry ? matchEntry.result_elapsed : null),
+                      type: 'success', details: resDetails });
+          } else {
+            var resErrMsg = (evt.payload && evt.payload.error) || 'agent error';
+            L.toast({ message: resAction + ' \u2717 ' + resErrMsg, type: 'error', details: resDetails });
+          }
+        }
       }
     }
 

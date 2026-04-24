@@ -12,11 +12,15 @@
     <span id="ws-status" class="ws-dot ws-dot-disconnected"></span>
     <a href="/" class="brand">LUCID</a>
     <a href="/" class="nav-tab{% if page_id in ('fleet', 'agent_detail', 'agent_components', 'component_detail', 'components', 'components_type') %} active{% endif %}">Fleet</a>
-    <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run') %} active{% endif %}">Experiments</a>
+    <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run', 'experiment_runs', 'experiment_run_config') %} active{% endif %}">Experiments</a>
     <a href="/users" class="nav-tab{% if page_id == 'users' %} active{% endif %}">Users</a>
     <a href="/topic-links" class="nav-tab{% if page_id == 'topic_links' %} active{% endif %}">Topic Links</a>
     <a href="/mqtt" class="nav-tab{% if page_id == 'mqtt' %} active{% endif %}">MQTT</a>
     <div class="nav-spacer"></div>
+    <button class="nav-log-btn" id="log-toggle-btn" title="Live Logs">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="log-badge" id="log-badge" style="display:none"></span>
+    </button>
     <button class="nav-search-btn" id="palette-hint" aria-label="Search">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     </button>
@@ -48,6 +52,21 @@
   </div>
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- Live log panel (bottom drawer) -->
+  <div class="log-panel" id="log-panel">
+    <div class="log-panel-header">
+      <span class="log-panel-title">Live Logs</span>
+      <div class="log-panel-controls">
+        <select class="log-sel" id="log-level-sel" title="Level filter"></select>
+        <select class="log-sel" id="log-source-sel" title="Source filter"><option value="">All sources</option></select>
+        <button class="log-btn" id="log-scroll-bottom" title="Scroll to bottom">&#8595;</button>
+        <button class="log-btn" id="log-clear-btn" title="Clear">Clear</button>
+        <button class="log-btn log-btn-close" id="log-close-btn" title="Close">&times;</button>
+      </div>
+    </div>
+    <div class="log-feed" id="log-feed"></div>
+  </div>
+
   <!-- Shared JS -->
   <script>window.LUCID = window.LUCID || {}; LUCID.apiBase = "";</script>
   {% block page_data %}{% endblock %}
@@ -62,6 +81,7 @@
   <script src="/static/fleet-command-palette.js"></script>
   <script src="/static/fleet-breadcrumb.js"></script>
   <script src="/static/fleet-bulk-commands.js"></script>
+  <script src="/static/fleet-logs-panel.js"></script>
   {% block page_scripts %}{% endblock %}
 </body>
 </html>

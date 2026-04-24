@@ -27,7 +27,7 @@
 
   // publisher state
   var pubCrumbs = [];
-  var pubFormMode = 'form'; // 'form' | 'raw'
+  // form + JSON are always both visible side by side
   var pubFormFields = [];   // [{path, key, value, control}]
 
   var SESSION_KEY = 'lucid_mqtt_conn';
@@ -233,7 +233,6 @@
     viewerMessages = {};
     resultSubs = {};
     pubCrumbs = [];
-    pubFormMode = 'form';
     pubFormFields = [];
     document.getElementById('mqtt-workspace').classList.add('hidden');
     document.getElementById('mqtt-connect-screen').classList.remove('hidden');
@@ -522,7 +521,8 @@
 
   function buildViewerHTML(v) {
     if (!v.agentId) {
-      return '<div class="mv-hdr"><div class="mv-topic" style="color:var(--border)">— empty pane —</div></div>'
+      return '<div class="mv-hdr"><div class="mv-topic" style="color:var(--border)">— empty pane —</div>'
+        + '<div class="mv-close" onclick="mqttCloseViewer(\'' + v.id + '\')">✕</div></div>'
         + '<div class="mv-empty"><div class="mv-empty-icon">📭</div><p>Click a topic in the tree</p><small>to stream live messages here</small></div>';
     }
     var fullTopic = 'lucid/agents/' + v.agentId + '/' + v.topic;
@@ -753,25 +753,7 @@
 
   // ── Publisher form helpers ──────────────────────────────────────────────
 
-  window.mdSetMode = function (mode) {
-    pubFormMode = mode;
-    var formView = document.getElementById('md-form-view');
-    var rawView = document.getElementById('md-payload');
-    var formBtn = document.getElementById('md-mode-form');
-    var rawBtn = document.getElementById('md-mode-raw');
-    if (mode === 'form') {
-      if (formView) formView.style.display = '';
-      if (rawView) rawView.style.display = 'none';
-      if (formBtn) formBtn.classList.add('md-mode-active');
-      if (rawBtn) rawBtn.classList.remove('md-mode-active');
-    } else {
-      if (formView) formView.style.display = 'none';
-      if (rawView) rawView.style.display = '';
-      if (rawBtn) rawBtn.classList.add('md-mode-active');
-      if (formBtn) formBtn.classList.remove('md-mode-active');
-      mdSyncFormToJson();
-    }
-  };
+  // Both form and JSON are always visible side by side — no mode toggle needed
 
   function mdGetSchemaFields(agentId, action) {
     if (!agentId || !action) return null;
@@ -901,8 +883,7 @@
       else val = el.value;
       return { path: fm.path, value: val };
     });
-    var params = L.buildPayload ? L.buildPayload(fieldValues) : {};
-    var payload = Object.assign({ request_id: genRequestId() }, params);
+    var payload = L.buildPayload ? L.buildPayload(fieldValues) : {};
     ta.value = JSON.stringify(payload, null, 2);
   }
 
@@ -927,7 +908,7 @@
       var hint = '';
       if (match) {
         hint = match.help || match.label || '';
-        if (match.has_body === false && !hint) hint = 'no payload required';
+        if (match.has_body === false && !hint) hint = 'no extra payload — only request_id';
       }
       hintEl.textContent = hint;
       hintEl.title = hint;
@@ -938,14 +919,16 @@
 
     // 2. Fall back to catalog template
     var tmpl = {};
-    if (!schemaFields && match && match.template) {
-      try {
-        tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : match.template;
-        delete tmpl.request_id;
-      } catch (e) {}
+    if (!schemaFields && match) {
+      if (match.template) {
+        try {
+          tmpl = typeof match.template === 'string' ? JSON.parse(match.template) : JSON.parse(JSON.stringify(match.template));
+        } catch (e) {}
+      }
     }
 
-    // 3. Build form fields
+    // 3. Build form fields — always include request_id
+    var reqId = genRequestId();
     if (schemaFields && schemaFields.length) {
       pubFormFields = schemaFields.map(function (sf) {
         var ctrl = (L.controlFromSchema && L.controlFromSchema({ type: sf.type, 'enum': sf['enum'], min: sf.min, max: sf.max }))
@@ -954,18 +937,22 @@
         return { path: sf.name, key: sf.name, value: sf.default_value, control: ctrl, description: sf.description };
       });
     } else {
+      // Remove request_id from template — we add it as a dedicated field
+      delete tmpl.request_id;
       pubFormFields = L.flattenTemplate ? L.flattenTemplate(tmpl, '', '') : [];
     }
 
-    mdRenderFormView();
+    // Always prepend request_id as first field
+    pubFormFields.unshift({
+      path: 'request_id', key: 'request_id', value: reqId,
+      control: { type: 'text' }, description: 'Unique ID to correlate command with result'
+    });
 
-    // Seed the textarea with request_id + defaults
-    var params = {};
-    pubFormFields.forEach(function (f) { var parts = f.path.split('.'); var cur = params; for (var j = 0; j < parts.length - 1; j++) { if (!cur[parts[j]]) cur[parts[j]] = {}; cur = cur[parts[j]]; } cur[parts[parts.length-1]] = f.value; });
-    var ta = document.getElementById('md-payload');
-    if (ta) ta.value = JSON.stringify(Object.assign({ request_id: genRequestId() }, params), null, 2);
+    mdRenderFormView();
+    mdSyncFormToJson();
 
     // Wire JSON→form sync once
+    var ta = document.getElementById('md-payload');
     if (ta && !ta._mdSyncBound) {
       ta._mdSyncBound = true;
       ta.addEventListener('input', function () {

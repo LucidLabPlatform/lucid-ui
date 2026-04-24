@@ -138,60 +138,38 @@
     return 'generic';
   };
 
-  // ── Component summary ──────────────────────────────────────────────
-  L.compSummary = function (compId, comp) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var status = (comp.status && comp.status.state) || 'unknown';
-    var type = L.detectComponentType(compId, comp.metadata && comp.metadata.capabilities);
+  // ── State helpers ──────────────────────────────────────────────────
 
-    if (type === 'exec') {
-      var active = s.active_runs || s['active runs'] || 0;
-      return active > 0 ? active + ' active run(s)' : 'No active runs';
+  // Normalize component state — handles both {payload: {...}} and bare object
+  L.statePayload = function (comp) {
+    var s = comp && comp.state;
+    if (!s) return {};
+    if (s && typeof s === 'object' && s.payload && typeof s.payload === 'object') return s.payload;
+    return s;
+  };
+
+  // snake_case / kebab-case → Title Case
+  L.formatKey = function (key) {
+    return String(key)
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  };
+
+  // ── Component summary ──────────────────────────────────────────────
+  // Purely state-driven: takes the first 3 non-object scalar values from state.
+  // No per-type logic — works for any component without code changes.
+  L.compSummary = function (compId, comp) {
+    var s = L.statePayload(comp);
+    var status = (comp.status && comp.status.state) || 'unknown';
+    var parts = [];
+    var keys = Object.keys(s);
+    for (var i = 0; i < keys.length && parts.length < 3; i++) {
+      var k = keys[i];
+      var v = s[k];
+      if (v == null || typeof v === 'object' || String(v) === '') continue;
+      parts.push(L.formatKey(k) + ': ' + v);
     }
-    if (type === 'ros_bridge') {
-      var rl = s.roslaunch || s.roslaunch_state || '';
-      var pubs = s.publishers || '';
-      var subs = s.subscriptions || '';
-      if (status === 'error') return 'ROS master not reachable';
-      var parts = [];
-      if (rl) parts.push('roslaunch: ' + rl);
-      if (pubs !== '') parts.push(pubs + ' pub');
-      if (subs !== '') parts.push(subs + ' sub');
-      return parts.join(' \u00B7 ') || status;
-    }
-    if (type === 'led_strip') {
-      var count = s.led_count || s['led count'] || '';
-      var bright = s.brightness != null ? s.brightness : '';
-      var effect = s.current_effect || s['current effect'] || '';
-      var parts2 = [];
-      if (count) parts2.push(count + ' LEDs');
-      if (bright !== '') parts2.push('Brightness: ' + bright);
-      if (effect) parts2.push('Effect: ' + effect);
-      return parts2.join(' \u00B7 ') || status;
-    }
-    if (type === 'ndi') {
-      var rx = s.receive_active || s['receive active'] || 'false';
-      var tx = s.send_active || s['send active'] || 'false';
-      if (rx === 'true' || tx === 'true') {
-        var p = [];
-        if (rx === 'true') p.push('receiving');
-        if (tx === 'true') p.push('sending');
-        return p.join(' + ');
-      }
-      return 'Idle';
-    }
-    if (type === 'projector') {
-      var conn = s.connected || '';
-      var port = s.serial_port || s['serial port'] || '';
-      if (conn === 'true') return 'Connected' + (port ? ' \u00B7 ' + port : '');
-      return 'Not connected';
-    }
-    if (type === 'viz') {
-      var arena = s.arena || 'unknown';
-      var td = s.touchdesigner || 'unknown';
-      return 'Arena: ' + arena + ' \u00B7 TD: ' + td;
-    }
-    return status;
+    return parts.length ? parts.join(' \u00B7 ') : status;
   };
 
   // ── Payload form helpers ───────────────────────────────────────────

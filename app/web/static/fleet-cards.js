@@ -86,11 +86,17 @@
     if (meta.platform) html += ' \u00B7 ' + L.esc(meta.platform);
     html += '</div>';
     html += '<div class="card-comps">' + renderCompList(a) + '</div>';
-    html += '<div class="card-actions">';
-    html += '<button class="act act-quick" data-agent="' + L.escAttr(a.agent_id) + '" data-action="ping">ping</button>';
-    html += '<button class="act act-quick" data-agent="' + L.escAttr(a.agent_id) + '" data-action="restart">restart</button>';
-    html += '<button class="act act-quick" data-agent="' + L.escAttr(a.agent_id) + '" data-action="refresh">refresh</button>';
-    html += '</div>';
+    var catalog = L.catalogs[a.agent_id] || {};
+    var agentQuickCmds = ((catalog.agent) || []).filter(function (cmd) {
+      return cmd.category === 'lifecycle' && !cmd.has_body;
+    });
+    if (agentQuickCmds.length) {
+      html += '<div class="card-actions">';
+      agentQuickCmds.forEach(function (cmd) {
+        html += '<button class="act act-quick" data-agent="' + L.escAttr(a.agent_id) + '" data-action="' + L.escAttr(cmd.action) + '">' + L.esc(cmd.label || cmd.action) + '</button>';
+      });
+      html += '</div>';
+    }
     html += '</a>';
     return html;
   }

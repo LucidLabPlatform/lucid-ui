@@ -4,9 +4,11 @@
 (function (L) {
   'use strict';
 
-  var MAX_VISIBLE = 3;
+  var MAX_VISIBLE = Infinity;
+  var MAX_EXPANDED = 4;
   var queue = [];
   var visible = 0;
+  var expandedToasts = []; // ordered oldest→newest, only pinned/expanded toasts
 
   L.toast = function (opts) {
     var msg = opts.message || '';
@@ -39,10 +41,11 @@
 
     var html = '<span class="toast-icon">' + icon + '</span>';
     html += '<span class="toast-msg">' + L.esc(message) + '</span>';
+    html += '<button class="toast-close" title="Dismiss">\u2715</button>';
 
     if (details) {
-      html += '<button class="toast-details-toggle">\u25BC Details</button>';
-      html += '<div class="toast-details hidden">';
+      html += '<button class="toast-details-toggle">\u25B2 Details</button>';
+      html += '<div class="toast-details">';
       if (details.target) {
         html += '<div class="toast-detail-section"><span class="toast-detail-label">Target</span>';
         html += '<span class="toast-detail-value">' + L.esc(details.target) + '</span></div>';
@@ -61,30 +64,16 @@
     el.innerHTML = html;
     container.appendChild(el);
 
-    // Details toggle
-    var toggleBtn = el.querySelector('.toast-details-toggle');
-    var detailsDiv = el.querySelector('.toast-details');
-    if (toggleBtn && detailsDiv) {
-      toggleBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        var isHidden = detailsDiv.classList.toggle('hidden');
-        toggleBtn.textContent = isHidden ? '\u25BC Details' : '\u25B2 Details';
-        // Pause auto-dismiss when details are open
-        if (!isHidden) {
-          clearTimeout(dismissTimer);
-          el.classList.add('toast-pinned');
-        } else {
-          dismissTimer = setTimeout(dismissFn, 3000);
-          el.classList.remove('toast-pinned');
-        }
-      });
-    }
-
     // Trigger animation
     requestAnimationFrame(function () { el.classList.add('toast-show'); });
 
-    var dismissFn = function () {
-      if (el.classList.contains('toast-pinned')) return;
+    var dismissTimer = null;
+
+    var dismissFn = function (force) {
+      if (!force && el.classList.contains('toast-pinned')) return;
+      clearTimeout(dismissTimer);
+      var idx = expandedToasts.indexOf(el);
+      if (idx !== -1) expandedToasts.splice(idx, 1);
       el.classList.remove('toast-show');
       el.classList.add('toast-hide');
       setTimeout(function () {
@@ -97,13 +86,56 @@
       }, 200);
     };
 
-    var dismissTimer = setTimeout(dismissFn, details ? 6000 : duration);
+    // Details toggle
+    var toggleBtn = el.querySelector('.toast-details-toggle');
+    var detailsDiv = el.querySelector('.toast-details');
+    if (toggleBtn && detailsDiv) {
+      // Start expanded and pinned
+      el.classList.add('toast-pinned');
+      expandedToasts.push(el);
 
-    // Click to dismiss (unless clicking details)
+      // If we now exceed the max, force-dismiss the oldest expanded toast
+      if (expandedToasts.length > MAX_EXPANDED) {
+        var oldest = expandedToasts[0]; // oldest is first
+        var oldCloseBtn = oldest.querySelector('.toast-close');
+        if (oldCloseBtn) oldCloseBtn.click();
+      }
+
+      toggleBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isHidden = detailsDiv.classList.toggle('hidden');
+        toggleBtn.textContent = isHidden ? '\u25BC Details' : '\u25B2 Details';
+        if (!isHidden) {
+          // Re-expanding
+          clearTimeout(dismissTimer);
+          el.classList.add('toast-pinned');
+          if (expandedToasts.indexOf(el) === -1) expandedToasts.push(el);
+        } else {
+          // Collapsing — remove from expanded list, start auto-dismiss
+          var idx = expandedToasts.indexOf(el);
+          if (idx !== -1) expandedToasts.splice(idx, 1);
+          el.classList.remove('toast-pinned');
+          dismissTimer = setTimeout(dismissFn, 3000);
+        }
+      });
+    } else {
+      // No details — auto-dismiss after duration
+      dismissTimer = setTimeout(dismissFn, duration);
+    }
+
+    // Close button always force-dismisses
+    var closeBtn = el.querySelector('.toast-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        dismissFn(true);
+      });
+    }
+
+    // Click body to dismiss only when no details panel
     el.addEventListener('click', function (e) {
-      if (e.target.closest('.toast-details-toggle') || e.target.closest('.toast-details')) return;
-      clearTimeout(dismissTimer);
-      dismissFn();
+      if (e.target.closest('.toast-close') || e.target.closest('.toast-details-toggle') || e.target.closest('.toast-details')) return;
+      if (!details) { clearTimeout(dismissTimer); dismissFn(true); }
     });
   }
 

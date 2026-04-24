@@ -1,53 +1,151 @@
-// fleet-components.js — Type-aware component card renderers
-// Depends on: fleet-utils.js
+// fleet-components.js — Schema-driven component card renderer
+// Depends on: fleet-utils.js, fleet.js
+//
+// One renderer for all component types. Field display is driven by
+// schema.publishes.state.fields — no per-type branches. Adding a new
+// component type requires no changes here.
 
 (function (L) {
   'use strict';
 
-  // ── Dispatcher ─────────────────────────────────────────────────────
+  // ── Public renderer ────────────────────────────────────────────────
 
   L.renderComponent = function (agentId, compId, comp, catalog) {
-    var type = L.detectComponentType(compId, comp.metadata && comp.metadata.capabilities);
-    var renderer = renderers[type] || renderers.generic;
-    return renderer(agentId, compId, comp, catalog);
+    var schema = compSchema(agentId, compId);
+    var fieldDefs = schema && schema.publishes && schema.publishes.state && schema.publishes.state.fields;
+    var state = L.statePayload(comp);
+    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
+
+    var html = compHeader(compId, comp);
+    html += '<div class="comp-card-body">';
+    html += renderStateFields(state, fieldDefs);
+    html += '</div>';
+    html += actionsHtml(agentId, compId, commands);
+
+    return '<div class="comp-card">' + html + '</div>';
   };
 
-  // ── Quick-command filter ────────────────────────────────────────────
-  // Card only shows the most important commands; detail page shows all.
+  // ── Schema lookup ──────────────────────────────────────────────────
 
-  function quickCommands(commands) {
-    if (!commands || !commands.length) return [];
-    return commands.filter(function (cmd) {
-      var a = cmd.action.toLowerCase();
-      if (a.indexOf('cfg') !== -1) return false;
-      if (a.indexOf('navigate') !== -1) return false;
-      if (a.indexOf('keystone') !== -1) return false;
-      if (a.indexOf('image_shift') !== -1) return false;
-      if (a.indexOf('aspect') !== -1) return false;
-      return true;
+  function compSchema(agentId, compId) {
+    return L.schemas[agentId] &&
+           L.schemas[agentId].components &&
+           L.schemas[agentId].components[compId];
+  }
+
+  // ── State rendering ────────────────────────────────────────────────
+  // Schema fields are rendered with type-aware controls (progress bar,
+  // boolean badge, color swatch). Fields not in the schema fall back to
+  // plain text. Object values are skipped unless they match the RGB pattern.
+
+  function renderStateFields(state, fieldDefs) {
+    if (!state || !Object.keys(state).length) return '<div class="comp-empty">No state</div>';
+
+    var html = '<div class="comp-metrics-grid">';
+    var rendered = {};
+
+    // 1. Schema-defined fields first (preserves authored order)
+    if (fieldDefs) {
+      Object.keys(fieldDefs).forEach(function (key) {
+        var val = state[key];
+        if (val == null) return;
+        rendered[key] = true;
+        html += renderField(key, val, fieldDefs[key]);
+      });
+    }
+
+    // 2. Remaining state fields not covered by schema
+    Object.keys(state).forEach(function (key) {
+      if (rendered[key]) return;
+      var val = state[key];
+      if (val == null || typeof val === 'object') return; // skip complex objects
+      html += renderField(key, val, null);
     });
+
+    html += '</div>';
+    return html;
   }
 
-  // ── Action buttons HTML ────────────────────────────────────────────
+  function renderField(key, val, def) {
+    var type = def && def.type;
 
-  function actionsHtml(agentId, compId, commands) {
-    if (!commands || !commands.length) return '';
-    return '<div class="comp-actions">' + commands.map(function (cmd) {
-      var cls = cmd.category === 'danger' ? ' act-danger' : '';
-      var hb = cmd.has_body ? ' data-has-body="1"' : '';
-      var tpl = cmd.template ? ' data-template="' + L.escAttr(JSON.stringify(cmd.template)) + '"' : '';
-      return '<button class="act' + cls + '" data-agent="' + L.escAttr(agentId) +
-        '" data-comp="' + L.escAttr(compId) +
-        '" data-action="' + L.escAttr(cmd.action) + '"' + hb + tpl + '>' +
-        L.esc(cmd.label || cmd.action) + '</button>';
-    }).join('') + '</div>';
+    // Color object with r/g/b subfields
+    if (type === 'object' || (val && typeof val === 'object')) {
+      var fields = def && def.fields;
+      if (fields && fields.r != null && fields.g != null && fields.b != null && typeof val === 'object') {
+        return colorField(key, val);
+      }
+      return ''; // skip other objects
+    }
+
+    // Boolean
+    if (type === 'boolean' || val === true || val === false) {
+      return boolField(key, val);
+    }
+    // String booleans
+    if (val === 'true' || val === 'false') {
+      return boolField(key, val === 'true');
+    }
+
+    // Numeric with min/max → progress bar
+    if ((type === 'integer' || type === 'number') && def && def.min != null && def.max != null) {
+      return numericField(key, Number(val), def.min, def.max);
+    }
+
+    // Enum → plain value (could become a badge later)
+    if (def && def['enum']) {
+      return textField(key, val);
+    }
+
+    // Fallback: plain text
+    return textField(key, val);
   }
 
-  // ── Shared parts ───────────────────────────────────────────────────
+  function textField(key, val) {
+    return '<div class="metric-block">' +
+      '<span class="metric-label">' + L.esc(L.formatKey(key)) + '</span>' +
+      '<span class="metric-value">' + L.esc(String(val)) + '</span>' +
+    '</div>';
+  }
+
+  function boolField(key, val) {
+    var on = val === true || val === 'true';
+    return '<div class="metric-block">' +
+      '<span class="metric-label">' + L.esc(L.formatKey(key)) + '</span>' +
+      '<span class="metric-value ' + (on ? 'val-ok' : 'val-muted') + '">' + (on ? 'Yes' : 'No') + '</span>' +
+    '</div>';
+  }
+
+  function numericField(key, val, min, max) {
+    var range = max - min;
+    var pct = range > 0 ? Math.min(100, Math.max(0, (val - min) / range * 100)) : 0;
+    // 0-100 range metrics get traffic-light coloring; other ranges use accent
+    var color = (min === 0 && max === 100)
+      ? (val > 80 ? 'var(--red)' : val > 50 ? 'var(--yellow)' : 'var(--green)')
+      : 'var(--accent)';
+    return '<div class="metric-block">' +
+      '<span class="metric-label">' + L.esc(L.formatKey(key)) + '</span>' +
+      '<span class="metric-value">' + L.esc(String(val)) + '</span>' +
+      '<div class="progress-bar"><div class="progress-fill" style="width:' + pct.toFixed(1) + '%;background:' + color + '"></div></div>' +
+    '</div>';
+  }
+
+  function colorField(key, val) {
+    var r = Math.max(0, Math.min(255, Number(val.r) || 0));
+    var g = Math.max(0, Math.min(255, Number(val.g) || 0));
+    var b = Math.max(0, Math.min(255, Number(val.b) || 0));
+    var hex = '#' + [r, g, b].map(function (v) { return ('0' + v.toString(16)).slice(-2); }).join('');
+    return '<div class="metric-block">' +
+      '<span class="metric-label">' + L.esc(L.formatKey(key)) + '</span>' +
+      '<span class="metric-value"><span class="color-swatch" style="background:' + hex + '"></span> ' + L.esc(hex) + '</span>' +
+    '</div>';
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────
 
   function compHeader(compId, comp) {
     var cState = (comp.status && comp.status.state) || 'unknown';
-    var icon = L.compIcon(compId);
+    var icon = L.compIcon(compId, comp);
     return '<div class="comp-card-header">' +
       '<span class="comp-card-icon">' + icon + '</span>' +
       '<span class="comp-card-name">' + L.esc(compId) + '</span>' +
@@ -55,192 +153,28 @@
     '</div>';
   }
 
-  function capsHtml(comp) {
-    var caps = (comp.metadata && comp.metadata.capabilities) || [];
-    if (!caps.length) return '';
-    return '<div class="comp-caps">' + caps.map(function (c) {
-      return '<span class="pill">' + L.esc(c) + '</span>';
-    }).join('') + '</div>';
+  // ── Actions ────────────────────────────────────────────────────────
+  // Show all non-config commands. Config commands are available via the
+  // full command panel only (they need forms, not quick buttons).
+
+  function actionsHtml(agentId, compId, commands) {
+    var visible = commands.filter(function (cmd) {
+      return cmd.category !== 'config';
+    });
+    if (!visible.length) return '';
+    return '<div class="comp-actions">' +
+      visible.map(function (cmd) {
+        var hb = cmd.has_body ? ' data-has-body="1"' : '';
+        var tpl = cmd.template ? ' data-template="' + L.escAttr(JSON.stringify(cmd.template)) + '"' : '';
+        return '<button class="act act-quick"' +
+          ' data-agent="' + L.escAttr(agentId) + '"' +
+          ' data-comp="' + L.escAttr(compId) + '"' +
+          ' data-action="' + L.escAttr(cmd.action) + '"' +
+          hb + tpl + '>' +
+          L.esc(cmd.label || cmd.action) +
+        '</button>';
+      }).join('') +
+    '</div>';
   }
-
-  function progressBar(value, max, color) {
-    var pct = Math.min(100, Math.max(0, (value / max) * 100));
-    return '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + (color || 'var(--accent)') + '"></div></div>';
-  }
-
-  function metricRow(label, value, unit) {
-    return '<div class="metric-row"><span class="metric-label">' + L.esc(label) + '</span>' +
-      '<span class="metric-value">' + L.esc(value) + (unit ? ' <span class="metric-unit">' + L.esc(unit) + '</span>' : '') + '</span></div>';
-  }
-
-  // ── LED Strip renderer ─────────────────────────────────────────────
-
-  function renderLedStrip(agentId, compId, comp, catalog) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
-    var brightness = s.brightness != null ? s.brightness : '—';
-    var color = s.color || {};
-    var r = color.r || 0, g = color.g || 0, b = color.b || 0;
-    var colorHex = 'rgb(' + r + ',' + g + ',' + b + ')';
-    var effect = s.current_effect || s['current effect'] || 'none';
-    var ledCount = s.led_count || s['led count'] || '—';
-
-    var html = compHeader(compId, comp);
-    html += '<div class="comp-card-body">';
-    html += '<div class="comp-metrics-grid">';
-    html += '<div class="metric-block">';
-    html += '<span class="metric-label">Brightness</span>';
-    html += '<span class="metric-value">' + L.esc(brightness) + '</span>';
-    if (typeof brightness === 'number') html += progressBar(brightness, 255, 'var(--accent)');
-    html += '</div>';
-    html += '<div class="metric-block">';
-    html += '<span class="metric-label">Color</span>';
-    html += '<div class="color-swatch" style="background:' + colorHex + '"></div>';
-    html += '</div>';
-    html += '<div class="metric-block">';
-    html += '<span class="metric-label">Effect</span>';
-    html += '<span class="metric-value">' + L.esc(effect) + '</span>';
-    html += '</div>';
-    html += '<div class="metric-block">';
-    html += '<span class="metric-label">LEDs</span>';
-    html += '<span class="metric-value">' + L.esc(ledCount) + '</span>';
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-    html += actionsHtml(agentId, compId, quickCommands(commands));
-
-    return '<div class="comp-card comp-led-strip">' + html + '</div>';
-  }
-
-  // ── CPU Monitor renderer ───────────────────────────────────────────
-
-  function renderCpuMonitor(agentId, compId, comp, catalog) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
-    var cpu = s.cpu_percent != null ? s.cpu_percent : s['cpu percent'];
-    var temp = s.temperature || s.cpu_temp || s['cpu temp'];
-    var load = s.load_avg || s['load avg'];
-    var throttled = s.throttled != null ? s.throttled : s.is_throttled;
-    var freq = s.frequency || s.cpu_freq;
-
-    var html = compHeader(compId, comp);
-    html += '<div class="comp-card-body">';
-    html += '<div class="comp-metrics-grid">';
-    if (cpu != null) {
-      html += '<div class="metric-block">';
-      html += '<span class="metric-label">CPU</span>';
-      html += '<span class="metric-value">' + L.esc(cpu) + '%</span>';
-      html += progressBar(cpu, 100, cpu > 80 ? 'var(--red)' : cpu > 50 ? 'var(--yellow)' : 'var(--green)');
-      html += '</div>';
-    }
-    if (temp != null) {
-      html += '<div class="metric-block">';
-      html += '<span class="metric-label">Temp</span>';
-      html += '<span class="metric-value">' + L.esc(temp) + '\u00B0C</span>';
-      html += '</div>';
-    }
-    if (load != null) {
-      var loadStr = Array.isArray(load) ? load.join(', ') : String(load);
-      html += '<div class="metric-block">';
-      html += '<span class="metric-label">Load</span>';
-      html += '<span class="metric-value">' + L.esc(loadStr) + '</span>';
-      html += '</div>';
-    }
-    if (throttled != null) {
-      var thr = throttled === true || throttled === 'true' || throttled === 'Yes';
-      html += '<div class="metric-block">';
-      html += '<span class="metric-label">Throttled</span>';
-      html += '<span class="metric-value ' + (thr ? 'val-warn' : 'val-ok') + '">' + (thr ? 'Yes' : 'No') + '</span>';
-      html += '</div>';
-    }
-    if (freq != null) {
-      html += '<div class="metric-block">';
-      html += '<span class="metric-label">Freq</span>';
-      html += '<span class="metric-value">' + L.esc(freq) + ' MHz</span>';
-      html += '</div>';
-    }
-    html += '</div></div>';
-    html += actionsHtml(agentId, compId, quickCommands(commands));
-
-    return '<div class="comp-card comp-cpu-monitor">' + html + '</div>';
-  }
-
-  // ── ROS Bridge renderer ────────────────────────────────────────────
-
-  function renderRosBridge(agentId, compId, comp, catalog) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
-    var cState = (comp.status && comp.status.state) || 'unknown';
-
-    var html = compHeader(compId, comp);
-    html += '<div class="comp-card-body">';
-    html += '<div class="comp-metrics-grid">';
-    html += metricRow('Roslaunch', s.roslaunch || s.roslaunch_state || '—');
-    html += metricRow('Publishers', s.publishers != null ? s.publishers : '—');
-    html += metricRow('Subscribers', s.subscriptions != null ? s.subscriptions : '—');
-    if (s.active_topics != null) html += metricRow('Active Topics', s.active_topics);
-    html += '</div></div>';
-    html += actionsHtml(agentId, compId, quickCommands(commands));
-
-    return '<div class="comp-card comp-ros-bridge">' + html + '</div>';
-  }
-
-  // ── NDI renderer ───────────────────────────────────────────────────
-
-  function renderNdi(agentId, compId, comp, catalog) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
-    var rx = s.receive_active || s['receive active'] || 'false';
-    var tx = s.send_active || s['send active'] || 'false';
-
-    var html = compHeader(compId, comp);
-    html += '<div class="comp-card-body">';
-    html += '<div class="comp-badges">';
-    html += '<span class="comp-badge ' + (rx === 'true' ? 'badge-active' : 'badge-inactive') + '">Receive: ' + (rx === 'true' ? 'Active' : 'Off') + '</span>';
-    html += '<span class="comp-badge ' + (tx === 'true' ? 'badge-active' : 'badge-inactive') + '">Send: ' + (tx === 'true' ? 'Active' : 'Off') + '</span>';
-    html += '</div></div>';
-    html += actionsHtml(agentId, compId, quickCommands(commands));
-
-    return '<div class="comp-card">' + html + '</div>';
-  }
-
-  // ── Generic renderer (fallback) ────────────────────────────────────
-
-  function renderGeneric(agentId, compId, comp, catalog) {
-    var s = (comp.state && comp.state.payload) || comp.state || {};
-    var commands = (catalog && catalog.components && catalog.components[compId]) || [];
-
-    var html = compHeader(compId, comp);
-    html += '<div class="comp-card-body">';
-
-    // Key-value grid of all state fields
-    var keys = Object.keys(s);
-    if (keys.length) {
-      html += '<div class="kv-grid">';
-      keys.forEach(function (k) {
-        html += '<div class="kv-cell"><div class="kv-key">' + L.esc(k) + '</div><div class="kv-val">' + L.esc(s[k]) + '</div></div>';
-      });
-      html += '</div>';
-    } else {
-      html += '<div class="comp-empty">No state data</div>';
-    }
-    html += '</div>';
-    html += actionsHtml(agentId, compId, quickCommands(commands));
-
-    return '<div class="comp-card">' + html + '</div>';
-  }
-
-  // ── Renderer map ───────────────────────────────────────────────────
-
-  var renderers = {
-    led_strip: renderLedStrip,
-    cpu_monitor: renderCpuMonitor,
-    ros_bridge: renderRosBridge,
-    ndi: renderNdi,
-    projector: renderGeneric,
-    viz: renderGeneric,
-    exec: renderGeneric,
-    generic: renderGeneric,
-  };
 
 })(window.LUCID);

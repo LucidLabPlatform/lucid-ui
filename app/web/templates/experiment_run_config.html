@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Run {{ template_id }} · Experiments · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/experiments" class="bc-view">Templates</a>
+  <a href="/experiments/runs" class="bc-view">Runs</a>
+  <nav class="breadcrumbs">
+    <a href="/experiments" class="bc-link">Experiments</a>
+    <span class="bc-sep">&gt;</span>
+    <a href="/experiments/{{ template_id }}" class="bc-link">{{ template_id }}</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current">Configure Run</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.templateId = "{{ template_id }}";</script>
+{% endblock %}
+{% block content %}
+<div class="rc-container" id="rc-container">
+  <div class="rc-graph-area" id="rc-graph-area">
+    <div class="rc-graph-header">
+      <span>Steps</span>
+    </div>
+    <div class="rc-graph-body" id="rc-graph-main-body">
+      <svg id="rc-svg-main" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+  <div class="rc-detail" id="rc-detail">
+    <div class="rc-detail-header">Configuration</div>
+    <div class="rc-detail-body" id="rc-detail-body">Loading&hellip;</div>
+    <div class="rc-detail-footer">
+      <button class="act act-primary rc-run-btn" id="rc-run-btn">Run Experiment</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-run-config.js"></script>
+{% endblock %}

@@ -7,6 +7,44 @@
   var panelEl, overlayEl;
   var currentState = { agentId: null, componentId: null, action: null };
 
+  // ── Result watcher state ──────────────────────────────────────────
+  var _resultUnsubscribe = null;
+  var _resultTimeout = null;
+  var _currentRequestId = null;
+
+  function clearResultWatcher() {
+    if (_resultUnsubscribe) { _resultUnsubscribe(); _resultUnsubscribe = null; }
+    if (_resultTimeout) { clearTimeout(_resultTimeout); _resultTimeout = null; }
+    if (L._panelWatchingRequestId) L._panelWatchingRequestId = null;
+    _currentRequestId = null;
+  }
+
+  function showPanelResult(entry, evt) {
+    var resultEl = document.getElementById('panel-result');
+    if (!resultEl) return;
+    resultEl.style.display = '';
+    var ok = evt.payload && evt.payload.ok;
+    var cls = ok ? 'result-ok' : 'result-err';
+    var elapsed = entry && entry.result_elapsed != null ? L.fmtDuration(entry.result_elapsed) : '';
+    var errMsg = (evt.payload && evt.payload.error) || '';
+    resultEl.innerHTML = '<div class="' + cls + '">' +
+      '<span class="result-icon">' + (ok ? '\u2713' : '\u2717') + '</span>' +
+      '<span class="result-action">' + L.esc(entry ? entry.action : currentState.action) + '</span>' +
+      (elapsed ? '<span class="result-time">' + L.esc(elapsed) + '</span>' : '') +
+      (errMsg ? '<div class="result-err-msg">' + L.esc(errMsg) + '</div>' : '') +
+      '</div>' +
+      (evt.payload ? '<pre class="result-payload">' + L.esc(JSON.stringify(evt.payload, null, 2)) + '</pre>' : '');
+  }
+
+  function showTimeout() {
+    var resultEl = document.getElementById('panel-result');
+    if (resultEl) {
+      resultEl.style.display = '';
+      resultEl.innerHTML = '<div class="result-warn">' +
+        '<span class="result-icon">\u23F1</span> No response within 30s</div>';
+    }
+  }
+
   L.openCommandPanel = function (opts) {
     opts = opts || {};
     panelEl = panelEl || document.getElementById('cmd-panel');
@@ -24,11 +62,13 @@
   };
 
   L.closeCommandPanel = function () {
+    clearResultWatcher();
     if (panelEl) { panelEl.classList.remove('open'); panelEl.classList.add('hidden'); }
     if (overlayEl) overlayEl.classList.add('hidden');
   };
 
   function renderPanel() {
+    clearResultWatcher();
     var html = '<div class="panel-header">';
     html += '<span class="panel-title">Send Command</span>';
     html += '<button class="panel-close" id="panel-close-btn">\u2715</button>';
@@ -414,6 +454,9 @@
   async function sendCommand() {
     if (!currentState.agentId || !currentState.action) return;
 
+    // Cancel any previous result watcher
+    clearResultWatcher();
+
     var jsonEl = document.getElementById('panel-json');
     var payloadSection = document.getElementById('panel-payload-section');
     var payload = {};
@@ -430,39 +473,79 @@
     var sendBtn = document.getElementById('panel-send-btn');
     if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending\u2026'; }
 
-    var result = await L.fireCmd(currentState.agentId, currentState.componentId, currentState.action, payload);
+    var dispatchResult = await L.fireCmd(currentState.agentId, currentState.componentId, currentState.action, payload);
 
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Command'; }
 
-    // Show inline result
+    // Update history immediately after dispatch
+    var historyEl = document.getElementById('panel-history-list');
+    if (historyEl) historyEl.innerHTML = renderHistory();
+
+    var requestId = dispatchResult && dispatchResult.request_id;
+
+    if (!dispatchResult.ok || !requestId) {
+      // Dispatch failed — show error inline
+      var resultEl2 = document.getElementById('panel-result');
+      if (resultEl2) {
+        resultEl2.style.display = '';
+        var errMsg = (dispatchResult.result && (dispatchResult.result.error || dispatchResult.result.detail)) || 'dispatch failed';
+        resultEl2.innerHTML = '<div class="result-err">' +
+          '<span class="result-icon">\u2717</span>' +
+          '<span class="result-action">' + L.esc(currentState.action) + '</span>' +
+          '<div class="result-err-msg">' + L.esc(errMsg) + '</div>' +
+          '</div>';
+      }
+      return;
+    }
+
+    // Dispatch OK — show waiting state and watch for WS result
     var resultEl = document.getElementById('panel-result');
     if (resultEl) {
       resultEl.style.display = '';
-      var cls = result.ok ? 'result-ok' : 'result-err';
-      resultEl.innerHTML = '<div class="' + cls + '">' +
-        '<span class="result-icon">' + (result.ok ? '\u2713' : '\u2717') + '</span>' +
-        '<span class="result-action">' + L.esc(currentState.action) + '</span>' +
-        '<span class="result-time">' + L.fmtDuration(result.elapsed) + '</span>' +
-        '</div>' +
-        (result.result ? '<pre class="result-payload">' + L.esc(JSON.stringify(result.result, null, 2)) + '</pre>' : '');
+      resultEl.innerHTML = '<div class="result-pending">\u27F3 Waiting for agent response\u2026</div>';
     }
 
-    // Update history
-    var historyEl = document.getElementById('panel-history-list');
-    if (historyEl) historyEl.innerHTML = renderHistory();
+    L._panelWatchingRequestId = requestId;
+    _currentRequestId = requestId;
+
+    function handleCmdResult(entry, evt) {
+      if (!evt || !evt.payload || evt.payload.request_id !== _currentRequestId) return;
+      clearResultWatcher();
+      showPanelResult(entry, evt);
+      var histEl = document.getElementById('panel-history-list');
+      if (histEl) histEl.innerHTML = renderHistory();
+    }
+
+    _resultUnsubscribe = L.onCmdResult(handleCmdResult);
+    _resultTimeout = setTimeout(function () {
+      clearResultWatcher();
+      showTimeout();
+    }, 30000);
   }
 
   function renderHistory() {
     if (!L.commandHistory.length) return '<div class="comp-empty">No commands sent yet</div>';
     return L.commandHistory.slice(0, 10).map(function (cmd) {
-      var icon = cmd.ok ? '\u2713' : '\u2717';
-      var cls = cmd.ok ? 'act-ok' : 'act-err';
+      var icon, cls;
+      if (cmd.result_received) {
+        icon = cmd.result_ok ? '\u2713' : '\u2717';
+        cls = cmd.result_ok ? 'act-ok' : 'act-err';
+      } else if (cmd.ok) {
+        icon = '\u2026'; // dispatched, awaiting agent result
+        cls = 'act-pending';
+      } else {
+        icon = '\u2717';
+        cls = 'act-err';
+      }
       var target = (cmd.componentId ? cmd.componentId + '/' : '') + cmd.action;
+      var elapsed = cmd.result_received && cmd.result_elapsed != null
+        ? L.fmtDuration(cmd.result_elapsed)
+        : L.fmtDuration(cmd.elapsed);
       return '<div class="history-row">' +
         '<span class="activity-icon ' + cls + '">' + icon + '</span>' +
         '<span class="history-target">' + L.esc(target) + '</span>' +
         '<span class="history-agent">' + L.esc(cmd.agentId) + '</span>' +
-        '<span class="history-time">' + L.fmtDuration(cmd.elapsed) + '</span>' +
+        '<span class="history-time">' + elapsed + '</span>' +
         '<span class="activity-ts">' + L.fmtTs(cmd.ts) + '</span>' +
         '</div>';
     }).join('');

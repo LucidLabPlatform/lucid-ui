@@ -95,12 +95,28 @@ def agent_detail(request: Request, agent_id: str):
     return templates.TemplateResponse(request=request, name="agent_detail.html", context=ctx)
 
 
+@router.get("/experiments/runs", response_class=HTMLResponse)
+def experiment_runs_list(request: Request):
+    ctx = _ctx(request, page_id="experiment_runs")
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="experiment_runs.html", context=ctx)
+
+
 @router.get("/experiments/runs/{run_id}", response_class=HTMLResponse)
 def experiment_run(request: Request, run_id: str):
     ctx = _ctx(request, page_id="experiment_run", run_id=run_id)
     if ctx is None:
         return require_login(request)
     return templates.TemplateResponse(request=request, name="experiment_run.html", context=ctx)
+
+
+@router.get("/experiments/{template_id}/run", response_class=HTMLResponse)
+def experiment_run_config(request: Request, template_id: str):
+    ctx = _ctx(request, page_id="experiment_run_config", template_id=template_id)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="experiment_run_config.html", context=ctx)
 
 
 @router.get("/experiments/{template_id}", response_class=HTMLResponse)

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}All Runs · Experiments · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/experiments" class="bc-view">Templates</a>
+  <a href="/experiments/runs" class="bc-view active">Runs</a>
+  <nav class="breadcrumbs">
+    <a href="/experiments" class="bc-link">Experiments</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current">All Runs</span>
+  </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="runs-page" id="runs-page">
+  <div class="runs-header">
+    <h1 class="detail-name">Experiment Runs</h1>
+    <div class="runs-header-actions">
+      <div class="runs-filters" id="runs-filters">
+        <button class="runs-filter active" data-status="">All</button>
+        <button class="runs-filter" data-status="running">Running</button>
+        <button class="runs-filter" data-status="completed">Completed</button>
+        <button class="runs-filter" data-status="failed">Failed</button>
+        <button class="runs-filter" data-status="cancelled">Cancelled</button>
+      </div>
+      <button class="act act-primary" id="start-run-btn">+ Start Run</button>
+    </div>
+  </div>
+  <div class="runs-list" id="runs-list">Loading&hellip;</div>
+</div>
+<!-- Template picker modal -->
+<div class="rc-modal-overlay hidden" id="tpl-picker-overlay">
+  <div class="rc-modal">
+    <div class="rc-modal-header">
+      <span>Select Template</span>
+      <button class="rc-close-btn" id="tpl-picker-close">&times;</button>
+    </div>
+    <div class="rc-modal-body" id="tpl-picker-body">Loading&hellip;</div>
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-experiment-runs.js"></script>
+{% endblock %}

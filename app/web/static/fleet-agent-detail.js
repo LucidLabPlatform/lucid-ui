@@ -122,7 +122,21 @@
     var heartbeat = cfg.heartbeat_s != null ? cfg.heartbeat_s : '';
     html += kvEditable('heartbeat_s', heartbeat, 'number', 'cfg/set');
     var logging = cfg.logging || {};
-    var logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
+    var logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']; // fallback
+    try {
+      var agentSch = L.schemas[agentId];
+      if (agentSch && agentSch.subscribes) {
+        var logCmdSchema = agentSch.subscribes['cmd/cfg/logging/set'];
+        var logLevelEnum =
+          logCmdSchema &&
+          logCmdSchema.fields &&
+          logCmdSchema.fields.set &&
+          logCmdSchema.fields.set.fields &&
+          logCmdSchema.fields.set.fields.log_level &&
+          logCmdSchema.fields.set.fields.log_level['enum'];
+        if (logLevelEnum && logLevelEnum.length) logLevelOptions = logLevelEnum;
+      }
+    } catch (e) { /* keep fallback */ }
     html += kvEditableSelect('log_level', logging.log_level || 'INFO', logLevelOptions, 'cfg/logging/set');
     html += '</div></div>';
     html += '<div class="info-block"><div class="tier2-label">Metadata</div>';
@@ -295,6 +309,7 @@
       L.fireCmd(agentId, null, action, payload).then(function (result) {
         saveBtn.textContent = result.ok ? '\u2713' : '\u2717';
         saveBtn.style.color = result.ok ? 'var(--green)' : 'var(--red)';
+        setTimeout(loadActivityFeed, 500);
         setTimeout(function () {
           saveBtn.textContent = origText;
           saveBtn.style.color = '';
@@ -357,6 +372,7 @@
     L.fireCmd(aid, compId, action, {}).then(function (result) {
       btn.textContent = result.ok ? '\u2713' : '\u2717';
       btn.style.color = result.ok ? 'var(--green)' : 'var(--red)';
+      setTimeout(loadActivityFeed, 500);
       setTimeout(function () {
         btn.textContent = origText;
         btn.style.color = '';
@@ -371,6 +387,22 @@
     renderFull: renderDetail,
     renderDirty: updateDetail,
     renderStats: null,
+  });
+
+  // ── Activity feed auto-refresh via WebSocket ──────────────────────
+  // When any evt/*/result arrives for this agent, reload the feed.
+  // Debounced to avoid hammering the API on burst events.
+  var _activityRefreshScheduled = false;
+  L.onWsEvent(function (evt) {
+    if (evt.type !== 'mqtt') return;
+    if (evt.agent_id !== agentId) return;
+    if (!evt.topic_type || !evt.topic_type.startsWith('evt/')) return;
+    if (_activityRefreshScheduled) return;
+    _activityRefreshScheduled = true;
+    setTimeout(function () {
+      _activityRefreshScheduled = false;
+      loadActivityFeed();
+    }, 500);
   });
 
 })(window.LUCID);
