@@ -353,11 +353,7 @@
         L._cmdResultListeners.forEach(function (fn) {
           try { fn(matchEntry, evt); } catch (_) {}
         });
-        if (typeof L.cmdLog !== 'undefined') {
-          var resultOk = evt.payload && evt.payload.ok;
-          // Always log UI-initiated commands; only log backend-triggered failures (not 1Hz topic link successes)
-          if (matchEntry || !resultOk) L.cmdLog.addEntry(matchEntry, evt);
-        }
+        if (typeof L.cmdLog !== 'undefined') L.cmdLog.addEntry(matchEntry, evt);
       }
     }
 

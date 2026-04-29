@@ -8,6 +8,13 @@
   var _unread = 0;
   var _isOpen = false;
   var _hasErrors = false;
+  var _filter = 'all'; // 'all' | 'errors' | 'mine'
+
+  function _matchesFilter(entry) {
+    if (_filter === 'errors') return !entry.ok;
+    if (_filter === 'mine')   return !!entry.fromSession;
+    return true;
+  }
 
   function _updateBadge() {
     var badge = document.getElementById('cmd-log-badge');
@@ -23,6 +30,34 @@
     } else {
       badge.classList.add('badge-ok');
     }
+  }
+
+  function _applyFilter() {
+    var feed = document.getElementById('cmd-log-feed');
+    var empty = document.getElementById('cmd-log-empty');
+    if (!feed) return;
+
+    var rows = feed.querySelectorAll('.cmd-log-entry');
+    var visible = 0;
+    rows.forEach(function (row) {
+      var id = row.dataset.entryId;
+      var entry = _entries.find(function (e) { return e.id === id; });
+      if (entry && _matchesFilter(entry)) {
+        row.style.display = '';
+        visible++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    if (empty) empty.style.display = visible === 0 ? '' : 'none';
+  }
+
+  function _setFilter(f) {
+    _filter = f;
+    document.querySelectorAll('.cmd-log-filter-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.filter === f);
+    });
+    _applyFilter();
   }
 
   function _formatTime(ts) {
@@ -46,6 +81,8 @@
   function _renderCommandEntry(entry) {
     var el = document.createElement('div');
     el.className = 'cmd-log-entry ' + (entry.ok ? 'cmd-ok' : 'cmd-err');
+    el.dataset.entryId = entry.id;
+    if (!_matchesFilter(entry)) el.style.display = 'none';
 
     var icon = entry.ok ? '\u2713' : '\u2717';
     var elapsed = entry.elapsed ? _formatElapsed(entry.elapsed) : '';
@@ -58,6 +95,7 @@
     html += '<div class="cmd-log-meta">';
     if (elapsed) html += '<span>' + L.esc(elapsed) + '</span>';
     html += '<span>' + L.esc(timeStr) + '</span>';
+    if (!entry.fromSession) html += '<span class="cmd-log-source-tag">auto</span>';
     html += '</div>';
 
     if (entry.details) {
@@ -72,9 +110,7 @@
       }
       html += '</div>';
     }
-
     html += '</div>';
-
     if (entry.details) {
       html += '<button class="cmd-log-expand-btn" title="Toggle details">\u25BC</button>';
     }
@@ -97,6 +133,8 @@
   function _renderBulkEntry(entry) {
     var el = document.createElement('div');
     el.className = 'cmd-log-entry ' + (entry.ok ? 'cmd-ok' : 'cmd-err');
+    el.dataset.entryId = entry.id;
+    if (!_matchesFilter(entry)) el.style.display = 'none';
 
     var icon = entry.ok ? '\u2713' : '\u2717';
     var timeStr = _formatTime(entry.ts);
@@ -132,7 +170,6 @@
       var ok, response, elapsed;
 
       if (wsEvt === null) {
-        // HTTP dispatch failure — no WS result
         ok = false;
         response = historyEntry.result;
         elapsed = historyEntry.elapsed;
@@ -144,12 +181,13 @@
 
       var target = historyEntry
         ? historyEntry.agentId + (historyEntry.componentId ? '/' + historyEntry.componentId : '')
-        : '';
+        : (wsEvt && wsEvt.agent_id) || '';
 
       var entry = {
         id: Date.now() + '-' + Math.random().toString(36).slice(2),
         type: 'command',
-        action: historyEntry ? historyEntry.action : '',
+        fromSession: !!historyEntry,
+        action: historyEntry ? historyEntry.action : (wsEvt && wsEvt.topic_type ? wsEvt.topic_type.split('/')[1] : ''),
         target: target,
         ok: ok,
         elapsed: elapsed,
@@ -175,6 +213,7 @@
       var entry = {
         id: Date.now() + '-' + Math.random().toString(36).slice(2),
         type: 'bulk',
+        fromSession: true,
         action: action,
         ok: ok,
         total: summary.total || 0,
@@ -229,17 +268,20 @@
     },
   };
 
-  // Wire up after DOM is ready
   document.addEventListener('DOMContentLoaded', function () {
     var toggleBtn = document.getElementById('cmd-log-toggle-btn');
-    var closeBtn = document.getElementById('cmd-log-close-btn');
-    var clearBtn = document.getElementById('cmd-log-clear-btn');
-    var overlay = document.getElementById('cmd-log-overlay');
+    var closeBtn  = document.getElementById('cmd-log-close-btn');
+    var clearBtn  = document.getElementById('cmd-log-clear-btn');
+    var overlay   = document.getElementById('cmd-log-overlay');
 
     if (toggleBtn) toggleBtn.addEventListener('click', function () { L.cmdLog.toggle(); });
-    if (closeBtn) closeBtn.addEventListener('click', function () { L.cmdLog.close(); });
-    if (clearBtn) clearBtn.addEventListener('click', function () { L.cmdLog.clear(); });
-    if (overlay) overlay.addEventListener('click', function () { L.cmdLog.close(); });
+    if (closeBtn)  closeBtn.addEventListener('click',  function () { L.cmdLog.close(); });
+    if (clearBtn)  clearBtn.addEventListener('click',  function () { L.cmdLog.clear(); });
+    if (overlay)   overlay.addEventListener('click',   function () { L.cmdLog.close(); });
+
+    document.querySelectorAll('.cmd-log-filter-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { _setFilter(btn.dataset.filter); });
+    });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && _isOpen) L.cmdLog.close();
