@@ -1054,7 +1054,10 @@
   // ── Page init ───────────────────────────────────────────────────────────
 
   function init() {
-    // Pre-fill from sessionStorage if available
+    // Pre-fill defaults then override with saved session values
+    document.getElementById('mqtt-host').value = window.location.hostname;
+    document.getElementById('mqtt-port').value = '8083';
+
     try {
       var saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
       if (saved) {
