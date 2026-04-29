@@ -321,7 +321,16 @@
       var comp = a.components[cid];
       if (evt.topic_type === 'status') comp.status = evt.payload;
       else if (evt.topic_type === 'state') comp.state = evt.payload;
-      else if (evt.topic_type === 'metadata') comp.metadata = evt.payload;
+      else if (evt.topic_type === 'metadata') {
+        var prevCaps = JSON.stringify((comp.metadata || {}).capabilities || []);
+        var newCaps  = JSON.stringify((evt.payload   || {}).capabilities || []);
+        if (prevCaps !== newCaps && L.catalogs[id]) {
+          delete L.catalogs[id];
+          try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(L.catalogs)); } catch (e) {}
+          L.loadCatalog(id);
+        }
+        comp.metadata = evt.payload;
+      }
       else if (evt.topic_type === 'cfg') comp.cfg = Object.assign({}, comp.cfg, evt.payload);
       else if (evt.topic_type === 'cfg/logging') comp.cfg = Object.assign({}, comp.cfg, { logging: evt.payload });
       else if (evt.topic_type === 'cfg/telemetry') comp.cfg = Object.assign({}, comp.cfg, { telemetry: evt.payload });
