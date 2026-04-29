@@ -1524,4 +1524,89 @@ details.payload-group:not([open]) .payload-group-label::before { transform: rota
 .tpl-picker-item:hover { background: var(--surface-hover); border-color: var(--accent); text-decoration: none; }
 .tpl-picker-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
 .tpl-picker-desc { font-size: 0.75rem; color: var(--muted); margin-top: 0.15rem; }
+
+/* ── Command Log Drawer ─────────────────────────────────────────────── */
+.cmd-log-overlay {
+  position: fixed; inset: 0; z-index: 390;
+  background: rgba(0,0,0,0.35);
+}
+.cmd-log-overlay.hidden { display: none; }
+
+.cmd-log-drawer {
+  position: fixed; top: 48px; right: 0; bottom: 0; width: 360px;
+  background: var(--surface); border-left: 1px solid var(--border);
+  display: flex; flex-direction: column; z-index: 391;
+  transform: translateX(100%); transition: transform 0.22s ease;
+}
+.cmd-log-drawer.cmd-log-open { transform: translateX(0); }
+
+.cmd-log-header {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cmd-log-title { font-size: 0.8rem; font-weight: 600; flex: 1; color: var(--text); }
+.cmd-log-clear-btn, .cmd-log-close-btn {
+  background: none; border: none; color: var(--muted); font-size: 0.75rem;
+  cursor: pointer; padding: 0.2rem 0.4rem; border-radius: var(--radius-sm);
+}
+.cmd-log-clear-btn:hover, .cmd-log-close-btn:hover { color: var(--text); background: var(--surface-hover); }
+.cmd-log-close-btn { font-size: 1rem; }
+
+.cmd-log-feed { flex: 1; overflow-y: auto; padding: 0.4rem 0; }
+.cmd-log-empty { padding: 2rem; text-align: center; font-size: 0.78rem; color: var(--muted); }
+
+.cmd-log-entry {
+  display: flex; align-items: flex-start; gap: 0.5rem;
+  padding: 0.45rem 0.9rem; border-left: 3px solid transparent;
+  font-size: 0.78rem; cursor: default;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cmd-log-entry:hover { background: var(--surface-hover); }
+.cmd-log-entry.cmd-ok  { border-left-color: var(--green); }
+.cmd-log-entry.cmd-err { border-left-color: var(--red); }
+
+.cmd-log-icon { font-weight: 700; font-size: 0.82rem; margin-top: 0.1rem; flex-shrink: 0; }
+.cmd-ok  .cmd-log-icon { color: var(--green); }
+.cmd-err .cmd-log-icon { color: var(--red); }
+
+.cmd-log-body { flex: 1; min-width: 0; }
+.cmd-log-action { font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-log-target { color: var(--muted); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmd-log-meta { font-size: 0.68rem; color: var(--subtle); display: flex; gap: 0.5rem; margin-top: 0.15rem; }
+
+.cmd-log-expand-btn {
+  background: none; border: none; color: var(--muted); font-size: 0.68rem;
+  cursor: pointer; padding: 0; flex-shrink: 0; margin-top: 0.15rem;
+}
+.cmd-log-expand-btn:hover { color: var(--accent); }
+
+.cmd-log-details { width: 100%; margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px solid var(--border-subtle); display: none; }
+.cmd-log-details.open { display: block; }
+.cmd-log-detail-label {
+  font-size: 0.63rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--muted); display: block; margin-bottom: 0.15rem; margin-top: 0.3rem;
+}
+.cmd-log-detail-pre {
+  font-size: 0.68rem; font-family: var(--font-mono); color: var(--text);
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 0.3rem 0.45rem; margin: 0; max-height: 100px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word;
+}
+
+.nav-cmd-log-btn {
+  position: relative; background: none; border: none; color: var(--muted);
+  cursor: pointer; padding: 0.3rem; display: flex; align-items: center;
+  border-radius: var(--radius-sm);
+}
+.nav-cmd-log-btn:hover { color: var(--text); }
+.cmd-log-badge {
+  position: absolute; top: 2px; right: 2px;
+  min-width: 14px; height: 14px; border-radius: 7px;
+  background: var(--red); color: #fff;
+  font-size: 0.6rem; font-weight: 700; line-height: 14px; text-align: center;
+  padding: 0 3px;
+}
+.cmd-log-badge.badge-ok { background: var(--green); color: #111; }
+.cmd-log-badge.hidden { display: none; }
 .tpl-picker-tags { margin-top: 0.25rem; display: flex; gap: 0.25rem; flex-wrap: wrap; }

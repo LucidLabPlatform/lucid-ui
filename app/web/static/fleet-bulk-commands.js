@@ -128,10 +128,9 @@
       var success = summary.success || 0;
       var failed = summary.failed || 0;
 
-      // Summary toast
-      var msg = action + ': ' + success + '/' + summary.total + ' succeeded';
-      if (failed) msg += ', ' + failed + ' failed';
-      L.toast({ message: msg, type: failed === 0 ? 'success' : (success > 0 ? 'info' : 'error') });
+      if (typeof L.cmdLog !== 'undefined') {
+        L.cmdLog.addBulkEntry(action, { total: summary.total, success: success, failed: failed });
+      }
 
       // Update progress
       if (progressEl) {
@@ -143,7 +142,9 @@
       return summary;
     })
     .catch(function (err) {
-      L.toast({ message: action + ' batch failed: ' + err.message, type: 'error' });
+      if (typeof L.cmdLog !== 'undefined') {
+        L.cmdLog.addBulkEntry(action, { total: total, success: 0, failed: total, error: err.message });
+      }
       if (progressEl) {
         progressEl.textContent = 'Failed: ' + err.message;
         progressEl.className = 'bulk-progress bulk-mixed';

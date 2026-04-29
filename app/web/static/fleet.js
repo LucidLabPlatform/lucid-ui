@@ -136,12 +136,10 @@
       var target = agentId + (componentId ? '/' + componentId : '');
 
       if (!ok) {
-        // HTTP dispatch failed — show error toast immediately (no WS result will arrive)
-        var errMsg = (result && result.error) || (result && result.detail) || 'failed';
-        L.toast({ message: action + ' \u2717 ' + errMsg, type: 'error',
-                  details: { target: target, request: payload, response: result } });
+        // HTTP dispatch failed — log immediately (no WS result will arrive)
+        if (typeof L.cmdLog !== 'undefined') L.cmdLog.addEntry(entry, null);
       }
-      // If ok: suppress dispatch toast — the WS evt/*/result handler shows the single result toast
+      // If ok: the WS evt/*/result handler logs the result
 
       return entry;
     } catch (e) {
@@ -162,7 +160,7 @@
         result_ts: null,
       };
       L.commandHistory.unshift(entry2);
-      L.toast({ message: action + ' \u2717 ' + e.message, type: 'error' });
+      if (typeof L.cmdLog !== 'undefined') L.cmdLog.addEntry(entry2, null);
       return entry2;
     }
   };
@@ -355,25 +353,7 @@
         L._cmdResultListeners.forEach(function (fn) {
           try { fn(matchEntry, evt); } catch (_) {}
         });
-        // Show result toast only when command panel is not watching this request_id
-        if (L._panelWatchingRequestId !== reqId) {
-          var resAction = matchEntry ? matchEntry.action : (evt.topic_type.split('/')[1] || evt.topic_type);
-          var resTarget = matchEntry
-            ? matchEntry.agentId + (matchEntry.componentId ? '/' + matchEntry.componentId : '')
-            : evt.agent_id;
-          var resDetails = {
-            target: resTarget,
-            request: matchEntry ? matchEntry.payload : null,
-            response: evt.payload,
-          };
-          if (evt.payload && evt.payload.ok) {
-            L.toast({ message: resAction + ' \u2713 ' + L.fmtDuration(matchEntry ? matchEntry.result_elapsed : null),
-                      type: 'success', details: resDetails });
-          } else {
-            var resErrMsg = (evt.payload && evt.payload.error) || 'agent error';
-            L.toast({ message: resAction + ' \u2717 ' + resErrMsg, type: 'error', details: resDetails });
-          }
-        }
+        if (typeof L.cmdLog !== 'undefined') L.cmdLog.addEntry(matchEntry, evt);
       }
     }
 
