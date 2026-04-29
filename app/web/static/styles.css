@@ -221,6 +221,7 @@ main { padding: 0; }
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.5rem;
   min-height: calc(100vh - 110px);
+  align-items: start;
 }
 .agent-card {
   display: flex; flex-direction: column;
@@ -238,18 +239,10 @@ main { padding: 0; }
 
 .card-meta { font-size: 0.63rem; color: var(--muted); margin-bottom: 0.15rem; }
 
-.card-comps { flex: 1; display: flex; flex-direction: column; gap: 1px; margin-bottom: 0.15rem; }
+.card-comps { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.15rem; flex-wrap: wrap; }
 
-.card-comp-row {
-  display: flex; align-items: center; gap: 0.35rem;
-  padding: 0.1rem 0.35rem; background: var(--bg); border-radius: var(--radius-sm);
-  font-size: 0.65rem;
-}
-.card-comp-icon { font-size: 0.7rem; flex-shrink: 0; }
-.card-comp-name { font-family: var(--font-mono); font-weight: 500; color: var(--text); white-space: nowrap; }
-.card-comp-summary { color: var(--muted); font-size: 0.62rem; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; text-align: right; }
-
-.no-comps { color: var(--muted); font-size: 0.65rem; font-style: italic; padding: 0.15rem 0; }
+.card-comp-count { font-size: 0.62rem; color: var(--muted); }
+.card-comp-none { font-size: 0.62rem; color: var(--muted); font-style: italic; }
 
 .card-actions {
   display: flex; gap: 0.25rem; border-top: 1px solid var(--border); padding-top: 0.2rem; margin-top: auto;
