@@ -13,7 +13,6 @@
     <a href="/" class="brand">LUCID</a>
     <a href="/" class="nav-tab{% if page_id in ('fleet', 'agent_detail', 'agent_components', 'component_detail', 'components', 'components_type') %} active{% endif %}">Fleet</a>
     <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run', 'experiment_runs', 'experiment_run_config') %} active{% endif %}">Experiments</a>
-    <a href="/users" class="nav-tab{% if page_id == 'users' %} active{% endif %}">Users</a>
     <a href="/topic-links" class="nav-tab{% if page_id == 'topic_links' %} active{% endif %}">Topic Links</a>
     <a href="/mqtt" class="nav-tab{% if page_id == 'mqtt' %} active{% endif %}">MQTT</a>
     <div class="nav-spacer"></div>
@@ -37,6 +36,7 @@
           <span class="nav-avatar-role">Administrator</span>
         </div>
         <div class="nav-avatar-divider"></div>
+        <a href="/users" class="nav-avatar-action">Users</a>
         <a href="/logout" class="nav-avatar-action">Logout</a>
       </div>
     </div>

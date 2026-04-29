@@ -188,5 +188,73 @@ btnAddUser.addEventListener('click', async () => {
   }
 });
 
+// ── Auth Log ─────────────────────────────────────────────────────────────────
+const authLogWrap = document.getElementById('auth-log-wrap');
+let _authLogFilter = 'all';
+let _authLogEntries = [];
+
+function authTypeBadge(type) {
+  return type === 'authn'
+    ? '<span class="badge badge-agent">auth</span>'
+    : '<span class="badge badge-observer">topic</span>';
+}
+
+function actionBadge(action) {
+  if (!action) return '';
+  const cls = action === 'subscribe' ? 'badge-observer' : 'badge-cc';
+  return `<span class="badge ${cls}">${action}</span>`;
+}
+
+function renderAuthLog() {
+  const entries = _authLogEntries.filter(e => _authLogFilter === 'all' || e.type === _authLogFilter);
+  if (!entries.length) {
+    authLogWrap.innerHTML = '<div class="empty">No entries</div>';
+    return;
+  }
+  authLogWrap.innerHTML = `
+    <table class="data-table">
+      <thead>
+        <tr><th>Time</th><th>Type</th><th>Username</th><th>Client ID</th><th>Topic / Action</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        ${entries.map(e => `
+          <tr>
+            <td style="color:var(--muted);font-size:0.72rem;white-space:nowrap">${fmtTs(e.ts)}</td>
+            <td>${authTypeBadge(e.type)}</td>
+            <td style="font-family:var(--font-mono);font-size:0.78rem">${e.username || '—'}</td>
+            <td style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">${e.clientid || '—'}</td>
+            <td style="font-family:var(--font-mono);font-size:0.72rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              ${e.topic ? `<span title="${e.topic}">${e.topic}</span>` : '—'}
+              ${e.action ? actionBadge(e.action) : ''}
+            </td>
+            <td style="color:#ff8f8f;font-size:0.75rem">${e.result || '—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function loadAuthLog() {
+  authLogWrap.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch('/api/auth-log?limit=200');
+    if (!res.ok) throw new Error(res.status);
+    _authLogEntries = await res.json();
+    renderAuthLog();
+  } catch (e) {
+    authLogWrap.innerHTML = `<div class="empty" style="color:#ff8f8f">Failed to load: ${e.message}</div>`;
+  }
+}
+
+document.querySelectorAll('[data-logfilter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    _authLogFilter = btn.dataset.logfilter;
+    document.querySelectorAll('[data-logfilter]').forEach(b => b.classList.toggle('active', b === btn));
+    renderAuthLog();
+  });
+});
+
+document.getElementById('btn-refresh-log').addEventListener('click', loadAuthLog);
+
 loadUsers();
 loadSyncHealth();
+loadAuthLog();

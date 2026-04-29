@@ -43,6 +43,22 @@
     </div>
   </section>
 </div>
+
+<!-- Auth denial log -->
+<div class="panel" style="margin-top:1.25rem">
+  <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap">
+    <h2 style="margin:0">Security Log</h2>
+    <button class="btn-sm" id="btn-refresh-log">Refresh</button>
+    <div style="margin-left:auto;display:flex;gap:0.4rem">
+      <button class="cmd-log-filter-btn active" data-logfilter="all">All</button>
+      <button class="cmd-log-filter-btn" data-logfilter="authn">Auth Failures</button>
+      <button class="cmd-log-filter-btn" data-logfilter="authz">Topic Denials</button>
+    </div>
+  </div>
+  <div id="auth-log-wrap">
+    <div class="empty">Loading…</div>
+  </div>
+</div>
 {% endblock %}
 
 {% block page_scripts %}
