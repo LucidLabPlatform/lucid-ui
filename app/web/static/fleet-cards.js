@@ -103,12 +103,18 @@
 
   function renderCompList(a) {
     var comps = Object.values(a.components || {});
-    if (!comps.length) return '<span class="card-comp-none">no components</span>';
-    var dots = comps.map(function (c) {
+    if (!comps.length) return '<div class="no-comps">no components</div>';
+    return comps.map(function (c) {
       var cState = (c.status && c.status.state) || 'unknown';
-      return '<span class="pill-dot dot-' + cState + '" title="' + L.escAttr(c.component_id) + '"></span>';
+      var icon = L.compIcon(c.component_id, c);
+      var summary = L.compSummary(c.component_id, c);
+      return '<div class="card-comp-row">' +
+        '<span class="pill-dot dot-' + cState + '"></span>' +
+        '<span class="card-comp-icon">' + icon + '</span>' +
+        '<span class="card-comp-name">' + L.esc(c.component_id) + '</span>' +
+        '<span class="card-comp-summary">' + L.esc(summary) + '</span>' +
+        '</div>';
     }).join('');
-    return dots + '<span class="card-comp-count">' + comps.length + ' component' + (comps.length !== 1 ? 's' : '') + '</span>';
   }
 
   // ══════════════════════════════════════════════════════════════════
