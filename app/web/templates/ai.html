@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}AI Copilot · LUCID{% endblock %}
+{% block content %}
+<div class="ai-shell">
+  <div class="ai-main">
+    <div class="ai-toolbar">
+      <select class="ai-session-sel" id="ai-session-sel" title="Session"></select>
+      <button class="act" id="ai-new-session" title="New chat">+ New</button>
+      <button class="act" id="ai-delete-session" title="Delete chat">Delete</button>
+      <span class="ai-flex"></span>
+      <label class="ai-toggle">
+        <input type="checkbox" id="ai-voice-toggle" checked> Voice
+      </label>
+      <span class="ai-status" id="ai-status">idle</span>
+    </div>
+    <div class="ai-transcript" id="ai-transcript">
+      <div class="ai-empty" id="ai-empty">Loading fleet snapshot…</div>
+    </div>
+    <form class="ai-composer" id="ai-composer" autocomplete="off">
+      <button type="button" class="ai-mic" id="ai-mic" title="Hold to speak">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <input type="text" class="ai-input" id="ai-input" placeholder="Ask anything about your fleet…" />
+      <button type="submit" class="act act-primary" id="ai-send">Send</button>
+    </form>
+    <audio id="ai-audio" hidden></audio>
+  </div>
+
+  <aside class="ai-side">
+    <section class="ai-panel">
+      <h3>Fleet</h3>
+      <div class="ai-panel-body" id="ai-panel-fleet">
+        <div class="ai-loading">Loading…</div>
+      </div>
+    </section>
+    <section class="ai-panel">
+      <h3>Recent Runs</h3>
+      <div class="ai-panel-body" id="ai-panel-runs">
+        <div class="ai-loading">Loading…</div>
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/ai.js"></script>
+{% endblock %}

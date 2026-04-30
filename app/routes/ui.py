@@ -1,5 +1,5 @@
 """HTML page routes for the LUCID Central Command web dashboard."""
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,6 +11,10 @@ router = APIRouter()
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "..", "web", "templates")
 templates = Jinja2Templates(directory=_TEMPLATE_DIR)
+
+
+def _ai_enabled() -> bool:
+    return os.environ.get("LUCID_UI_ENABLE_AI", "false").strip().lower() == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +63,7 @@ def _ctx(request: Request, **extra) -> dict:
         "request": request,
         "user": result,
         "orchestrator_url": os.environ.get("ORCHESTRATOR_URL", "http://localhost:8000"),
+        "enable_ai": _ai_enabled(),
         **extra,
     }
 
@@ -173,3 +178,13 @@ def mqtt_page(request: Request):
     if ctx is None:
         return require_login(request)
     return templates.TemplateResponse(request=request, name="mqtt.html", context=ctx)
+
+
+@router.get("/ai", response_class=HTMLResponse)
+def ai_page(request: Request):
+    if not _ai_enabled():
+        raise HTTPException(status_code=404)
+    ctx = _ctx(request, page_id="ai")
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="ai.html", context=ctx)

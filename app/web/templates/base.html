@@ -15,6 +15,7 @@
     <a href="/experiments" class="nav-tab{% if page_id in ('experiments', 'experiment_template', 'experiment_run', 'experiment_runs', 'experiment_run_config') %} active{% endif %}">Experiments</a>
     <a href="/topic-links" class="nav-tab{% if page_id == 'topic_links' %} active{% endif %}">Topic Links</a>
     <a href="/mqtt" class="nav-tab{% if page_id == 'mqtt' %} active{% endif %}">MQTT</a>
+    {% if enable_ai %}<a href="/ai" class="nav-tab{% if page_id == 'ai' %} active{% endif %}">AI</a>{% endif %}
     <div class="nav-spacer"></div>
     <button class="nav-cmd-log-btn" id="cmd-log-toggle-btn" title="Command Log">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
