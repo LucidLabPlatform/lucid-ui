@@ -206,7 +206,9 @@ function actionBadge(action) {
 }
 
 function renderAuthLog() {
-  const entries = _authLogEntries.filter(e => _authLogFilter === 'all' || e.type === _authLogFilter);
+  // Only show denied/rejected entries (authn_log contains successful logins too)
+  const denied = _authLogEntries.filter(e => (e.result || '').toLowerCase() === 'deny');
+  const entries = denied.filter(e => _authLogFilter === 'all' || e.type === _authLogFilter);
   if (!entries.length) {
     authLogWrap.innerHTML = '<div class="empty">No entries</div>';
     return;
