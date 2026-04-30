@@ -1,0 +1,155 @@
+<h2>Agent Detail Page Layout</h2>
+<p class="subtitle">How should status, state, metadata, config, components, logs, and commands be arranged?</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1f2e;padding:12px;border-radius:6px;font-family:monospace;font-size:11px;color:#94a3b8;">
+        <!-- Layout mockup A -->
+        <div style="display:flex;gap:8px;height:320px;">
+          <!-- Agent sidebar -->
+          <div style="width:50px;background:#151a27;border-radius:4px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;">
+            <div style="font-size:8px;color:#60a5fa;text-align:center;margin-bottom:4px;">Agents</div>
+            <div style="background:#60a5fa22;border-left:2px solid #60a5fa;padding:2px 3px;font-size:7px;border-radius:2px;">pi-01</div>
+            <div style="padding:2px 3px;font-size:7px;border-radius:2px;">pi-02</div>
+            <div style="padding:2px 3px;font-size:7px;border-radius:2px;">pi-03</div>
+          </div>
+          <!-- Main content -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+            <!-- Header -->
+            <div style="background:#151a27;border-radius:4px;padding:6px;display:flex;align-items:center;gap:8px;">
+              <span style="color:#e2e8f0;font-size:10px;font-weight:bold;">pi-01</span>
+              <span style="background:#22c55e33;color:#22c55e;font-size:7px;padding:1px 5px;border-radius:8px;">● online</span>
+            </div>
+            <!-- Top row: info cards -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Status</div>
+                <div style="font-size:8px;color:#22c55e;">● online</div>
+                <div style="font-size:7px;color:#94a3b8;">uptime: 4d 12h</div>
+                <div style="font-size:7px;color:#94a3b8;">heartbeat: 2s ago</div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Metadata</div>
+                <div style="font-size:7px;color:#94a3b8;">host: raspberrypi</div>
+                <div style="font-size:7px;color:#94a3b8;">ip: 192.168.1.42</div>
+                <div style="font-size:7px;color:#94a3b8;">os: linux arm64</div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">State</div>
+                <div style="font-size:7px;color:#94a3b8;">mode: idle</div>
+                <div style="font-size:7px;color:#94a3b8;">experiment: none</div>
+                <div style="font-size:7px;color:#94a3b8;">errors: 0</div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Config</div>
+                <div style="font-size:7px;color:#94a3b8;">heartbeat: 10s</div>
+                <div style="font-size:7px;color:#94a3b8;">log_level: INFO</div>
+                <div style="font-size:7px;color:#94a3b8;">telemetry: on</div>
+              </div>
+            </div>
+            <!-- Bottom row: components + logs + commands -->
+            <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:6px;flex:1;">
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Components</div>
+                <div style="font-size:7px;color:#22c55e;margin-bottom:2px;">● led-strip</div>
+                <div style="font-size:7px;color:#22c55e;margin-bottom:2px;">● cpu-monitor</div>
+                <div style="font-size:7px;color:#ef4444;">● temp-sensor</div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Logs</div>
+                <div style="font-size:7px;color:#64748b;">[12:01] INFO started</div>
+                <div style="font-size:7px;color:#64748b;">[12:02] INFO heartbeat</div>
+                <div style="font-size:7px;color:#eab308;">[12:03] WARN high temp</div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:6px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:3px;">Commands</div>
+                <div style="font-size:7px;color:#94a3b8;">[quick cmds]</div>
+                <div style="font-size:7px;color:#94a3b8;">[action input]</div>
+                <div style="font-size:7px;color:#94a3b8;">[history]</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Dashboard-Style Cards</h3>
+      <p>Info cards across the top (status, metadata, state, config as 4 summary cards with key-value pairs). Components, logs, and commands in a bottom row. Logs are compact — not the dominant section.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1f2e;padding:12px;border-radius:6px;font-family:monospace;font-size:11px;color:#94a3b8;">
+        <div style="display:flex;gap:8px;height:320px;">
+          <!-- Agent sidebar -->
+          <div style="width:50px;background:#151a27;border-radius:4px;padding:6px 4px;display:flex;flex-direction:column;gap:4px;">
+            <div style="font-size:8px;color:#60a5fa;text-align:center;margin-bottom:4px;">Agents</div>
+            <div style="background:#60a5fa22;border-left:2px solid #60a5fa;padding:2px 3px;font-size:7px;border-radius:2px;">pi-01</div>
+            <div style="padding:2px 3px;font-size:7px;border-radius:2px;">pi-02</div>
+            <div style="padding:2px 3px;font-size:7px;border-radius:2px;">pi-03</div>
+          </div>
+          <!-- Main content -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+            <!-- Header -->
+            <div style="background:#151a27;border-radius:4px;padding:6px;display:flex;align-items:center;gap:8px;">
+              <span style="color:#e2e8f0;font-size:10px;font-weight:bold;">pi-01</span>
+              <span style="background:#22c55e33;color:#22c55e;font-size:7px;padding:1px 5px;border-radius:8px;">● online</span>
+            </div>
+            <!-- Tabs row -->
+            <div style="display:flex;gap:2px;background:#151a27;border-radius:4px;padding:4px;">
+              <div style="font-size:7px;color:#60a5fa;background:#60a5fa22;padding:3px 8px;border-radius:3px;">Overview</div>
+              <div style="font-size:7px;color:#64748b;padding:3px 8px;">Logs</div>
+              <div style="font-size:7px;color:#64748b;padding:3px 8px;">Commands</div>
+              <div style="font-size:7px;color:#64748b;padding:3px 8px;">Raw JSON</div>
+            </div>
+            <!-- Overview tab content -->
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+              <div style="background:#151a27;border-radius:4px;padding:8px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Status & State</div>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:7px;">
+                  <span style="color:#64748b;">state</span><span style="color:#22c55e;">online</span>
+                  <span style="color:#64748b;">uptime</span><span>4d 12h</span>
+                  <span style="color:#64748b;">mode</span><span>idle</span>
+                  <span style="color:#64748b;">errors</span><span>0</span>
+                </div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:8px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Metadata</div>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:7px;">
+                  <span style="color:#64748b;">host</span><span>raspberrypi</span>
+                  <span style="color:#64748b;">ip</span><span>192.168.1.42</span>
+                  <span style="color:#64748b;">os</span><span>linux arm64</span>
+                  <span style="color:#64748b;">version</span><span>1.2.3</span>
+                </div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:8px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Components</div>
+                <div style="font-size:7px;color:#22c55e;margin-bottom:3px;">● led-strip <span style="color:#64748b;font-size:6px;">— running</span></div>
+                <div style="font-size:7px;color:#22c55e;margin-bottom:3px;">● cpu-monitor <span style="color:#64748b;font-size:6px;">— running</span></div>
+                <div style="font-size:7px;color:#ef4444;margin-bottom:3px;">● temp-sensor <span style="color:#64748b;font-size:6px;">— error</span></div>
+              </div>
+              <div style="background:#151a27;border-radius:4px;padding:8px;">
+                <div style="font-size:7px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Config</div>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:7px;">
+                  <span style="color:#64748b;">heartbeat</span><span>10s</span>
+                  <span style="color:#64748b;">log_level</span><span>INFO</span>
+                  <span style="color:#64748b;">telemetry</span><span>enabled</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Tabbed Layout</h3>
+      <p>Overview tab shows status, metadata, state, config, and components in a clean 2×2 grid. Logs and commands move to separate tabs. Keeps the overview uncluttered — logs available one click away but not dominating the view.</p>
+    </div>
+  </div>
+
+</div>

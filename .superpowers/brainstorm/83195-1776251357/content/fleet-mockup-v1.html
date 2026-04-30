@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUCID Fleet Mockup</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1017;
+  --surface: #1a2036;
+  --surface-hover: #1e2744;
+  --border: #283044;
+  --text: #e2e8f0;
+  --muted: #8494ab;
+  --subtle: #94a3b8;
+  --accent: #60a5fa;
+  --green: #4ade80;
+  --red: #f87171;
+  --yellow: #facc15;
+  --orange: #fb923c;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Top nav */
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.25rem;
+  height: 44px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.brand { font-weight: 700; color: var(--accent); letter-spacing: .05em; font-size: 0.9rem; }
+.nav-sep { color: var(--muted); font-size: 0.8rem; }
+.nav-links { display: flex; gap: 2px; margin-left: 0.75rem; }
+.nav-link { color: var(--muted); font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 5px; cursor: pointer; }
+.nav-link:hover { background: var(--border); color: var(--text); }
+.nav-link.active { background: var(--border); color: var(--text); }
+.ws-badge { margin-left: auto; font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.55rem; border-radius: 999px; background: #14532d; color: var(--green); }
+
+/* Main layout */
+.fleet-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left sidebar */
+.fleet-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #111827;
+}
+.sidebar-header {
+  padding: 0.75rem 1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.sidebar-count { font-size: 0.68rem; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.48rem 1rem;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s;
+}
+.sidebar-item:hover { background: var(--surface-hover); }
+.sidebar-item.active {
+  background: #1e2a44;
+  border-left-color: var(--accent);
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-online { background: var(--green); box-shadow: 0 0 4px rgba(74,222,128,.5); }
+.dot-offline { background: var(--red); }
+.dot-error { background: var(--orange); }
+.dot-unknown { background: #475569; }
+.sidebar-agent-name { font-size: 0.82rem; color: var(--text); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-item.active .sidebar-agent-name { color: var(--accent); }
+.sidebar-cpu { font-size: 0.68rem; color: var(--muted); font-family: var(--font-mono); flex-shrink: 0; }
+.sidebar-sep {
+  margin: 0.3rem 1rem;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+/* Right panel */
+.fleet-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Agent header */
+.agent-header {
+  padding: 0.85rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.agent-name { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.status-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  text-transform: lowercase;
+}
+.badge-online { background: #14532d; color: var(--green); }
+.badge-offline { background: #450a0a; color: var(--red); }
+.badge-error { background: #431407; color: var(--orange); }
+.badge-unknown { background: #1e293b; color: var(--muted); }
+.agent-meta-inline { margin-left: auto; font-size: 0.75rem; color: var(--muted); display: flex; gap: 1rem; }
+.agent-meta-inline span { display: flex; align-items: center; gap: 0.25rem; }
+
+/* Detail body */
+.detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 1rem;
+  align-content: start;
+}
+
+/* Info section */
+.info-section { display: flex; flex-direction: column; gap: 1rem; }
+.info-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.info-card-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: #141c2e;
+}
+.kv-table { width: 100%; border-collapse: collapse; }
+.kv-table tr:not(:last-child) td { border-bottom: 1px solid #1e2a3a; }
+.kv-table td { padding: 0.38rem 0.85rem; font-size: 0.78rem; }
+.kv-table .kv-key { color: var(--muted); width: 50%; }
+.kv-table .kv-val { color: var(--text); font-family: var(--font-mono); font-size: 0.74rem; }
+.kv-val.val-good { color: var(--green); }
+.kv-val.val-warn { color: var(--yellow); }
+.kv-val.val-bad { color: var(--red); }
+
+/* Components section */
+.components-section { display: flex; flex-direction: column; gap: 0.65rem; }
+.comp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.comp-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: #141c2e;
+}
+.comp-name { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; }
+.comp-version { font-size: 0.65rem; color: var(--muted); font-family: var(--font-mono); }
+.comp-state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0;
+}
+.comp-kv {
+  padding: 0.38rem 0.85rem;
+  border-right: 1px solid #1e2a3a;
+  border-bottom: 1px solid #1e2a3a;
+}
+.comp-kv:last-child { border-right: none; }
+.comp-k { font-size: 0.67rem; color: var(--muted); margin-bottom: 2px; }
+.comp-v { font-size: 0.78rem; color: var(--text); font-family: var(--font-mono); }
+.comp-v.good { color: var(--green); }
+.comp-v.bad { color: var(--red); }
+.comp-v.warn { color: var(--yellow); }
+
+.note {
+  position: fixed;
+  bottom: 12px;
+  right: 14px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="topnav">
+  <span class="brand">LUCID</span>
+  <span class="nav-sep">Central Command</span>
+  <div class="nav-links">
+    <span class="nav-link active">Fleet</span>
+    <span class="nav-link">Experiments</span>
+    <span class="nav-link">Topic Tree</span>
+    <span class="nav-link">AI Assistant</span>
+  </div>
+  <span class="ws-badge">⬤ live</span>
+</nav>
+
+<!-- Two-panel layout -->
+<div class="fleet-layout">
+
+  <!-- Left: agent list -->
+  <aside class="fleet-sidebar">
+    <div class="sidebar-header">
+      Fleet
+      <span class="sidebar-count">8 online · 3 stale</span>
+    </div>
+    <div class="sidebar-list">
+      <div class="sidebar-item active">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">rosbot</span>
+        <span class="sidebar-cpu">2.7%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">led_truss</span>
+        <span class="sidebar-cpu">0.0%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">north</span>
+        <span class="sidebar-cpu">7.7%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">south</span>
+        <span class="sidebar-cpu">9.4%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">east</span>
+        <span class="sidebar-cpu">0.0%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">west</span>
+        <span class="sidebar-cpu">10.7%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">optitrack</span>
+        <span class="sidebar-cpu">40.0%</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-online"></div>
+        <span class="sidebar-agent-name">socrates</span>
+        <span class="sidebar-cpu">0.0%</span>
+      </div>
+      <hr class="sidebar-sep">
+      <div class="sidebar-item">
+        <div class="status-dot dot-unknown"></div>
+        <span class="sidebar-agent-name" style="color:var(--muted)">$(led_agent_id)</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-unknown"></div>
+        <span class="sidebar-agent-name" style="color:var(--muted)">Farah</span>
+      </div>
+      <div class="sidebar-item">
+        <div class="status-dot dot-unknown"></div>
+        <span class="sidebar-agent-name" style="color:var(--muted)">optitrack-01</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right: agent detail — showing "rosbot" -->
+  <div class="fleet-detail">
+    <div class="agent-header">
+      <span class="agent-name">rosbot</span>
+      <span class="status-badge badge-online">online</span>
+      <div class="agent-meta-inline">
+        <span>Linux / x86_64</span>
+        <span>v2.1.0</span>
+        <span>uptime 4d 17h</span>
+        <span style="color:var(--yellow)">last seen 8s ago</span>
+      </div>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- Left: agent info -->
+      <div class="info-section">
+        <div class="info-card">
+          <div class="info-card-title">System</div>
+          <table class="kv-table">
+            <tr><td class="kv-key">cpu</td><td class="kv-val">2.7%</td></tr>
+            <tr><td class="kv-key">memory</td><td class="kv-val">3.1%</td></tr>
+            <tr><td class="kv-key">disk</td><td class="kv-val val-warn">82.4%</td></tr>
+            <tr><td class="kv-key">platform</td><td class="kv-val">Linux</td></tr>
+            <tr><td class="kv-key">arch</td><td class="kv-val">x86_64</td></tr>
+            <tr><td class="kv-key">version</td><td class="kv-val">2.1.0</td></tr>
+            <tr><td class="kv-key">heartbeat</td><td class="kv-val">30s</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right: components -->
+      <div class="components-section">
+
+        <!-- exec component -->
+        <div class="comp-card">
+          <div class="comp-card-header">
+            <span class="comp-name">exec</span>
+            <span class="status-badge badge-online">running</span>
+            <span class="comp-version">capabilities: reset, ping, run, stop</span>
+          </div>
+          <div class="comp-state-grid">
+            <div class="comp-kv">
+              <div class="comp-k">active runs</div>
+              <div class="comp-v">0</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">run count</div>
+              <div class="comp-v">0</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">max timeout</div>
+              <div class="comp-v">300s</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">allow list</div>
+              <div class="comp-v good">open</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ros_bridge component — error state -->
+        <div class="comp-card" style="border-color:#3a1a0a;">
+          <div class="comp-card-header" style="background:#1c1208;">
+            <span class="comp-name">ros_bridge</span>
+            <span class="status-badge badge-error">error</span>
+            <span class="comp-version">v2.2.0 · capabilities: reset, ping, roslaunch_start/stop, rosbag_start/stop</span>
+          </div>
+          <div class="comp-state-grid">
+            <div class="comp-kv">
+              <div class="comp-k">roslaunch</div>
+              <div class="comp-v warn">idle</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">rosbag</div>
+              <div class="comp-v">idle</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">publishers</div>
+              <div class="comp-v">1</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">subscriptions</div>
+              <div class="comp-v">9</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">range/fl</div>
+              <div class="comp-v">0.292m</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">range/fr</div>
+              <div class="comp-v">8.191m</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">range/rl</div>
+              <div class="comp-v">0.239m</div>
+            </div>
+            <div class="comp-kv">
+              <div class="comp-k">range/rr</div>
+              <div class="comp-v">0.291m</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="note">Mockup — click sidebar agents to see different layouts (not interactive)</div>
+
+</body>
+</html>

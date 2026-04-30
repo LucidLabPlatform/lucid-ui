@@ -1,0 +1,150 @@
+<h2>Layout A — Topic Click Behavior</h2>
+<p class="subtitle">When you click a live topic in the tree, where do the live messages appear?</p>
+
+<style>
+  .scene { background: #0d0d1a; border-radius: 10px; padding: 12px; margin-bottom: 6px; }
+  .w-bar { height: 28px; background: #1e1e30; border-radius: 5px; display: flex; align-items: center; padding: 0 10px; gap: 8px; font-size: 10px; color: #666; margin-bottom: 8px; }
+  .w-dot-g { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+  .w-pane { background: #13131f; border-radius: 6px; border: 1px solid #222234; }
+  .w-ph { background: #1a1a2e; border-radius: 4px; }
+  .w-hdr { height: 26px; background: #1a1a2e; border-radius: 6px 6px 0 0; border-bottom: 1px solid #1e1e30; display: flex; align-items: center; padding: 0 10px; font-size: 10px; color: #555; gap: 5px; }
+  .w-row { height: 20px; margin: 3px 7px; border-radius: 3px; display: flex; align-items: center; padding: 0 7px; gap: 5px; font-size: 10px; color: #666; }
+  .w-row.sel { background: #252538; color: #a0a0c8; }
+  .w-row.ind { margin-left: 16px; }
+  .w-row.ind2 { margin-left: 26px; }
+  .w-topic-bar { height: 34px; background: #1a1a2e; border-radius: 5px; border: 1px solid #6c63ff44; display: flex; align-items: center; padding: 0 10px; gap: 6px; margin: 6px; }
+  .crumb { background: #252538; border-radius: 3px; padding: 1px 6px; font-size: 10px; color: #a0a0c8; }
+  .w-chips { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px; }
+  .chip { background: #1c1c2e; border-radius: 4px; padding: 3px 8px; font-size: 10px; color: #777; }
+  .chip.hi { background: #252538; color: #a0a0c8; }
+  .w-payload { background: #1a1a2e; border-radius: 4px; margin: 6px; padding: 6px 8px; font-size: 9px; color: #666; font-family: monospace; line-height: 1.5; }
+  .w-btn { height: 26px; background: #6c63ff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: 600; margin: 6px; }
+  .msg-row { margin: 4px 8px; border-radius: 3px; padding: 4px 7px; font-size: 9px; font-family: monospace; background: #1a1a2e; }
+  .msg-ts { color: #444; }
+  .msg-val { color: #22c55e; }
+  .msg-key { color: #6c63ff; }
+  .divider { font-size: 10px; color: #444; text-align: center; margin: 6px 0 2px; letter-spacing: 0.05em; }
+  .tag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 3px; padding: 1px 5px; }
+  .tag-b { background: #1e1e40; color: #6c63ff; }
+  .tag-a { background: #1e3020; color: #22c55e; }
+  .tag-new { background: #3a1e1e; color: #ef4444; }
+  .arrow { font-size: 18px; color: #444; text-align: center; margin: 4px 0; }
+</style>
+
+<div class="options">
+
+  <!-- Option A: Right panel splits top/bottom -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Right panel splits — Publisher top, Live feed bottom</h3>
+      <p>Clicking a topic keeps the publisher visible but opens a live message stream below it in the same right pane</p>
+      <div class="scene">
+        <div class="w-bar"><div class="w-dot-g"></div><span style="color:#a0a0c8">mqtt://failsafe · Connected</span></div>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:6px">
+          <div class="w-pane">
+            <div class="w-hdr">📡 Topics</div>
+            <div class="w-row ind">▼ north/</div>
+            <div class="w-row ind2 sel">● telemetry/cpu</div>
+            <div class="w-row ind2">cmd/…</div>
+            <div class="w-row ind">▶ south/</div>
+          </div>
+          <div class="w-pane">
+            <div class="w-hdr">⚡ Publisher</div>
+            <div class="w-topic-bar">
+              <div class="crumb">lucid</div><span style="color:#333">/</span>
+              <div class="crumb">agents</div><span style="color:#333">/</span>
+              <span style="color:#6c63ff;font-size:10px">start typing…</span>
+            </div>
+            <div class="w-chips">
+              <div class="chip hi">north</div><div class="chip">south</div><div class="chip">east</div><div class="chip">west</div>
+            </div>
+            <div style="border-top:1px solid #1e1e30;margin-top:6px;padding-top:6px">
+              <div class="w-hdr" style="border-radius:0;background:transparent;color:#6c63ff;font-size:9px">📥 LIVE · lucid/agents/north/telemetry/cpu</div>
+              <div class="msg-row"><span class="msg-ts">12:04:01 </span><span class="msg-key">"cpu_percent"</span><span style="color:#444">: </span><span class="msg-val">34.2</span></div>
+              <div class="msg-row"><span class="msg-ts">12:04:00 </span><span class="msg-key">"cpu_percent"</span><span style="color:#444">: </span><span class="msg-val">31.8</span></div>
+              <div class="msg-row"><span class="msg-ts">12:03:59 </span><span class="msg-key">"cpu_percent"</span><span style="color:#444">: </span><span class="msg-val">38.1</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Third panel slides in from right -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Third panel slides in — Tree | Publisher | Live feed</h3>
+      <p>Clicking a topic opens a dedicated live message panel on the far right, publisher stays full height</p>
+      <div class="scene">
+        <div class="w-bar"><div class="w-dot-g"></div><span style="color:#a0a0c8">mqtt://failsafe · Connected</span></div>
+        <div style="display:grid;grid-template-columns:140px 1fr 160px;gap:6px">
+          <div class="w-pane">
+            <div class="w-hdr">📡 Topics</div>
+            <div class="w-row ind">▼ north/</div>
+            <div class="w-row ind2 sel">● telemetry/cpu</div>
+            <div class="w-row ind2">cmd/…</div>
+            <div class="w-row ind">▶ south/</div>
+          </div>
+          <div class="w-pane">
+            <div class="w-hdr">⚡ Publisher</div>
+            <div class="w-topic-bar">
+              <div class="crumb">lucid</div><span style="color:#333">/</span>
+              <div class="crumb">agents</div><span style="color:#333">/</span>
+              <span style="color:#6c63ff;font-size:10px">start typing…</span>
+            </div>
+            <div class="w-chips">
+              <div class="chip hi">north</div><div class="chip">south</div>
+            </div>
+            <div class="w-payload">{"request_id": "…"}</div>
+            <div class="w-btn">Send Command</div>
+          </div>
+          <div class="w-pane" style="border-color:#6c63ff44">
+            <div class="w-hdr" style="color:#6c63ff">📥 LIVE</div>
+            <div style="font-size:9px;color:#555;margin:3px 8px;font-family:monospace">north/telemetry/cpu</div>
+            <div class="msg-row"><span class="msg-ts">12:04:01 </span><span class="msg-val">34.2%</span></div>
+            <div class="msg-row"><span class="msg-ts">12:04:00 </span><span class="msg-val">31.8%</span></div>
+            <div class="msg-row"><span class="msg-ts">12:03:59 </span><span class="msg-val">38.1%</span></div>
+            <div class="msg-row"><span class="msg-ts">12:03:58 </span><span class="msg-val">29.5%</span></div>
+            <div style="font-size:9px;color:#444;text-align:right;margin:4px 8px">✕ close</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Full takeover of right pane, back button -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Right pane switches modes — click topic to view, back to compose</h3>
+      <p>The right panel is either the publisher OR the live view, with a back button to switch. Clean but requires mode-switching.</p>
+      <div class="scene">
+        <div class="w-bar"><div class="w-dot-g"></div><span style="color:#a0a0c8">mqtt://failsafe · Connected</span></div>
+        <div style="display:grid;grid-template-columns:160px 1fr;gap:6px">
+          <div class="w-pane">
+            <div class="w-hdr">📡 Topics</div>
+            <div class="w-row ind">▼ north/</div>
+            <div class="w-row ind2 sel">● telemetry/cpu</div>
+            <div class="w-row ind2">cmd/…</div>
+            <div class="w-row ind">▶ south/</div>
+          </div>
+          <div class="w-pane">
+            <div class="w-hdr" style="justify-content:space-between">
+              <span style="color:#6c63ff">📥 north/telemetry/cpu</span>
+              <span style="color:#555;cursor:pointer">← Publisher</span>
+            </div>
+            <div class="msg-row" style="margin-top:6px"><span class="msg-ts">12:04:01 </span><span class="msg-key">"cpu_percent"</span>: <span class="msg-val">34.2</span>, <span class="msg-key">"ts"</span>: <span class="msg-val">1706000001</span></div>
+            <div class="msg-row"><span class="msg-ts">12:04:00 </span><span class="msg-key">"cpu_percent"</span>: <span class="msg-val">31.8</span>, <span class="msg-key">"ts"</span>: <span class="msg-val">1706000000</span></div>
+            <div class="msg-row"><span class="msg-ts">12:03:59 </span><span class="msg-key">"cpu_percent"</span>: <span class="msg-val">38.1</span>, <span class="msg-key">"ts"</span>: <span class="msg-val">1705999999</span></div>
+            <div class="msg-row"><span class="msg-ts">12:03:58 </span><span class="msg-key">"cpu_percent"</span>: <span class="msg-val">29.5</span>, <span class="msg-key">"ts"</span>: <span class="msg-val">1705999998</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:14px">Click your preferred behavior, then confirm in the terminal.</p>

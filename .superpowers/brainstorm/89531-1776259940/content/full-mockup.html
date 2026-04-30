@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUCID Central Command — Full Mockup</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1017; --surface: #1a2036; --surface2: #141c2e;
+  --surface-hover: #1e2744; --border: #283044; --border2: #1e2a3a;
+  --text: #e2e8f0; --muted: #8494ab; --subtle: #94a3b8;
+  --accent: #60a5fa; --accent-dim: rgba(96,165,250,.1);
+  --green: #4ade80; --red: #f87171; --yellow: #facc15; --orange: #fb923c;
+  --radius: 8px; --radius-sm: 5px;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --transition: 120ms ease;
+}
+body { font-family: system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── Nav ── */
+.topnav { display:flex; align-items:center; gap:.65rem; padding:0 1.25rem; height:44px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; position:relative; z-index:200; }
+.brand { font-weight:700; color:var(--accent); letter-spacing:.05em; font-size:.9rem; cursor:pointer; }
+.nav-sep { color:var(--muted); font-size:.8rem; }
+.nav-links { display:flex; gap:2px; margin-left:.5rem; }
+.nav-link { color:var(--muted); font-size:.78rem; padding:.28rem .65rem; border-radius:var(--radius-sm); cursor:pointer; transition:background var(--transition),color var(--transition); user-select:none; }
+.nav-link:hover { background:var(--border); color:var(--text); }
+.nav-link.active { background:var(--border); color:var(--text); }
+.nav-tools-wrap { position:relative; }
+.nav-tools { color:var(--muted); font-size:.78rem; padding:.28rem .65rem; border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--border); user-select:none; }
+.nav-tools:hover { background:var(--border); color:var(--text); }
+.tools-dropdown { display:none; position:absolute; top:calc(100% + 6px); left:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; min-width:145px; z-index:300; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.tools-dropdown.open { display:block; }
+.tools-item { display:block; padding:.45rem .9rem; font-size:.78rem; color:var(--muted); cursor:pointer; }
+.tools-item:hover { background:var(--surface-hover); color:var(--text); }
+.ws-badge { margin-left:auto; font-size:.7rem; font-weight:600; padding:.18rem .55rem; border-radius:999px; background:#14532d; color:var(--green); }
+.nav-user { font-size:.75rem; color:var(--muted); margin-left:.5rem; }
+
+/* ── Pages ── */
+.page { display:none; flex:1; overflow:hidden; flex-direction:column; }
+.page.active { display:flex; }
+
+/* ═══════════════════════════════════════════
+   FLEET PAGE
+═══════════════════════════════════════════ */
+.fleet-layout { display:flex; flex:1; overflow:hidden; }
+
+/* Sidebar */
+.fleet-sidebar { width:195px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:#111827; }
+.sidebar-header { padding:.7rem 1rem .5rem; font-size:.67rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.sidebar-count { font-size:.68rem; color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0; }
+.sidebar-list { flex:1; overflow-y:auto; padding:.3rem 0; }
+.sidebar-item { display:flex; align-items:center; gap:.55rem; padding:.5rem 1rem; cursor:pointer; border-left:2px solid transparent; transition:background var(--transition); }
+.sidebar-item:hover { background:var(--surface-hover); }
+.sidebar-item.active { background:#1e2a44; border-left-color:var(--accent); }
+.status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-online { background:var(--green); box-shadow:0 0 5px rgba(74,222,128,.5); }
+.dot-error  { background:var(--orange); }
+.dot-unknown { background:#374151; }
+.sidebar-agent-name { font-size:.83rem; color:var(--text); font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sidebar-item.active .sidebar-agent-name { color:var(--accent); }
+.sidebar-item.stale .sidebar-agent-name { color:var(--muted); }
+.sidebar-sep { margin:.35rem 1rem; border:none; border-top:1px solid var(--border); }
+.sidebar-clean-btn { margin:.3rem .75rem .5rem; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); padding:.3rem .6rem; font-size:.68rem; color:var(--muted); cursor:pointer; width:calc(100% - 1.5rem); text-align:left; }
+.sidebar-clean-btn:hover { background:var(--surface-hover); color:var(--red); border-color:var(--red); }
+
+/* Agent detail panel */
+.fleet-detail { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.agent-header { padding:.8rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.75rem; flex-shrink:0; background:var(--surface); }
+.agent-name-large { font-size:1.1rem; font-weight:700; color:var(--text); }
+.status-badge { font-size:.7rem; font-weight:600; padding:.16rem .6rem; border-radius:999px; }
+.badge-online  { background:#14532d; color:var(--green); }
+.badge-running { background:#14532d; color:var(--green); }
+.badge-error   { background:#431407; color:var(--orange); }
+.badge-offline { background:#450a0a; color:var(--red); }
+.badge-unknown { background:#1e293b; color:var(--muted); }
+.badge-idle    { background:#2a2a0a; color:var(--yellow); }
+.agent-meta-bar { margin-left:auto; font-size:.74rem; color:var(--muted); display:flex; gap:1rem; align-items:center; }
+.agent-detail-link { font-size:.74rem; padding:.25rem .65rem; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--muted); cursor:pointer; transition:all var(--transition); }
+.agent-detail-link:hover { background:var(--surface-hover); color:var(--text); }
+
+.detail-body { flex:1; overflow-y:auto; padding:1rem 1.25rem; display:grid; grid-template-columns:195px 1fr; gap:1rem; align-content:start; }
+
+/* Info card */
+.info-section { display:flex; flex-direction:column; gap:1rem; }
+.info-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.info-card-title { font-size:.63rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); padding:.5rem .85rem; border-bottom:1px solid var(--border); background:var(--surface2); }
+.kv-table { width:100%; border-collapse:collapse; }
+.kv-table tr:not(:last-child) td { border-bottom:1px solid var(--border2); }
+.kv-table td { padding:.38rem .85rem; font-size:.77rem; }
+.kv-key { color:var(--muted); width:45%; }
+.kv-val { color:var(--text); font-family:var(--font-mono); font-size:.73rem; }
+.kv-val.good { color:var(--green); }
+.kv-val.warn { color:var(--yellow); }
+.kv-val.bad  { color:var(--red); }
+
+/* Component cards */
+.components-section { display:flex; flex-direction:column; gap:.65rem; }
+.comp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.comp-card.comp-error { border-color:#3a2010; }
+.comp-card-header { display:flex; align-items:center; gap:.6rem; padding:.52rem .85rem; border-bottom:1px solid var(--border); background:var(--surface2); }
+.comp-card.comp-error .comp-card-header { background:#180e06; border-bottom-color:#3a2010; }
+.comp-name { font-size:.82rem; font-weight:600; color:var(--text); flex:1; cursor:pointer; }
+.comp-name:hover { color:var(--accent); text-decoration:underline; }
+.comp-caps { font-size:.63rem; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px; }
+.comp-state-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+.comp-kv { padding:.4rem .85rem; border-right:1px solid var(--border2); border-bottom:1px solid var(--border2); }
+.comp-k { font-size:.65rem; color:var(--muted); margin-bottom:2px; }
+.comp-v { font-size:.77rem; color:var(--text); font-family:var(--font-mono); }
+.comp-v.good { color:var(--green); }
+.comp-v.bad  { color:var(--red); }
+.comp-v.warn { color:var(--yellow); }
+.comp-v.null { color:#475569; }
+.data-age { font-size:.63rem; color:#475569; padding:.3rem .85rem; font-style:italic; border-top:1px solid var(--border2); }
+
+.empty-state { flex:1; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:.85rem; }
+
+/* ═══════════════════════════════════════════
+   AGENT DETAIL PAGE
+═══════════════════════════════════════════ */
+.agent-detail-page { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.agent-detail-header { padding:.8rem 1.25rem; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+.back-btn { font-size:.78rem; color:var(--muted); cursor:pointer; padding:.25rem .5rem; border-radius:var(--radius-sm); border:1px solid var(--border); }
+.back-btn:hover { background:var(--surface-hover); color:var(--text); }
+.tab-bar { display:flex; gap:0; padding:0 1.25rem; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.tab-btn { font-size:.8rem; color:var(--muted); padding:.6rem .9rem; cursor:pointer; border-bottom:2px solid transparent; transition:color var(--transition); }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-pane { display:none; flex:1; overflow:hidden; flex-direction:column; }
+.tab-pane.active { display:flex; }
+
+/* Logs */
+.log-toolbar { display:flex; align-items:center; gap:.75rem; padding:.6rem 1.25rem; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--surface); }
+.log-toolbar-label { font-size:.75rem; color:var(--muted); }
+.btn-sm { font-size:.72rem; padding:.25rem .65rem; border-radius:var(--radius-sm); border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer; }
+.btn-sm:hover { background:var(--surface-hover); color:var(--text); }
+.log-feed { flex:1; overflow-y:auto; padding:.5rem 1.25rem; font-family:var(--font-mono); font-size:.75rem; }
+.log-line { display:flex; gap:.75rem; padding:.18rem 0; border-bottom:1px solid #0d131d; }
+.log-ts { color:#475569; flex-shrink:0; width:80px; }
+.log-level { flex-shrink:0; width:40px; font-weight:600; }
+.log-level.INFO  { color:#60a5fa; }
+.log-level.WARN  { color:var(--yellow); }
+.log-level.ERROR { color:var(--red); }
+.log-level.DEBUG { color:#475569; }
+.log-comp { color:var(--muted); flex-shrink:0; width:85px; overflow:hidden; text-overflow:ellipsis; }
+.log-msg { color:var(--text); word-break:break-all; }
+
+/* Commands */
+.cmd-pane { flex:1; overflow-y:auto; padding:1.25rem; display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; align-content:start; }
+.cmd-form-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.cmd-form-title { font-size:.63rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); padding:.5rem .85rem; border-bottom:1px solid var(--border); background:var(--surface2); }
+.cmd-form-body { padding:.85rem; display:flex; flex-direction:column; gap:.6rem; }
+.cmd-select, .cmd-input, .cmd-textarea { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.45rem .7rem; color:var(--text); font-size:.8rem; font-family:inherit; outline:none; }
+.cmd-select:focus, .cmd-input:focus, .cmd-textarea:focus { border-color:var(--accent); }
+.cmd-textarea { font-family:var(--font-mono); font-size:.75rem; resize:vertical; min-height:70px; }
+.quick-cmds { display:flex; flex-wrap:wrap; gap:.4rem; }
+.quick-cmd { font-size:.7rem; padding:.22rem .6rem; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--muted); cursor:pointer; background:none; }
+.quick-cmd:hover { background:var(--surface-hover); color:var(--text); }
+.btn-primary { background:var(--accent); color:#0d1017; border:none; border-radius:var(--radius-sm); padding:.45rem 1rem; font-size:.8rem; font-weight:600; cursor:pointer; }
+.btn-primary:hover { opacity:.9; }
+
+/* History */
+.cmd-history-item { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:.6rem .85rem; margin-bottom:.5rem; font-size:.75rem; }
+.cmd-history-action { color:var(--accent); font-family:var(--font-mono); font-weight:600; }
+.cmd-history-meta { color:var(--muted); margin-top:.2rem; display:flex; gap:.75rem; }
+.cmd-history-result { color:var(--green); font-weight:600; }
+.cmd-history-result.fail { color:var(--red); }
+
+/* Raw JSON */
+.raw-pane { flex:1; overflow-y:auto; padding:1rem 1.25rem; display:flex; flex-direction:column; gap:.6rem; }
+.raw-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.raw-section summary { padding:.5rem .85rem; font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); cursor:pointer; background:var(--surface2); user-select:none; }
+.raw-section summary:hover { color:var(--text); }
+.raw-pre { font-family:var(--font-mono); font-size:.73rem; padding:.85rem; color:#94a3b8; white-space:pre-wrap; word-break:break-all; border-top:1px solid var(--border); }
+
+/* ═══════════════════════════════════════════
+   EXPERIMENTS PAGE
+═══════════════════════════════════════════ */
+.page-header { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); flex-shrink:0; }
+.page-title { font-size:1.1rem; font-weight:700; }
+.page-subtitle { color:var(--muted); font-size:.8rem; }
+.btn-outline { font-size:.75rem; padding:.32rem .85rem; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--muted); cursor:pointer; background:none; margin-left:auto; }
+.btn-outline:hover { background:var(--surface-hover); color:var(--text); }
+.exp-layout { display:flex; flex:1; overflow:hidden; }
+.exp-section { flex:1; overflow-y:auto; padding:1rem 1.25rem; display:flex; flex-direction:column; gap:.6rem; }
+.exp-section + .exp-section { border-left:1px solid var(--border); }
+.exp-section-title { font-size:.65rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); padding-bottom:.5rem; border-bottom:1px solid var(--border); margin-bottom:.25rem; }
+.exp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem .9rem; cursor:pointer; transition:border-color var(--transition); }
+.exp-card:hover { border-color:var(--accent); }
+.exp-card-name { font-size:.85rem; font-weight:600; color:var(--text); margin-bottom:.25rem; }
+.exp-card-desc { font-size:.75rem; color:var(--muted); margin-bottom:.5rem; }
+.exp-card-tags { display:flex; gap:.35rem; flex-wrap:wrap; }
+.exp-tag { font-size:.65rem; padding:.18rem .55rem; background:var(--surface2); border:1px solid var(--border); border-radius:999px; color:var(--muted); }
+.run-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.65rem .9rem; display:flex; align-items:center; gap:.75rem; cursor:pointer; }
+.run-card:hover { border-color:var(--accent); }
+.run-status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.run-name { font-size:.82rem; font-weight:500; color:var(--text); flex:1; }
+.run-meta { font-size:.72rem; color:var(--muted); text-align:right; }
+
+/* ═══════════════════════════════════════════
+   AI ASSISTANT PAGE
+═══════════════════════════════════════════ */
+.ai-layout { display:flex; flex:1; overflow:hidden; }
+.ai-sidebar { width:220px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; background:#111827; }
+.ai-sidebar-header { padding:.7rem 1rem .5rem; font-size:.67rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.ai-new-btn { font-size:.68rem; padding:.2rem .55rem; background:var(--accent); color:#0d1017; border:none; border-radius:var(--radius-sm); cursor:pointer; font-weight:600; }
+.ai-session-list { flex:1; overflow-y:auto; padding:.3rem 0; }
+.ai-session-item { padding:.5rem 1rem; cursor:pointer; border-left:2px solid transparent; }
+.ai-session-item:hover { background:var(--surface-hover); }
+.ai-session-item.active { background:#1e2a44; border-left-color:var(--accent); }
+.ai-session-name { font-size:.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ai-session-meta { font-size:.68rem; color:var(--muted); margin-top:2px; }
+.ai-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.ai-chat-area { flex:1; overflow-y:auto; padding:1.25rem; display:flex; flex-direction:column; gap:.85rem; }
+.msg { display:flex; gap:.75rem; max-width:80%; }
+.msg.user { align-self:flex-end; flex-direction:row-reverse; }
+.msg-bubble { padding:.65rem .9rem; border-radius:var(--radius); font-size:.82rem; line-height:1.55; }
+.msg.assistant .msg-bubble { background:var(--surface); border:1px solid var(--border); color:var(--text); }
+.msg.user .msg-bubble { background:var(--accent); color:#0d1017; }
+.msg-avatar { width:28px; height:28px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; margin-top:2px; }
+.msg.assistant .msg-avatar { background:var(--surface2); color:var(--accent); border:1px solid var(--border); }
+.msg.user .msg-avatar { background:var(--accent); color:#0d1017; }
+.ai-input-area { padding:.75rem 1.25rem; border-top:1px solid var(--border); display:flex; gap:.75rem; background:var(--surface); flex-shrink:0; }
+.ai-input { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.55rem .9rem; color:var(--text); font-size:.82rem; outline:none; font-family:inherit; resize:none; }
+.ai-input:focus { border-color:var(--accent); }
+.ai-send-btn { background:var(--accent); border:none; border-radius:var(--radius); padding:.55rem .9rem; color:#0d1017; font-weight:600; cursor:pointer; font-size:.82rem; }
+
+/* ═══════════════════════════════════════════
+   TOOLS PAGES (Topic Tree, Users, Schema, etc.)
+═══════════════════════════════════════════ */
+.tools-page { flex:1; overflow-y:auto; padding:1.5rem; }
+.tools-page h2 { font-size:1.1rem; font-weight:700; margin-bottom:1.25rem; }
+.schema-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+.schema-table th { text-align:left; padding:.45rem .75rem; font-size:.65rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border); }
+.schema-table td { padding:.42rem .75rem; border-bottom:1px solid var(--border2); color:var(--text); }
+.schema-table tr:hover td { background:var(--surface-hover); }
+.schema-table td:first-child { color:var(--accent); font-family:var(--font-mono); }
+.users-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+.users-table th { text-align:left; padding:.45rem .75rem; font-size:.65rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--surface2); border-bottom:1px solid var(--border); }
+.users-table td { padding:.42rem .75rem; border-bottom:1px solid var(--border2); color:var(--text); }
+.role-badge { font-size:.65rem; padding:.15rem .55rem; border-radius:999px; }
+.role-agent { background:#14532d20; color:var(--green); border:1px solid #14532d; }
+.role-cc { background:#1e3a5f20; color:var(--accent); border:1px solid #1e3a5f; }
+
+/* Topic tree */
+.topic-tree { font-family:var(--font-mono); font-size:.78rem; line-height:1.8; }
+.tt-agent { color:var(--accent); font-weight:600; }
+.tt-comp { color:var(--subtle); padding-left:1.5rem; }
+.tt-topic { color:var(--muted); padding-left:3rem; }
+.tt-topic.retained { color:#94a3b8; }
+.tt-topic.cmd { color:var(--yellow); }
+.tt-topic.evt { color:var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ── Top Nav ── -->
+<nav class="topnav">
+  <span class="brand" onclick="showPage('fleet')">LUCID</span>
+  <span class="nav-sep">Central Command</span>
+  <div class="nav-links">
+    <span class="nav-link active" id="nav-fleet" onclick="showPage('fleet')">Fleet</span>
+    <span class="nav-link" id="nav-experiments" onclick="showPage('experiments')">Experiments</span>
+    <span class="nav-link" id="nav-ai" onclick="showPage('ai')">AI Assistant</span>
+    <div class="nav-tools-wrap">
+      <span class="nav-tools" onclick="toggleTools()">Tools ▾</span>
+      <div class="tools-dropdown" id="tools-dropdown">
+        <span class="tools-item" onclick="showPage('topic-tree')">Topic Tree</span>
+        <span class="tools-item" onclick="showPage('topic-links')">Topic Links</span>
+        <span class="tools-item" onclick="showPage('users')">Users</span>
+        <span class="tools-item" onclick="showPage('auth-log')">Auth Log</span>
+        <span class="tools-item" onclick="showPage('schema')">Schema</span>
+      </div>
+    </div>
+  </div>
+  <span class="ws-badge">⬤ live</span>
+  <span class="nav-user">admin</span>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: FLEET
+═══════════════════════════════════════════ -->
+<div class="page active" id="page-fleet">
+  <div class="fleet-layout">
+    <aside class="fleet-sidebar">
+      <div class="sidebar-header">Fleet <span class="sidebar-count" id="fleet-count">8 online</span></div>
+      <div class="sidebar-list" id="sidebar-list">
+        <!-- populated by JS -->
+      </div>
+    </aside>
+    <div class="fleet-detail" id="fleet-detail">
+      <div class="empty-state" id="fleet-empty">Select an agent</div>
+      <div id="agent-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;">
+        <div class="agent-header">
+          <span class="agent-name-large" id="panel-name"></span>
+          <span class="status-badge" id="panel-badge"></span>
+          <div class="agent-meta-bar">
+            <span id="panel-meta"></span>
+            <span class="agent-detail-link" id="panel-logs-btn">Logs / Commands →</span>
+          </div>
+        </div>
+        <div class="detail-body">
+          <div class="info-section">
+            <div class="info-card">
+              <div class="info-card-title">Agent</div>
+              <table class="kv-table" id="panel-agent-kv"></table>
+            </div>
+          </div>
+          <div class="components-section" id="panel-components"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: AGENT DETAIL
+═══════════════════════════════════════════ -->
+<div class="page" id="page-agent">
+  <div class="agent-detail-header">
+    <span class="back-btn" onclick="showPage('fleet')">← Fleet</span>
+    <span class="agent-name-large" id="detail-name"></span>
+    <span class="status-badge" id="detail-badge"></span>
+    <div class="agent-meta-bar" id="detail-meta"></div>
+  </div>
+  <div class="tab-bar">
+    <span class="tab-btn active" onclick="switchTab('logs')">Logs</span>
+    <span class="tab-btn" onclick="switchTab('commands')">Commands</span>
+    <span class="tab-btn" onclick="switchTab('raw')">Raw JSON</span>
+  </div>
+  <!-- Logs -->
+  <div class="tab-pane active" id="tab-logs">
+    <div class="log-toolbar">
+      <span class="log-toolbar-label">Live feed — last 500 lines</span>
+      <button class="btn-sm">Clear</button>
+      <button class="btn-sm">Pause</button>
+    </div>
+    <div class="log-feed" id="log-feed"></div>
+  </div>
+  <!-- Commands -->
+  <div class="tab-pane" id="tab-commands">
+    <div class="cmd-pane">
+      <div class="cmd-form-card">
+        <div class="cmd-form-title">Send Command</div>
+        <div class="cmd-form-body">
+          <select class="cmd-select" id="cmd-target-sel">
+            <option>Agent</option>
+          </select>
+          <div class="quick-cmds" id="quick-cmds-el"></div>
+          <input class="cmd-input" placeholder="action (Enter to send)" />
+          <textarea class="cmd-textarea" placeholder='{"key":"value"}  optional'></textarea>
+          <button class="btn-primary">Send Command</button>
+        </div>
+      </div>
+      <div>
+        <div class="exp-section-title">Recent Commands</div>
+        <div id="cmd-history-el"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Raw -->
+  <div class="tab-pane" id="tab-raw">
+    <div class="raw-pane" id="raw-pane"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: EXPERIMENTS
+═══════════════════════════════════════════ -->
+<div class="page" id="page-experiments">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Experiments</div>
+      <div class="page-subtitle">Templates and run history</div>
+    </div>
+    <button class="btn-outline">+ New Template</button>
+  </div>
+  <div class="exp-layout">
+    <div class="exp-section">
+      <div class="exp-section-title">Templates</div>
+      <div class="exp-card">
+        <div class="exp-card-name">Foraging — GAMA Single Run</div>
+        <div class="exp-card-desc">Launch ROSbot foraging with OptiTrack tracking and LED feedback. Configurable duration and robot count.</div>
+        <div class="exp-card-tags">
+          <span class="exp-tag">rosbot</span>
+          <span class="exp-tag">optitrack</span>
+          <span class="exp-tag">led_truss</span>
+          <span class="exp-tag">foraging</span>
+        </div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-card-name">LED Truss — Effect Sequence</div>
+        <div class="exp-card-desc">Run a timed sequence of LED effects across the truss strip. Supports glow, wave, rainbow-cycle.</div>
+        <div class="exp-card-tags">
+          <span class="exp-tag">led_truss</span>
+          <span class="exp-tag">led_strip</span>
+        </div>
+      </div>
+      <div class="exp-card">
+        <div class="exp-card-name">Projection — NDI Handoff</div>
+        <div class="exp-card-desc">Coordinate NDI stream handoff across north/south/east/west projector nodes with projector power sequencing.</div>
+        <div class="exp-card-tags">
+          <span class="exp-tag">north</span><span class="exp-tag">south</span>
+          <span class="exp-tag">east</span><span class="exp-tag">west</span>
+          <span class="exp-tag">ndi</span><span class="exp-tag">projector</span>
+        </div>
+      </div>
+    </div>
+    <div class="exp-section">
+      <div class="exp-section-title">Recent Runs</div>
+      <div class="run-card">
+        <div class="run-status-dot" style="background:var(--green)"></div>
+        <div>
+          <div class="run-name">Foraging — GAMA Single Run</div>
+          <div style="font-size:.7rem;color:var(--muted)">completed · 6 steps</div>
+        </div>
+        <div class="run-meta">Apr 13 · 21:11<br><span style="color:var(--green)">completed</span></div>
+      </div>
+      <div class="run-card">
+        <div class="run-status-dot" style="background:var(--red)"></div>
+        <div>
+          <div class="run-name">Foraging — GAMA Single Run</div>
+          <div style="font-size:.7rem;color:var(--muted)">failed · step 3</div>
+        </div>
+        <div class="run-meta">Apr 12 · 14:32<br><span style="color:var(--red)">failed</span></div>
+      </div>
+      <div class="run-card">
+        <div class="run-status-dot" style="background:var(--green)"></div>
+        <div>
+          <div class="run-name">LED Truss — Effect Sequence</div>
+          <div style="font-size:.7rem;color:var(--muted)">completed · 4 steps</div>
+        </div>
+        <div class="run-meta">Apr 10 · 09:14<br><span style="color:var(--green)">completed</span></div>
+      </div>
+      <div class="run-card">
+        <div class="run-status-dot" style="background:var(--green)"></div>
+        <div>
+          <div class="run-name">Projection — NDI Handoff</div>
+          <div style="font-size:.7rem;color:var(--muted)">completed · 8 steps</div>
+        </div>
+        <div class="run-meta">Apr 9 · 16:45<br><span style="color:var(--green)">completed</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: AI ASSISTANT
+═══════════════════════════════════════════ -->
+<div class="page" id="page-ai">
+  <div class="ai-layout">
+    <div class="ai-sidebar">
+      <div class="ai-sidebar-header">Sessions <button class="ai-new-btn">+ New</button></div>
+      <div class="ai-session-list">
+        <div class="ai-session-item active">
+          <div class="ai-session-name">Rosbot status check</div>
+          <div class="ai-session-meta">Today · 4 messages</div>
+        </div>
+        <div class="ai-session-item">
+          <div class="ai-session-name">LED effect sequence</div>
+          <div class="ai-session-meta">Apr 13 · 7 messages</div>
+        </div>
+        <div class="ai-session-item">
+          <div class="ai-session-name">Foraging experiment setup</div>
+          <div class="ai-session-meta">Apr 12 · 12 messages</div>
+        </div>
+      </div>
+    </div>
+    <div class="ai-main">
+      <div class="ai-chat-area">
+        <div class="msg assistant">
+          <div class="msg-avatar">L</div>
+          <div class="msg-bubble">Hello! I have access to your fleet. Currently 8 agents are online. How can I help?</div>
+        </div>
+        <div class="msg user">
+          <div class="msg-avatar">F</div>
+          <div class="msg-bubble">What's the status of rosbot?</div>
+        </div>
+        <div class="msg assistant">
+          <div class="msg-avatar">L</div>
+          <div class="msg-bubble"><strong>rosbot</strong> is online (uptime 4d 17h, Linux/x86_64, v2.1.0).<br><br>
+            Components:<br>
+            • <strong>exec</strong> — running, 0 active runs<br>
+            • <strong>ros_bridge</strong> — ⚠️ error state. Roslaunch is idle with 1 publisher and 9 subscriptions active. Range sensors last updated 2 days ago — you may want to restart the bridge.
+          </div>
+        </div>
+      </div>
+      <div class="ai-input-area">
+        <textarea class="ai-input" rows="1" placeholder="Ask about your fleet…"></textarea>
+        <button class="ai-send-btn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: TOPIC TREE (Tools)
+═══════════════════════════════════════════ -->
+<div class="page" id="page-topic-tree">
+  <div class="tools-page">
+    <h2>MQTT Topic Tree</h2>
+    <div class="topic-tree">
+      <div class="tt-agent">lucid/agents/rosbot/</div>
+      <div class="tt-topic retained">metadata | status | state | cfg | cfg/logging | cfg/telemetry</div>
+      <div class="tt-topic">logs | telemetry/{metric}</div>
+      <div class="tt-topic cmd">cmd/ping | cmd/restart | cmd/update-cfg | cmd/reload-components</div>
+      <div class="tt-topic evt">evt/ping/result | evt/restart/result | ...</div>
+      <div class="tt-comp">components/exec/</div>
+      <div class="tt-topic retained" style="padding-left:4.5rem">metadata | status | state | cfg</div>
+      <div class="tt-topic cmd" style="padding-left:4.5rem">cmd/run | cmd/stop | cmd/ping | cmd/reset</div>
+      <div class="tt-comp">components/ros_bridge/</div>
+      <div class="tt-topic retained" style="padding-left:4.5rem">metadata | status | state | cfg</div>
+      <div class="tt-topic cmd" style="padding-left:4.5rem">cmd/roslaunch_start | cmd/roslaunch_stop | cmd/rosbag_start | cmd/rosbag_stop</div>
+      <br>
+      <div class="tt-agent">lucid/agents/led_truss/</div>
+      <div class="tt-topic retained">metadata | status | state | cfg</div>
+      <div class="tt-comp">components/led_strip/</div>
+      <div class="tt-topic cmd" style="padding-left:4.5rem">cmd/set-color | cmd/effect/rainbow | cmd/effect/glow | cmd/effect/wave | cmd/clear</div>
+      <br>
+      <div class="tt-agent">lucid/agents/north/ &nbsp;· &nbsp;south/ &nbsp;· &nbsp;east/ &nbsp;· &nbsp;west/</div>
+      <div class="tt-comp">components/ndi/</div>
+      <div class="tt-topic cmd" style="padding-left:4.5rem">cmd/receive/start | cmd/receive/stop | cmd/send/start | cmd/send/stop</div>
+      <div class="tt-comp">components/projector/</div>
+      <div class="tt-topic cmd" style="padding-left:4.5rem">cmd/power/on | cmd/power/off | cmd/input/hdmi1 | cmd/input/hdmi2 | cmd/keystone/set</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: USERS (Tools)
+═══════════════════════════════════════════ -->
+<div class="page" id="page-users">
+  <div class="tools-page">
+    <h2>Users</h2>
+    <table class="users-table">
+      <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Last synced</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>central-command</td><td><span class="role-badge role-cc">central-command</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>rosbot</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>led_truss</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>north</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>south</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>east</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>west</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>optitrack</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+        <tr><td>socrates</td><td><span class="role-badge role-agent">agent</span></td><td>Apr 8</td><td>just now</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: SCHEMA (Tools)
+═══════════════════════════════════════════ -->
+<div class="page" id="page-schema">
+  <div class="tools-page">
+    <h2>Database Schema</h2>
+    <table class="schema-table">
+      <thead><tr><th>Table</th><th>Key columns</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>agents</td><td>agent_id, first_seen_ts, last_seen_ts</td><td>Agent registry</td></tr>
+        <tr><td>agent_status</td><td>agent_id, state, uptime_s, connected_since_ts</td><td>Latest heartbeat state</td></tr>
+        <tr><td>agent_state</td><td>agent_id, components (JSONB)</td><td>Installed component list</td></tr>
+        <tr><td>agent_metadata</td><td>agent_id, version, platform, architecture</td><td>Static agent info</td></tr>
+        <tr><td>agent_cfg</td><td>agent_id, heartbeat_s</td><td>Agent configuration</td></tr>
+        <tr><td>components</td><td>agent_id, component_id, first_seen_ts</td><td>Component registry</td></tr>
+        <tr><td>component_status</td><td>agent_id, component_id, state</td><td>Component live state</td></tr>
+        <tr><td>component_state</td><td>agent_id, component_id, payload (JSONB)</td><td>Component state payload</td></tr>
+        <tr><td>logs</td><td>agent_id, component_id, payload, received_ts</td><td>Log stream storage</td></tr>
+        <tr><td>commands</td><td>request_id, agent_id, action, result_ok, sent_ts</td><td>Command audit log</td></tr>
+        <tr><td>experiment_templates</td><td>id, name, definition (JSONB)</td><td>Experiment definitions</td></tr>
+        <tr><td>experiment_runs</td><td>id, template_id, status, started_at</td><td>Run history</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE: AUTH LOG (Tools)
+═══════════════════════════════════════════ -->
+<div class="page" id="page-auth-log">
+  <div class="tools-page">
+    <h2>Auth Log</h2>
+    <table class="schema-table">
+      <thead><tr><th>Time</th><th>Type</th><th>Username</th><th>Client ID</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>11:30:41</td><td>authn</td><td>optitrack</td><td>optitrack</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>11:30:19</td><td>authn</td><td>rosbot</td><td>rosbot</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>11:30:14</td><td>authn</td><td>socrates</td><td>socrates</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>11:30:11</td><td>authn</td><td>led_truss</td><td>led_truss</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>11:21:41</td><td>authn</td><td>north</td><td>north</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>11:21:41</td><td>authn</td><td>west</td><td>west</td><td style="color:var(--green)">allow</td></tr>
+        <tr><td>09:14:02</td><td>authz</td><td>rosbot</td><td>rosbot</td><td style="color:var(--red)">deny</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+// ── Fleet data ──────────────────────────────────────────────────────
+const AGENTS = [
+  { id:'rosbot', status:'online', platform:'Linux', arch:'x86_64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'8s ago',
+    components:[
+      { id:'exec', status:'running', version:null, caps:'reset · ping · run · stop',
+        state:{ 'active runs':0, 'run count':0, 'max timeout':'300s', 'allow list':'open' },
+        stateColors:{ 'allow list':'good' } },
+      { id:'ros_bridge', status:'error', version:'2.2.0', caps:'roslaunch_start/stop · rosbag_start/stop',
+        state:{ 'roslaunch':'idle', 'rosbag':'idle', 'publishers':1, 'subscriptions':9, 'range/fl':'0.292 m', 'range/fr':'8.191 m', 'range/rl':'0.239 m', 'range/rr':'0.291 m' },
+        stateColors:{ 'roslaunch':'warn' }, dataAge:'state last updated 2d ago' }
+    ]
+  },
+  { id:'led_truss', status:'online', platform:'Linux', arch:'aarch64', version:'2.1.0', uptime:'6d 13h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'11s ago',
+    components:[
+      { id:'led_strip', status:'running', version:'2.0.0', caps:'set-color · effect/glow · effect/wave · effect/rainbow · effect/sparkle',
+        state:{ 'led count':1790, 'brightness':125, 'strip1 pin':18, 'strip2 pin':13, 'strip1 count':896, 'strip2 count':894, 'current effect':'none', 'hw initialized':'true' },
+        stateColors:{ 'current effect':'null', 'hw initialized':'good' } }
+    ]
+  },
+  { id:'north', status:'online', platform:'Linux', arch:'aarch64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'14s ago',
+    components:[
+      { id:'ndi', status:'running', version:'0.2.0', caps:'receive/start · receive/stop · send/start · send/stop',
+        state:{ 'send active':'false', 'receive active':'false', 'send stream':'lucid-ndi', 'receive stream':'ROBOTICSS-MAC-PRO.LOCAL (north)' },
+        stateColors:{ 'send active':'null', 'receive active':'null' } },
+      { id:'projector', status:'running', version:'0.2.0', caps:'power/on · power/off · input/hdmi1 · input/hdmi2 · keystone/set',
+        state:{ 'connected':'true', 'serial port':'/dev/ttyUSB0', 'helper':'available' },
+        stateColors:{ 'connected':'good', 'helper':'good' } }
+    ]
+  },
+  { id:'south', status:'online', platform:'Linux', arch:'aarch64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'9s ago',
+    components:[
+      { id:'ndi', status:'running', version:'0.2.0', caps:'receive/start · receive/stop · send/start · send/stop',
+        state:{ 'send active':'false', 'receive active':'false', 'send stream':'lucid-ndi', 'receive stream':'ROBOTICSS-MAC-PRO.LOCAL (south)' },
+        stateColors:{ 'send active':'null', 'receive active':'null' } },
+      { id:'projector', status:'running', version:'0.2.0', caps:'power/on · power/off · input/hdmi1 · input/hdmi2',
+        state:{ 'connected':'true', 'serial port':'/dev/ttyUSB0', 'helper':'available' },
+        stateColors:{ 'connected':'good', 'helper':'good' } }
+    ]
+  },
+  { id:'east', status:'online', platform:'Linux', arch:'aarch64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'22s ago',
+    components:[
+      { id:'ndi', status:'running', version:'0.2.0', caps:'receive/start · receive/stop · send/start · send/stop',
+        state:{ 'send active':'false', 'receive active':'false', 'send stream':'lucid-ndi', 'receive stream':'ROBOTICSS-MAC-PRO.LOCAL (east)' },
+        stateColors:{} },
+      { id:'projector', status:'running', version:'0.2.0', caps:'power/on · power/off · input/hdmi1 · input/hdmi2',
+        state:{ 'connected':'true', 'serial port':'/dev/ttyUSB0', 'helper':'available' },
+        stateColors:{ 'connected':'good', 'helper':'good' } }
+    ]
+  },
+  { id:'west', status:'online', platform:'Linux', arch:'aarch64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'5s ago',
+    components:[
+      { id:'ndi', status:'running', version:'0.2.0', caps:'receive/start · receive/stop · send/start · send/stop',
+        state:{ 'send active':'false', 'receive active':'false', 'send stream':'lucid-ndi', 'receive stream':'ROBOTICSS-MAC-PRO.LOCAL (west)' },
+        stateColors:{} },
+      { id:'projector', status:'running', version:'0.2.0', caps:'power/on · power/off · input/hdmi1 · input/hdmi2',
+        state:{ 'connected':'true', 'serial port':'/dev/ttyUSB0', 'helper':'available' },
+        stateColors:{ 'connected':'good', 'helper':'good' } }
+    ]
+  },
+  { id:'optitrack', status:'online', platform:'Linux', arch:'x86_64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'2s ago',
+    components:[
+      { id:'ros_bridge', status:'running', version:'2.2.0', caps:'roslaunch_start/stop · rosbag_start/stop',
+        state:{ 'roslaunch':'idle', 'rosbag':'idle', 'publishers':0, 'subscriptions':1 },
+        stateColors:{ 'roslaunch':'warn' } }
+    ]
+  },
+  { id:'socrates', status:'online', platform:'Darwin', arch:'x86_64', version:'2.1.0', uptime:'4d 17h', firstSeen:'Apr 8', heartbeat:30, lastSeen:'19s ago',
+    components:[
+      { id:'viz', status:'running', version:'0.8.0', caps:'start-arena · stop-arena · start-touchdesigner · stop-touchdesigner · restart',
+        state:{ 'arena':'not running', 'arena pid':'null', 'touchdesigner':'not running', 'td pid':'null' },
+        stateColors:{ 'arena':'null', 'arena pid':'null', 'touchdesigner':'null', 'td pid':'null' } }
+    ]
+  },
+];
+const STALE = ['$(led_agent_id)', 'Farah', 'optitrack-01'];
+
+// ── Fake logs ────────────────────────────────────────────────────────
+const FAKE_LOGS = [
+  {ts:'11:30:41', level:'INFO',  comp:'ros_bridge', msg:'Heartbeat sent — uptime 410289s'},
+  {ts:'11:30:11', level:'INFO',  comp:'agent',      msg:'Status published: state=online uptime_s=410289'},
+  {ts:'11:29:42', level:'WARN',  comp:'ros_bridge', msg:'ROS node not responding — retrying in 30s'},
+  {ts:'11:29:12', level:'ERROR', comp:'ros_bridge', msg:'Failed to connect to ROS master at http://localhost:11311'},
+  {ts:'11:28:41', level:'INFO',  comp:'exec',       msg:'Idle — no active runs'},
+  {ts:'11:27:11', level:'DEBUG', comp:'agent',      msg:'Config heartbeat_s=30 loaded from /etc/lucid/agent.env'},
+  {ts:'11:26:42', level:'INFO',  comp:'ros_bridge', msg:'Subscribed to /range/fl /range/fr /range/rl /range/rr'},
+  {ts:'11:25:11', level:'INFO',  comp:'agent',      msg:'Component ros_bridge registered — state=error'},
+  {ts:'11:24:50', level:'INFO',  comp:'exec',       msg:'allow_list_open=True, no restrictions'},
+  {ts:'11:24:01', level:'INFO',  comp:'agent',      msg:'MQTT connected to emqx:1883'},
+];
+
+const FAKE_CMD_HISTORY = [
+  {action:'ping', target:'agent', result:true, ts:'11:28:00', duration:'120ms'},
+  {action:'roslaunch_stop', target:'ros_bridge', result:false, ts:'11:20:14', duration:'timeout'},
+  {action:'ping', target:'ros_bridge', result:true, ts:'10:45:32', duration:'88ms'},
+];
+
+// ── State ────────────────────────────────────────────────────────────
+let selectedAgent = null;
+let activeTab = 'logs';
+
+// ── Render sidebar ──────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('sidebar-list');
+  let html = '';
+  AGENTS.forEach(a => {
+    html += `<div class="sidebar-item${selectedAgent === a.id ? ' active' : ''}" onclick="selectAgent('${a.id}')">
+      <div class="status-dot dot-online"></div>
+      <span class="sidebar-agent-name">${a.id}</span>
+    </div>`;
+  });
+  html += '<hr class="sidebar-sep">';
+  STALE.forEach(s => {
+    html += `<div class="sidebar-item stale"><div class="status-dot dot-unknown"></div><span class="sidebar-agent-name">${s}</span></div>`;
+  });
+  html += `<button class="sidebar-clean-btn" onclick="event.stopPropagation()">✕ Clean up stale (3)</button>`;
+  list.innerHTML = html;
+}
+
+// ── Select agent ────────────────────────────────────────────────────
+function selectAgent(id) {
+  selectedAgent = id;
+  renderSidebar();
+  const agent = AGENTS.find(a => a.id === id);
+  if (!agent) return;
+
+  document.getElementById('fleet-empty').style.display = 'none';
+  const panel = document.getElementById('agent-panel');
+  panel.style.display = 'flex';
+
+  document.getElementById('panel-name').textContent = agent.id;
+  const badge = document.getElementById('panel-badge');
+  badge.textContent = agent.status;
+  badge.className = 'status-badge badge-' + agent.status;
+
+  document.getElementById('panel-meta').innerHTML =
+    `${agent.platform} / ${agent.arch} &nbsp;·&nbsp; v${agent.version} &nbsp;·&nbsp; uptime ${agent.uptime} &nbsp;·&nbsp; <span style="color:var(--yellow)">last seen ${agent.lastSeen}</span>`;
+
+  document.getElementById('panel-logs-btn').onclick = () => openAgentDetail(id);
+
+  // Agent KV
+  const kv = document.getElementById('panel-agent-kv');
+  kv.innerHTML = [
+    ['platform', agent.platform],
+    ['arch', agent.arch],
+    ['version', agent.version],
+    ['uptime', agent.uptime],
+    ['heartbeat', agent.heartbeat + 's'],
+    ['first seen', agent.firstSeen],
+  ].map(([k,v]) => `<tr><td class="kv-key">${k}</td><td class="kv-val">${v}</td></tr>`).join('');
+
+  // Components
+  const comps = document.getElementById('panel-components');
+  comps.innerHTML = agent.components.map(c => {
+    const isError = c.status === 'error';
+    const stateHtml = Object.entries(c.state).map(([k,v]) => {
+      const cls = (c.stateColors||{})[k] || '';
+      return `<div class="comp-kv"><div class="comp-k">${k}</div><div class="comp-v ${cls}">${v}</div></div>`;
+    }).join('');
+    const ageHtml = c.dataAge ? `<div class="data-age">${c.dataAge}</div>` : '';
+    const ver = c.version ? `<span class="comp-caps" style="margin-right:.5rem">v${c.version}</span>` : '';
+    return `<div class="comp-card${isError?' comp-error':''}">
+      <div class="comp-card-header">
+        <span class="comp-name" onclick="openAgentDetail('${id}')">${c.id}</span>
+        <span class="status-badge badge-${c.status}">${c.status}</span>
+        ${ver}<span class="comp-caps">${c.caps}</span>
+      </div>
+      <div class="comp-state-grid">${stateHtml}</div>
+      ${ageHtml}
+    </div>`;
+  }).join('');
+}
+
+// ── Agent detail page ────────────────────────────────────────────────
+function openAgentDetail(id) {
+  const agent = AGENTS.find(a => a.id === id);
+  if (!agent) return;
+
+  document.getElementById('detail-name').textContent = agent.id;
+  const badge = document.getElementById('detail-badge');
+  badge.textContent = agent.status;
+  badge.className = 'status-badge badge-' + agent.status;
+  document.getElementById('detail-meta').innerHTML =
+    `${agent.platform} / ${agent.arch} &nbsp;·&nbsp; v${agent.version} &nbsp;·&nbsp; uptime ${agent.uptime}`;
+
+  // Populate cmd target
+  const sel = document.getElementById('cmd-target-sel');
+  sel.innerHTML = `<option>Agent (${agent.id})</option>` +
+    agent.components.map(c => `<option>Component: ${c.id}</option>`).join('');
+
+  // Quick cmds
+  document.getElementById('quick-cmds-el').innerHTML =
+    ['ping', 'restart', 'reload-components'].map(a =>
+      `<button class="quick-cmd">${a}</button>`).join('');
+
+  // Logs
+  const logFeed = document.getElementById('log-feed');
+  logFeed.innerHTML = FAKE_LOGS.map(l =>
+    `<div class="log-line">
+      <span class="log-ts">${l.ts}</span>
+      <span class="log-level ${l.level}">${l.level}</span>
+      <span class="log-comp">${l.comp}</span>
+      <span class="log-msg">${l.msg}</span>
+    </div>`).join('');
+
+  // Cmd history
+  document.getElementById('cmd-history-el').innerHTML = FAKE_CMD_HISTORY.map(c =>
+    `<div class="cmd-history-item">
+      <span class="cmd-history-action">${c.action}</span> → ${c.target}
+      <div class="cmd-history-meta">
+        <span>${c.ts}</span>
+        <span>${c.duration}</span>
+        <span class="cmd-history-result${c.result?'':' fail'}">${c.result?'✓ ok':'✗ failed'}</span>
+      </div>
+    </div>`).join('');
+
+  // Raw JSON
+  const rawPane = document.getElementById('raw-pane');
+  rawPane.innerHTML = [
+    ['Status', {state: agent.status, uptime_s: 410289, version: agent.version}],
+    ['Metadata', {platform: agent.platform, architecture: agent.arch, version: agent.version}],
+    ['Config', {heartbeat_s: agent.heartbeat}],
+    ['Components', Object.fromEntries(agent.components.map(c => [c.id, {status: c.status, state: c.state}]))],
+  ].map(([title, data]) =>
+    `<details class="raw-section" open>
+      <summary>${title}</summary>
+      <pre class="raw-pre">${JSON.stringify(data, null, 2)}</pre>
+    </details>`).join('');
+
+  switchTab('logs');
+  showPage('agent', true);
+}
+
+// ── Tab switching ────────────────────────────────────────────────────
+function switchTab(name) {
+  activeTab = name;
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    const tabs = ['logs','commands','raw'];
+    btn.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('tab-' + name);
+  if (pane) pane.classList.add('active');
+}
+
+// ── Page routing ─────────────────────────────────────────────────────
+const PAGE_MAP = {
+  fleet: 'page-fleet', agent: 'page-agent', experiments: 'page-experiments',
+  ai: 'page-ai', 'topic-tree': 'page-topic-tree', users: 'page-users',
+  schema: 'page-schema', 'auth-log': 'page-auth-log', 'topic-links': 'page-topic-tree',
+};
+const NAV_MAP = { fleet:'nav-fleet', experiments:'nav-experiments', ai:'nav-ai' };
+
+function showPage(name, skipNav) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pageId = PAGE_MAP[name] || 'page-fleet';
+  document.getElementById(pageId)?.classList.add('active');
+  if (!skipNav) {
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    const navEl = NAV_MAP[name] ? document.getElementById(NAV_MAP[name]) : null;
+    if (navEl) navEl.classList.add('active');
+  }
+  document.getElementById('tools-dropdown').classList.remove('open');
+}
+
+function toggleTools() {
+  document.getElementById('tools-dropdown').classList.toggle('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.nav-tools-wrap')) {
+    document.getElementById('tools-dropdown').classList.remove('open');
+  }
+});
+
+// ── Init ─────────────────────────────────────────────────────────────
+renderSidebar();
+selectAgent('rosbot');
+</script>
+</body>
+</html>

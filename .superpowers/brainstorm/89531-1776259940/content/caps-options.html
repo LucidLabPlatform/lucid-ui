@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component caps — options</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1017; --surface: #1a2036; --surface2: #141c2e;
+  --border: #283044; --border2: #1e2a3a;
+  --text: #e2e8f0; --muted: #8494ab;
+  --accent: #60a5fa; --green: #4ade80; --orange: #fb923c; --yellow: #facc15;
+  --radius: 8px; --radius-sm: 5px;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+body { font-family: system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; padding: 2rem; }
+h2 { font-size:1rem; color:var(--accent); margin-bottom:.35rem; }
+p  { font-size:.8rem; color:var(--muted); margin-bottom:1.25rem; line-height:1.5; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+.option-label { font-size:.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.65rem; }
+
+/* shared card styles */
+.comp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:.65rem; }
+.comp-card.comp-error { border-color:#3a2010; }
+.comp-card-header { display:flex; align-items:center; gap:.6rem; padding:.52rem .85rem; border-bottom:1px solid var(--border); background:var(--surface2); }
+.comp-card.comp-error .comp-card-header { background:#180e06; border-bottom-color:#3a2010; }
+.comp-name { font-size:.82rem; font-weight:600; color:var(--text); flex:1; }
+.status-badge { font-size:.7rem; font-weight:600; padding:.16rem .6rem; border-radius:999px; }
+.badge-running { background:#14532d; color:var(--green); }
+.badge-error   { background:#431407; color:var(--orange); }
+.comp-state-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+.comp-kv { padding:.4rem .85rem; border-right:1px solid var(--border2); border-bottom:1px solid var(--border2); }
+.comp-k { font-size:.65rem; color:var(--muted); margin-bottom:2px; }
+.comp-v { font-size:.77rem; color:var(--text); font-family:var(--font-mono); }
+.comp-v.warn { color:var(--yellow); }
+.data-age { font-size:.63rem; color:#475569; padding:.3rem .85rem; font-style:italic; border-top:1px solid var(--border2); }
+
+/* Option A — no caps shown at all */
+/* nothing extra */
+
+/* Option B — pill badges */
+.caps-pills { display:flex; flex-wrap:wrap; gap:.3rem; padding:.45rem .85rem; border-top:1px solid var(--border2); }
+.cap-pill { font-size:.65rem; padding:.15rem .5rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-family:var(--font-mono); }
+
+/* Option C — compact count with hover tooltip feel */
+.caps-count { font-size:.7rem; color:var(--muted); padding:.35rem .85rem; border-top:1px solid var(--border2); }
+.caps-count span { color:var(--accent); cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+</style>
+</head>
+<body>
+
+<h2>How should component capabilities be shown?</h2>
+<p>Capabilities = the actions you can send to a component (ping, reset, roslaunch_start, etc.)</p>
+
+<div class="grid">
+
+  <!-- Option A: Hidden — only visible in Commands tab -->
+  <div>
+    <div class="option-label">A — Not shown here, only in Commands tab</div>
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <span class="comp-name">exec</span>
+        <span class="status-badge badge-running">running</span>
+      </div>
+      <div class="comp-state-grid">
+        <div class="comp-kv"><div class="comp-k">active runs</div><div class="comp-v">0</div></div>
+        <div class="comp-kv"><div class="comp-k">run count</div><div class="comp-v">0</div></div>
+        <div class="comp-kv"><div class="comp-k">max timeout</div><div class="comp-v">300s</div></div>
+        <div class="comp-kv"><div class="comp-k">allow list</div><div class="comp-v" style="color:var(--green)">open</div></div>
+      </div>
+    </div>
+    <div class="comp-card comp-error">
+      <div class="comp-card-header">
+        <span class="comp-name">ros_bridge</span>
+        <span class="status-badge badge-error">error</span>
+      </div>
+      <div class="comp-state-grid">
+        <div class="comp-kv"><div class="comp-k">roslaunch</div><div class="comp-v warn">idle</div></div>
+        <div class="comp-kv"><div class="comp-k">rosbag</div><div class="comp-v">idle</div></div>
+        <div class="comp-kv"><div class="comp-k">publishers</div><div class="comp-v">1</div></div>
+        <div class="comp-kv"><div class="comp-k">subscriptions</div><div class="comp-v">9</div></div>
+        <div class="comp-kv"><div class="comp-k">range/fl</div><div class="comp-v">0.292 m</div></div>
+        <div class="comp-kv"><div class="comp-k">range/fr</div><div class="comp-v">8.191 m</div></div>
+      </div>
+      <div class="data-age">state last updated 2d ago</div>
+    </div>
+    <p>Clean header. Capabilities appear when you actually need them — in the Commands tab, pre-populated per component.</p>
+  </div>
+
+  <!-- Option B: Pill badges below state grid -->
+  <div>
+    <div class="option-label">B — Pill badges, tucked below state</div>
+    <div class="comp-card">
+      <div class="comp-card-header">
+        <span class="comp-name">exec</span>
+        <span class="status-badge badge-running">running</span>
+      </div>
+      <div class="comp-state-grid">
+        <div class="comp-kv"><div class="comp-k">active runs</div><div class="comp-v">0</div></div>
+        <div class="comp-kv"><div class="comp-k">run count</div><div class="comp-v">0</div></div>
+        <div class="comp-kv"><div class="comp-k">max timeout</div><div class="comp-v">300s</div></div>
+        <div class="comp-kv"><div class="comp-k">allow list</div><div class="comp-v" style="color:var(--green)">open</div></div>
+      </div>
+      <div class="caps-pills">
+        <span class="cap-pill">reset</span>
+        <span class="cap-pill">ping</span>
+        <span class="cap-pill">run</span>
+        <span class="cap-pill">stop</span>
+      </div>
+    </div>
+    <div class="comp-card comp-error">
+      <div class="comp-card-header">
+        <span class="comp-name">ros_bridge</span>
+        <span class="status-badge badge-error">error</span>
+      </div>
+      <div class="comp-state-grid">
+        <div class="comp-kv"><div class="comp-k">roslaunch</div><div class="comp-v warn">idle</div></div>
+        <div class="comp-kv"><div class="comp-k">rosbag</div><div class="comp-v">idle</div></div>
+        <div class="comp-kv"><div class="comp-k">publishers</div><div class="comp-v">1</div></div>
+        <div class="comp-kv"><div class="comp-k">subscriptions</div><div class="comp-v">9</div></div>
+        <div class="comp-kv"><div class="comp-k">range/fl</div><div class="comp-v">0.292 m</div></div>
+        <div class="comp-kv"><div class="comp-k">range/fr</div><div class="comp-v">8.191 m</div></div>
+      </div>
+      <div class="caps-pills">
+        <span class="cap-pill">roslaunch_start</span>
+        <span class="cap-pill">roslaunch_stop</span>
+        <span class="cap-pill">rosbag_start</span>
+        <span class="cap-pill">rosbag_stop</span>
+      </div>
+      <div class="data-age">state last updated 2d ago</div>
+    </div>
+    <p>Visible but clearly secondary — below the state data, styled as small tags rather than inline text.</p>
+  </div>
+
+</div>
+</body>
+</html>

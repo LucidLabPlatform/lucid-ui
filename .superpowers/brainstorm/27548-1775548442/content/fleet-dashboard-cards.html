@@ -1,0 +1,182 @@
+<h2>Fleet Dashboard — Agent Cards</h2>
+<p class="subtitle">How much detail should each agent card show?</p>
+
+<div class="cards">
+
+  <!-- Option A: Expanded cards -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1f2e;padding:16px;border-radius:6px;font-family:monospace;color:#94a3b8;">
+        <div style="font-size:9px;color:#64748b;margin-bottom:10px;">Fleet Dashboard — 3 agents</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+          <!-- Card 1 -->
+          <div style="background:#151a27;border-radius:6px;padding:10px;border:1px solid #2d3748;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="color:#60a5fa;font-size:10px;font-weight:bold;">pi-livingroom</span>
+              <span style="background:#22c55e33;color:#22c55e;font-size:7px;padding:1px 6px;border-radius:8px;">● online</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Host</div>
+                <div style="font-size:8px;color:#e2e8f0;">raspberrypi-lr</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">IP</div>
+                <div style="font-size:8px;color:#e2e8f0;">192.168.1.42</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Uptime</div>
+                <div style="font-size:8px;color:#e2e8f0;">4d 12h</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Last Seen</div>
+                <div style="font-size:8px;color:#e2e8f0;">2s ago</div>
+              </div>
+            </div>
+            <div style="border-top:1px solid #2d3748;padding-top:6px;">
+              <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Components</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:7px;background:#22c55e22;color:#22c55e;padding:1px 5px;border-radius:3px;">● led-strip</span>
+                <span style="font-size:7px;background:#22c55e22;color:#22c55e;padding:1px 5px;border-radius:3px;">● cpu-monitor</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div style="background:#151a27;border-radius:6px;padding:10px;border:1px solid #2d3748;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="color:#60a5fa;font-size:10px;font-weight:bold;">pi-garage</span>
+              <span style="background:#ef444433;color:#ef4444;font-size:7px;padding:1px 6px;border-radius:8px;">● error</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Host</div>
+                <div style="font-size:8px;color:#e2e8f0;">raspberrypi-gr</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">IP</div>
+                <div style="font-size:8px;color:#e2e8f0;">192.168.1.55</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Uptime</div>
+                <div style="font-size:8px;color:#e2e8f0;">0h 3m</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Last Seen</div>
+                <div style="font-size:8px;color:#e2e8f0;">45s ago</div>
+              </div>
+            </div>
+            <div style="border-top:1px solid #2d3748;padding-top:6px;">
+              <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Components</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:7px;background:#ef444422;color:#ef4444;padding:1px 5px;border-radius:3px;">● temp-sensor</span>
+                <span style="font-size:7px;background:#22c55e22;color:#22c55e;padding:1px 5px;border-radius:3px;">● cpu-monitor</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div style="background:#151a27;border-radius:6px;padding:10px;border:1px solid #2d3748;opacity:0.6;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="color:#60a5fa;font-size:10px;font-weight:bold;">pi-kitchen</span>
+              <span style="background:#64748b33;color:#64748b;font-size:7px;padding:1px 6px;border-radius:8px;">● offline</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Host</div>
+                <div style="font-size:8px;color:#e2e8f0;">raspberrypi-kt</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">IP</div>
+                <div style="font-size:8px;color:#e2e8f0;">192.168.1.71</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Uptime</div>
+                <div style="font-size:8px;color:#64748b;">—</div>
+              </div>
+              <div>
+                <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:2px;">Last Seen</div>
+                <div style="font-size:8px;color:#e2e8f0;">3h ago</div>
+              </div>
+            </div>
+            <div style="border-top:1px solid #2d3748;padding-top:6px;">
+              <div style="font-size:6px;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Components</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                <span style="font-size:7px;background:#64748b22;color:#64748b;padding:1px 5px;border-radius:3px;">● led-strip</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Rich Summary Cards</h3>
+      <p>Each card shows host, IP, uptime, last seen, and component list with status badges. Good density — see everything at a glance. Cards are larger but fewer per row.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Compact table-like rows -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#1a1f2e;padding:16px;border-radius:6px;font-family:monospace;color:#94a3b8;">
+        <div style="font-size:9px;color:#64748b;margin-bottom:10px;">Fleet Dashboard — 3 agents</div>
+
+        <!-- Table header -->
+        <div style="display:grid;grid-template-columns:140px 80px 100px 70px 60px 1fr;gap:8px;padding:6px 8px;font-size:7px;color:#64748b;text-transform:uppercase;border-bottom:1px solid #2d3748;">
+          <span>Agent</span>
+          <span>Status</span>
+          <span>Host / IP</span>
+          <span>Uptime</span>
+          <span>Seen</span>
+          <span>Components</span>
+        </div>
+
+        <!-- Row 1 -->
+        <div style="display:grid;grid-template-columns:140px 80px 100px 70px 60px 1fr;gap:8px;padding:8px;font-size:8px;background:#151a27;border-radius:4px;margin-top:4px;align-items:center;">
+          <span style="color:#60a5fa;font-weight:bold;">pi-livingroom</span>
+          <span><span style="background:#22c55e33;color:#22c55e;font-size:7px;padding:1px 5px;border-radius:8px;">● online</span></span>
+          <span style="font-size:7px;">raspberrypi-lr<br><span style="color:#64748b;">192.168.1.42</span></span>
+          <span>4d 12h</span>
+          <span>2s</span>
+          <span style="display:flex;flex-wrap:wrap;gap:3px;">
+            <span style="font-size:6px;background:#22c55e22;color:#22c55e;padding:1px 4px;border-radius:2px;">led-strip</span>
+            <span style="font-size:6px;background:#22c55e22;color:#22c55e;padding:1px 4px;border-radius:2px;">cpu-mon</span>
+          </span>
+        </div>
+
+        <!-- Row 2 -->
+        <div style="display:grid;grid-template-columns:140px 80px 100px 70px 60px 1fr;gap:8px;padding:8px;font-size:8px;background:#151a27;border-radius:4px;margin-top:4px;align-items:center;">
+          <span style="color:#60a5fa;font-weight:bold;">pi-garage</span>
+          <span><span style="background:#ef444433;color:#ef4444;font-size:7px;padding:1px 5px;border-radius:8px;">● error</span></span>
+          <span style="font-size:7px;">raspberrypi-gr<br><span style="color:#64748b;">192.168.1.55</span></span>
+          <span>0h 3m</span>
+          <span>45s</span>
+          <span style="display:flex;flex-wrap:wrap;gap:3px;">
+            <span style="font-size:6px;background:#ef444422;color:#ef4444;padding:1px 4px;border-radius:2px;">temp-sens</span>
+            <span style="font-size:6px;background:#22c55e22;color:#22c55e;padding:1px 4px;border-radius:2px;">cpu-mon</span>
+          </span>
+        </div>
+
+        <!-- Row 3 -->
+        <div style="display:grid;grid-template-columns:140px 80px 100px 70px 60px 1fr;gap:8px;padding:8px;font-size:8px;background:#151a27;border-radius:4px;margin-top:4px;align-items:center;opacity:0.6;">
+          <span style="color:#60a5fa;font-weight:bold;">pi-kitchen</span>
+          <span><span style="background:#64748b33;color:#64748b;font-size:7px;padding:1px 5px;border-radius:8px;">● offline</span></span>
+          <span style="font-size:7px;">raspberrypi-kt<br><span style="color:#64748b;">192.168.1.71</span></span>
+          <span style="color:#64748b;">—</span>
+          <span>3h</span>
+          <span style="display:flex;flex-wrap:wrap;gap:3px;">
+            <span style="font-size:6px;background:#64748b22;color:#64748b;padding:1px 4px;border-radius:2px;">led-strip</span>
+          </span>
+        </div>
+
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Table / List View</h3>
+      <p>Compact row per agent — agent, status, host/IP, uptime, last seen, components all in columns. Fits more agents on screen. Very scannable but less visual.</p>
+    </div>
+  </div>
+
+</div>

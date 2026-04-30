@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LUCID — MQTT Command Sender</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:            #111318;
+    --surface:       #1a1d27;
+    --surface-2:     #22262f;
+    --surface-hover: #2a2e3a;
+    --border:        #2e3340;
+    --border-subtle: #252930;
+    --text:          #e2e8f0;
+    --muted:         #8494ab;
+    --subtle:        #94a3b8;
+    --accent:        #7c9cff;
+    --accent-dim:    rgba(124,156,255,0.08);
+    --green:         #4ade80;
+    --red:           #f87171;
+    --yellow:        #facc15;
+    --radius:        10px;
+    --radius-sm:     6px;
+    --font-mono:     "JetBrains Mono","Fira Code",ui-monospace,monospace;
+    --transition:    150ms ease;
+  }
+  html { font-size: 13px; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 1rem; line-height: 1.55;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* NAV */
+  .topnav {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.55rem 1.25rem;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .brand { font-weight: 700; font-size: 1rem; color: var(--accent); letter-spacing: 0.08em; margin-right: 0.5rem; }
+  .nav-tab { color: var(--muted); font-size: 0.82rem; font-weight: 500; padding: 0.28rem 0.6rem; border-radius: var(--radius-sm); cursor: pointer; }
+  .nav-tab.active { color: var(--text); font-weight: 600; background: var(--surface-2); }
+  .nav-spacer { flex: 1; }
+  .conn-pill {
+    display: flex; align-items: center; gap: 0.45rem;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+    padding: 0.22rem 0.7rem; font-size: 0.72rem; color: var(--muted);
+  }
+  .ws-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .ws-dot-connected { background: var(--green); box-shadow: 0 0 5px rgba(74,222,128,0.45); animation: pulse-dot 2s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* WORKSPACE */
+  .workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  /* TREE */
+  .tree-panel {
+    width: 220px; flex-shrink: 0;
+    background: var(--bg); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .panel-hdr {
+    height: 36px; display: flex; align-items: center; gap: 0.45rem;
+    padding: 0 0.8rem; border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+  }
+  .tree-search {
+    margin: 0.45rem; padding: 0.28rem 0.6rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem;
+  }
+  .tree-search input {
+    background: transparent; border: none; outline: none; color: var(--text); font-size: 0.72rem; width: 100%;
+  }
+  .tree-search input::placeholder { color: var(--muted); }
+  .tree-body { flex: 1; overflow-y: auto; padding: 0.2rem 0; }
+
+  .t-row {
+    height: 25px; display: flex; align-items: center; gap: 0.35rem;
+    padding: 0 0.55rem; font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--muted); cursor: pointer; border-radius: var(--radius-sm);
+    margin: 1px 0.25rem; transition: background var(--transition), color var(--transition);
+    user-select: none;
+  }
+  .t-row:hover { background: var(--surface-hover); color: var(--text); }
+  .t-row.open { color: var(--subtle); }
+  .t-row.sel { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(124,156,255,0.15); }
+  .t-row.active-viewer { background: rgba(74,222,128,0.07); color: var(--green); border: 1px solid rgba(74,222,128,0.12); }
+  .t-row.l1 { padding-left: 1.1rem; }
+  .t-row.l2 { padding-left: 1.8rem; }
+  .t-row.l3 { padding-left: 2.5rem; }
+  .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .dot-g { background: var(--green); box-shadow: 0 0 4px rgba(74,222,128,0.5); }
+  .dot-y { background: var(--yellow); }
+  .dot-d { background: #374151; }
+  .t-badge { margin-left: auto; font-size: 0.58rem; font-weight: 600; background: var(--surface-2); color: var(--muted); border-radius: 3px; padding: 0 3px; }
+  .t-live-badge { margin-left: auto; font-size: 0.58rem; font-weight: 700; background: rgba(74,222,128,0.1); color: var(--green); border-radius: 3px; padding: 0 4px; }
+  .t-hint { font-size: 0.65rem; color: var(--border); margin-left: auto; }
+
+  /* VIEWERS */
+  .viewers { flex: 1; display: flex; overflow: hidden; }
+  .viewer {
+    flex: 1; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-width: 180px;
+    background: var(--bg);
+  }
+  .viewer:last-child { border-right: none; }
+  .viewer-hdr {
+    height: 36px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 0.75rem; gap: 0.45rem; flex-shrink: 0;
+  }
+  .viewer-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.5s ease-in-out infinite; flex-shrink: 0; }
+  .viewer-topic { font-size: 0.68rem; font-family: var(--font-mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .viewer-topic em { color: var(--accent); font-style: normal; font-weight: 600; }
+  .viewer-msg-count { font-size: 0.62rem; color: var(--muted); background: var(--surface); border-radius: 3px; padding: 0 4px; flex-shrink: 0; }
+  .viewer-close { color: var(--border); font-size: 0.85rem; cursor: pointer; flex-shrink: 0; padding: 2px 4px; border-radius: 3px; }
+  .viewer-close:hover { color: var(--muted); background: var(--surface-hover); }
+  .viewer-body { flex: 1; overflow-y: auto; padding: 0.4rem; }
+
+  .msg {
+    background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); margin-bottom: 0.3rem; padding: 0.4rem 0.6rem;
+    font-family: var(--font-mono); font-size: 0.68rem;
+    transition: border-color 0.3s;
+  }
+  .msg.latest { border-color: var(--border); }
+  .msg.flash { animation: msg-flash 0.5s ease; }
+  @keyframes msg-flash { 0%{background:rgba(124,156,255,0.08)} 100%{background:var(--surface)} }
+  .msg-meta { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem; }
+  .msg-time { color: var(--muted); }
+  .msg-qos { font-size: 0.58rem; background: var(--surface-2); color: var(--muted); border-radius: 2px; padding: 0 3px; }
+  .msg-retained { font-size: 0.58rem; background: rgba(74,222,128,0.08); color: var(--green); border-radius: 2px; padding: 0 3px; }
+  .msg-body { color: var(--subtle); line-height: 1.55; word-break: break-word; }
+  .k { color: var(--accent); }
+  .s { color: var(--green); }
+  .n { color: var(--yellow); }
+  .b { color: #c084fc; }
+
+  .viewer-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0.5rem;
+  }
+  .viewer-empty .icon { font-size: 22px; }
+  .viewer-empty p { font-size: 0.75rem; color: var(--muted); }
+  .viewer-empty small { font-size: 0.65rem; color: var(--border); }
+
+  /* + add split */
+  .add-split {
+    width: 30px; flex-shrink: 0;
+    background: var(--bg); border-left: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--border); font-size: 15px;
+    transition: color var(--transition), background var(--transition);
+  }
+  .add-split:hover { color: var(--accent); background: var(--surface); }
+
+  /* FAB */
+  .publish-fab {
+    position: absolute; bottom: 1.1rem; right: 1.1rem;
+    height: 36px; background: var(--accent); color: #0f1117;
+    border-radius: 999px; padding: 0 1rem;
+    display: flex; align-items: center; gap: 0.45rem;
+    font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; z-index: 10;
+    box-shadow: 0 4px 18px rgba(124,156,255,0.3);
+    transition: transform var(--transition), box-shadow var(--transition);
+    user-select: none;
+  }
+  .publish-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(124,156,255,0.45); }
+
+  /* DRAWER */
+  .drawer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    z-index: 20; overflow: hidden;
+    transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .drawer.open { height: 240px; }
+  .drawer-hdr {
+    height: 38px; display: flex; align-items: center; padding: 0 1.1rem;
+    border-bottom: 1px solid var(--border); background: var(--surface-2); flex-shrink: 0;
+  }
+  .drawer-title { font-size: 0.8rem; font-weight: 600; }
+  .drawer-badge {
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--accent); background: var(--accent-dim); border-radius: 3px; padding: 0.1rem 0.4rem; margin-left: 0.5rem;
+  }
+  .drawer-close {
+    margin-left: auto; font-size: 0.95rem; color: var(--muted); cursor: pointer;
+    padding: 0.15rem 0.3rem; border-radius: var(--radius-sm);
+  }
+  .drawer-close:hover { color: var(--text); background: var(--surface-hover); }
+  .drawer-body { padding: 0.75rem 1.1rem; display: flex; flex-direction: column; gap: 0.55rem; }
+
+  /* Topic bar */
+  .topic-bar {
+    display: flex; align-items: center;
+    background: var(--bg); border: 1px solid var(--accent);
+    border-radius: var(--radius-sm); height: 36px;
+    box-shadow: 0 0 0 2px rgba(124,156,255,0.07);
+    overflow: hidden;
+  }
+  .topic-prefix {
+    font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono);
+    white-space: nowrap; padding: 0 0.4rem 0 0.7rem; flex-shrink: 0;
+  }
+  .topic-crumbs {
+    display: flex; align-items: center; gap: 0;
+    overflow-x: auto; flex: 1; min-width: 0;
+    scrollbar-width: none;
+  }
+  .topic-crumbs::-webkit-scrollbar { display: none; }
+  .crumb {
+    background: var(--surface-2); border-radius: 3px;
+    padding: 0.1rem 0.45rem; font-size: 0.7rem;
+    color: var(--text); font-family: var(--font-mono); white-space: nowrap;
+    cursor: pointer; transition: background var(--transition); flex-shrink: 0;
+  }
+  .crumb:hover { background: var(--surface-hover); color: var(--red); }
+  .crumb-x { font-size: 0.58rem; color: var(--muted); margin-left: 3px; }
+  .crumb-sep { color: var(--border); font-size: 0.85rem; padding: 0 1px; flex-shrink: 0; }
+  .topic-input {
+    background: transparent; border: none; outline: none;
+    font-size: 0.75rem; color: var(--accent); font-family: var(--font-mono);
+    caret-color: var(--accent); min-width: 80px; width: 120px;
+    padding-right: 0.5rem;
+  }
+  .topic-input::placeholder { color: var(--muted); }
+
+  /* Autocomplete */
+  .ac-row { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
+  .ac-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .ac-chip {
+    display: flex; align-items: center; gap: 0.28rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.18rem 0.55rem;
+    font-size: 0.7rem; font-family: var(--font-mono);
+    color: var(--subtle); cursor: pointer;
+    transition: background var(--transition), border-color var(--transition), color var(--transition);
+  }
+  .ac-chip:hover { background: var(--accent-dim); border-color: rgba(124,156,255,0.3); color: var(--accent); }
+  .ac-chip.hi { background: var(--accent-dim); border-color: rgba(124,156,255,0.3); color: var(--accent); }
+  .ac-chip .cd { width: 5px; height: 5px; border-radius: 50%; }
+  .cd-g { background: var(--green); }
+  .cd-y { background: var(--yellow); }
+  .ac-chip.ghost { border-style: dashed; color: var(--border); }
+  .ac-chip.ghost:hover { color: var(--muted); }
+
+  /* Bottom row */
+  .bottom-row { display: flex; gap: 0.6rem; }
+  .payload-box {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.4rem 0.6rem;
+    font-size: 0.68rem; font-family: var(--font-mono);
+    color: var(--subtle); line-height: 1.6; min-height: 50px;
+  }
+  .send-btn {
+    height: 50px; background: var(--accent); color: #0f1117;
+    border-radius: var(--radius-sm); padding: 0 1rem;
+    display: flex; align-items: center; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: filter var(--transition);
+  }
+  .send-btn:hover { filter: brightness(1.12); }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">LUCID</span>
+  <span class="nav-tab">Fleet</span>
+  <span class="nav-tab">Experiments</span>
+  <span class="nav-tab active">MQTT</span>
+  <span class="nav-tab">Users</span>
+  <div class="nav-spacer"></div>
+  <div class="conn-pill">
+    <div class="ws-dot ws-dot-connected"></div>
+    <span>mqtt://10.205.10.16:8083 · north_agent</span>
+  </div>
+</nav>
+
+<div class="workspace">
+
+  <!-- TREE -->
+  <div class="tree-panel">
+    <div class="panel-hdr">📡 Topics</div>
+    <div class="tree-search">🔍 <input placeholder="filter topics…" id="tree-filter" oninput="filterTree(this.value)" /></div>
+    <div class="tree-body" id="tree-body"></div>
+  </div>
+
+  <!-- VIEWERS -->
+  <div class="viewers" id="viewers"></div>
+  <div class="add-split" id="add-split-btn" title="Add pane" onclick="addEmptyPane()">+</div>
+
+  <!-- FAB -->
+  <div class="publish-fab" id="fab" onclick="openDrawer()">⚡ Publish</div>
+
+  <!-- DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-hdr">
+      <span class="drawer-title">Smart Publisher</span>
+      <span class="drawer-badge">MQTT</span>
+      <span class="drawer-close" onclick="closeDrawer()">✕</span>
+    </div>
+    <div class="drawer-body">
+      <div class="topic-bar" id="topic-bar">
+        <span class="topic-prefix">lucid/agents/</span>
+        <div class="topic-crumbs" id="topic-crumbs">
+          <div id="crumbs" style="display:flex;align-items:center;gap:0;flex-shrink:0"></div>
+          <input class="topic-input" id="topic-input" placeholder="select agent…" oninput="onTopicInput(this.value)" onkeydown="onTopicKey(event)" autocomplete="off" />
+        </div>
+      </div>
+      <div class="ac-row" id="ac-row">
+        <span class="ac-label">agents</span>
+      </div>
+      <div class="bottom-row">
+        <div class="payload-box" id="payload-box" contenteditable="true">
+          <span class="k">"request_id"</span>: <span class="s">"<span id="req-id">a3f9-7c2d</span>"</span>
+        </div>
+        <div class="send-btn" onclick="sendCommand()">Send ↑</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Data model ─────────────────────────────────────────────────────────
+var AGENTS = {
+  north: { status: 'online',  components: ['led-strip','cpu-monitor'] },
+  south: { status: 'online',  components: ['led-strip'] },
+  east:  { status: 'offline', components: [] },
+  west:  { status: 'offline', components: [] }
+};
+
+var TOPIC_TREE = {
+  north: {
+    metadata:  { type:'retained', qos:1, data: ()=>({agent_id:'north',version:'2.1.0',platform:'rpi4'}) },
+    status:    { type:'retained', qos:1, data: ()=>({status:'online', uptime_s: 3800+Math.floor(Math.random()*100), ts: ts()}) },
+    state:     { type:'retained', qos:1, data: ()=>({loaded_components:['led-strip','cpu-monitor'], enabled:['led-strip','cpu-monitor']}) },
+    'telemetry/cpu':    { type:'stream', qos:0, interval:1200, data: ()=>({cpu_percent: +(28+Math.random()*20).toFixed(1), ts: ts()}) },
+    'telemetry/memory': { type:'stream', qos:0, interval:2000, data: ()=>({used_mb: Math.floor(420+Math.random()*80), total_mb:4096, ts: ts()}) },
+    'components/led-strip/status':  { type:'retained', qos:1, data: ()=>({status:'running',ts:ts()}) },
+    'components/led-strip/state':   { type:'retained', qos:1, data: ()=>({effect:'pulse',brightness:0.8,color:'#ff4400',ts:ts()}) },
+    'components/cpu-monitor/status':{ type:'retained', qos:1, data: ()=>({status:'running',ts:ts()}) },
+    'evt/restart/result':           { type:'event', qos:1, data: ()=>({request_id:'auto',ok:true,ts:ts()}) },
+  },
+  south: {
+    metadata: { type:'retained', qos:1, data: ()=>({agent_id:'south',version:'2.0.8',platform:'rpi4'}) },
+    status:   { type:'retained', qos:1, data: ()=>({status:'online', uptime_s:1200+Math.floor(Math.random()*50), ts:ts()}) },
+    state:    { type:'retained', qos:1, data: ()=>({loaded_components:['led-strip'],enabled:['led-strip']}) },
+    'telemetry/cpu': { type:'stream', qos:0, interval:1500, data: ()=>({cpu_percent: +(10+Math.random()*15).toFixed(1), ts:ts()}) },
+    'components/led-strip/status': { type:'retained', qos:1, data: ()=>({status:'running',ts:ts()}) },
+  }
+};
+
+var CMD_CATALOG = {
+  north: ['restart','shutdown','reload-config','set-log-level','components/led-strip/cmd/set-effect','components/led-strip/cmd/set-color','components/cpu-monitor/cmd/set-interval'],
+  south: ['restart','shutdown','reload-config','components/led-strip/cmd/set-effect'],
+};
+
+var CMD_PARAMS = {
+  'restart':       {},
+  'shutdown':      {},
+  'reload-config': {},
+  'set-log-level': { level: '"debug"' },
+  'set-effect':    { effect: '"pulse"', speed: 1.0 },
+  'set-color':     { r: 255, g: 68, b: 0, brightness: 0.8 },
+  'set-interval':  { interval_s: 5 },
+};
+
+function ts() { return Math.floor(Date.now()/1000); }
+function fmtTime() {
+  var d = new Date();
+  return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+}
+function fmtJson(obj) {
+  return Object.entries(obj).map(([k,v]) => {
+    var val = typeof v === 'string' ? '<span class="s">"'+v+'"</span>' : '<span class="n">'+v+'</span>';
+    return '<span class="k">"'+k+'"</span>: '+val;
+  }).join(',<br>');
+}
+function uid() { return Math.random().toString(36).substr(2,8); }
+
+// ── Tree state ──────────────────────────────────────────────────────────
+var openNodes = new Set(['root','north']);
+var activeViewers = {};  // topic → viewerId
+
+function toggleNode(nodeId) {
+  if (openNodes.has(nodeId)) openNodes.delete(nodeId);
+  else openNodes.add(nodeId);
+  renderTree();
+}
+
+function renderTree(filter) {
+  var f = (filter || document.getElementById('tree-filter').value || '').toLowerCase();
+  var html = '';
+
+  // root
+  var rootOpen = openNodes.has('root');
+  html += '<div class="t-row open" onclick="toggleNode(\'root\')">';
+  html += (rootOpen ? '▼' : '▶') + ' lucid/agents/</div>';
+
+  if (!rootOpen) { document.getElementById('tree-body').innerHTML = html; return; }
+
+  Object.keys(TOPIC_TREE).forEach(function(agent) {
+    var agentStatus = AGENTS[agent].status;
+    var dotClass = agentStatus === 'online' ? 'dot-g' : 'dot-d';
+    var nodeId = 'agent-'+agent;
+    var isOpen = openNodes.has(nodeId);
+    var show = !f || agent.includes(f);
+
+    if (!f || agent.includes(f) || Object.keys(TOPIC_TREE[agent]).some(t=>t.includes(f))) {
+      html += '<div class="t-row open l1" onclick="toggleNode(\''+nodeId+'\')">';
+      html += (isOpen?'▼':'▶') + ' <div class="t-dot '+dotClass+'"></div> '+agent+'</div>';
+    }
+
+    if (!isOpen) return;
+
+    // special cmd/ row
+    var cmds = CMD_CATALOG[agent];
+    var topicKeys = Object.keys(TOPIC_TREE[agent]);
+    topicKeys.forEach(function(topic) {
+      if (f && !topic.includes(f) && !agent.includes(f)) return;
+      var fullTopic = 'lucid/agents/'+agent+'/'+topic;
+      var isActive = !!activeViewers[fullTopic];
+      var entry = TOPIC_TREE[agent][topic];
+      var isStream = entry.type === 'stream';
+      var rowClass = 't-row l2' + (isActive ? ' active-viewer' : '');
+
+      html += '<div class="'+rowClass+'" onclick="openViewer(\''+agent+'\',\''+topic+'\')">';
+      if (isStream) html += '<div class="t-dot dot-g"></div> ';
+      html += topic;
+      if (entry.type === 'retained') html += ' <span class="t-badge">R</span>';
+      if (isActive) html += ' <span class="t-live-badge">LIVE</span>';
+      html += '</div>';
+    });
+
+    if (cmds) {
+      html += '<div class="t-row l2" style="color:var(--border)" onclick="openDrawerForAgent(\''+agent+'\')">';
+      html += 'cmd/ <span class="t-hint">→ publish</span></div>';
+    }
+  });
+
+  document.getElementById('tree-body').innerHTML = html;
+}
+
+function filterTree(val) { renderTree(val); }
+
+// ── Viewers ─────────────────────────────────────────────────────────────
+var viewerList = [];   // array of {id, agent, topic}
+var viewerTimers = {}; // topic → timer id
+var msgCounts = {};
+
+function openViewer(agent, topic) {
+  var fullTopic = 'lucid/agents/'+agent+'/'+topic;
+  if (activeViewers[fullTopic]) {
+    // already open — flash it
+    var vid = activeViewers[fullTopic];
+    var el = document.getElementById('viewer-'+vid);
+    if (el) { el.style.outline = '2px solid var(--accent)'; setTimeout(()=>el.style.outline='',600); }
+    return;
+  }
+
+  var id = uid();
+  viewerList.push({id, agent, topic});
+  activeViewers[fullTopic] = id;
+  msgCounts[id] = 0;
+  renderViewers();
+  renderTree();
+
+  // Seed initial messages
+  var entry = TOPIC_TREE[agent] && TOPIC_TREE[agent][topic];
+  if (entry) {
+    var count = entry.type === 'retained' ? 3 : 5;
+    var now = Date.now();
+    for (var i = count-1; i >= 0; i--) {
+      setTimeout((function(offset, isFirst){
+        return function(){
+          addMessage(id, entry, isFirst);
+        };
+      })(i, i===0), (count-1-i)*80);
+    }
+    // Stream: keep pushing
+    if (entry.type === 'stream') {
+      var iv = entry.interval || 1500;
+      viewerTimers[fullTopic] = setInterval(function(){ addMessage(id, entry, true); }, iv);
+    }
+  }
+}
+
+function closeViewer(id) {
+  var v = viewerList.find(x=>x.id===id);
+  if (v) {
+    var fullTopic = 'lucid/agents/'+v.agent+'/'+v.topic;
+    delete activeViewers[fullTopic];
+    if (viewerTimers[fullTopic]) { clearInterval(viewerTimers[fullTopic]); delete viewerTimers[fullTopic]; }
+  }
+  viewerList = viewerList.filter(x=>x.id!==id);
+  renderViewers();
+  renderTree();
+}
+
+function addEmptyPane() {
+  var id = uid();
+  viewerList.push({id, agent:null, topic:null});
+  renderViewers();
+}
+
+function addMessage(viewerId, entry, isNew) {
+  var body = document.getElementById('msgs-'+viewerId);
+  if (!body) return;
+  msgCounts[viewerId] = (msgCounts[viewerId]||0)+1;
+
+  var meta = document.getElementById('meta-'+viewerId);
+  if (meta) meta.textContent = msgCounts[viewerId]+' msgs';
+
+  var qosBadge = '<span class="msg-qos">QoS '+entry.qos+'</span>';
+  var retBadge = entry.type==='retained' ? '<span class="msg-retained">retained</span>' : '';
+  var flashClass = isNew ? ' flash' : '';
+
+  var div = document.createElement('div');
+  div.className = 'msg'+flashClass;
+  div.innerHTML = '<div class="msg-meta"><span class="msg-time">'+fmtTime()+'</span>'+qosBadge+retBadge+'</div>'
+    + '<div class="msg-body">'+fmtJson(entry.data())+'</div>';
+
+  // Insert at top
+  body.insertBefore(div, body.firstChild);
+
+  // Trim old
+  while (body.children.length > 50) body.removeChild(body.lastChild);
+}
+
+function renderViewers() {
+  var container = document.getElementById('viewers');
+  container.innerHTML = '';
+
+  if (viewerList.length === 0) {
+    var placeholder = document.createElement('div');
+    placeholder.className = 'viewer';
+    placeholder.innerHTML = '<div class="viewer-empty"><div class="icon">📡</div><p>Click any topic in the tree to open it</p><small>Multiple topics open side by side</small></div>';
+    container.appendChild(placeholder);
+    return;
+  }
+
+  viewerList.forEach(function(v) {
+    var el = document.createElement('div');
+    el.className = 'viewer';
+    el.id = 'viewer-'+v.id;
+
+    if (!v.agent) {
+      el.innerHTML = '<div class="viewer-hdr"><div class="viewer-topic" style="color:var(--border)">— empty pane —</div></div>'
+        +'<div class="viewer-empty"><div class="icon">📭</div><p>Click a topic in the tree</p><small>to open its live stream here</small></div>';
+    } else {
+      var fullTopic = 'lucid/agents/'+v.agent+'/'+v.topic;
+      var shortTopic = 'lucid/agents/<em>'+v.agent+'</em>/'+v.topic;
+      el.innerHTML = '<div class="viewer-hdr">'
+        +'<div class="viewer-live-dot"></div>'
+        +'<div class="viewer-topic">'+shortTopic+'</div>'
+        +'<span class="viewer-msg-count" id="meta-'+v.id+'">0 msgs</span>'
+        +'<div class="viewer-close" onclick="closeViewer(\''+v.id+'\')">✕</div>'
+        +'</div>'
+        +'<div class="viewer-body" id="msgs-'+v.id+'"></div>';
+    }
+    container.appendChild(el);
+  });
+}
+
+// ── Publisher ────────────────────────────────────────────────────────────
+var pubCrumbs = [];
+var pubSuggestions = [];
+
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('fab').style.display = 'none';
+  document.getElementById('topic-input').focus();
+  updateSuggestions();
+}
+
+function openDrawerForAgent(agent) {
+  openDrawer();
+  if (pubCrumbs.length === 0) {
+    addCrumb(agent);
+    document.getElementById('topic-input').focus();
+  }
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('fab').style.display = 'flex';
+}
+
+function addCrumb(val) {
+  pubCrumbs.push(val);
+  document.getElementById('topic-input').value = '';
+  renderCrumbs();
+  updateSuggestions();
+  updatePayload();
+}
+
+function removeCrumb(i) {
+  pubCrumbs = pubCrumbs.slice(0, i);
+  renderCrumbs();
+  updateSuggestions();
+  updatePayload();
+}
+
+function renderCrumbs() {
+  var el = document.getElementById('crumbs');
+  el.innerHTML = pubCrumbs.map(function(c,i){
+    return '<div class="crumb" onclick="removeCrumb('+i+')">'+c+' <span class="crumb-x">✕</span></div><span class="crumb-sep">/</span>';
+  }).join('');
+  // update placeholder
+  var depth = pubCrumbs.length;
+  var placeholders = ['select agent…','cmd or subtopic…','action…','param…'];
+  document.getElementById('topic-input').placeholder = placeholders[Math.min(depth, placeholders.length-1)];
+  // scroll to end so the input is always visible
+  var scroller = document.getElementById('topic-crumbs');
+  if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+}
+
+function updateSuggestions() {
+  var row = document.getElementById('ac-row');
+  var depth = pubCrumbs.length;
+  var suggestions = [];
+  var label = '';
+
+  if (depth === 0) {
+    label = 'agents';
+    suggestions = Object.keys(AGENTS).filter(a => AGENTS[a].status === 'online').map(a => ({label:a, dot:'g'}))
+      .concat(Object.keys(AGENTS).filter(a=>AGENTS[a].status!=='online').map(a=>({label:a,dot:'d'})));
+  } else if (depth === 1) {
+    var agent = pubCrumbs[0];
+    label = 'topics';
+    suggestions = [
+      {label:'cmd',dot:'g'},
+      {label:'components',dot:'g'},
+    ];
+  } else if (depth === 2 && pubCrumbs[1] === 'cmd') {
+    var agent = pubCrumbs[0];
+    label = 'commands';
+    var cmds = (CMD_CATALOG[agent]||[]).filter(c=>!c.includes('/'));
+    suggestions = cmds.map(c=>({label:c, dot:'g'}));
+    var compCmds = (CMD_CATALOG[agent]||[]).filter(c=>c.includes('/'));
+    if (compCmds.length) suggestions.push({label:'components/…',ghost:true});
+  } else if (depth === 2 && pubCrumbs[1] === 'components') {
+    var agent = pubCrumbs[0];
+    label = 'components';
+    suggestions = (AGENTS[agent].components||[]).map(c=>({label:c,dot:'g'}));
+  } else if (depth === 3 && pubCrumbs[1] === 'components') {
+    label = 'subtopic';
+    suggestions = [{label:'cmd',dot:'g'},{label:'status',dot:'g'}];
+  } else if (depth === 4 && pubCrumbs[2] === 'cmd') {
+    var agent = pubCrumbs[0], comp = pubCrumbs[3] ? pubCrumbs[2] : pubCrumbs[3];
+    label = 'commands';
+    // guess from catalog
+    var compName = pubCrumbs[2];
+    var fullPfx = 'components/'+compName+'/cmd/';
+    var cmds2 = (CMD_CATALOG[pubCrumbs[0]]||[]).filter(c=>c.startsWith(fullPfx)).map(c=>c.replace(fullPfx,''));
+    suggestions = cmds2.length ? cmds2.map(c=>({label:c,dot:'g'})) : [{label:'set-effect',dot:'y'},{label:'set-color',dot:'y'}];
+  }
+
+  pubSuggestions = suggestions;
+  var html = '<span class="ac-label">'+label+'</span>';
+  suggestions.forEach(function(s,i){
+    var cls = 'ac-chip'+(i===0?' hi':'')+(s.ghost?' ghost':'');
+    var dot = s.ghost ? '' : '<div class="cd cd-'+(s.dot||'g')+'"></div> ';
+    html += '<div class="'+cls+'" onclick="pickSuggestion(\''+s.label.replace(/'/g,"\\'")+'\')">'+(s.ghost?s.label:dot+s.label)+'</div>';
+  });
+  row.innerHTML = html;
+}
+
+function pickSuggestion(val) {
+  if (val.endsWith('…')) {
+    document.getElementById('topic-input').focus();
+    return;
+  }
+  addCrumb(val);
+  document.getElementById('topic-input').focus();
+}
+
+function onTopicInput(val) { updateSuggestions(); }
+
+function onTopicKey(e) {
+  if (e.key === 'Enter' || e.key === 'Tab' || e.key === '/') {
+    e.preventDefault();
+    var val = document.getElementById('topic-input').value.trim();
+    if (!val && pubSuggestions.length) val = pubSuggestions[0].label;
+    if (val && !val.endsWith('…')) addCrumb(val);
+  } else if (e.key === 'Backspace' && !document.getElementById('topic-input').value) {
+    e.preventDefault();
+    removeCrumb(pubCrumbs.length - 1);
+  }
+}
+
+function updatePayload() {
+  var el = document.getElementById('payload-box');
+  var action = pubCrumbs[pubCrumbs.length-1] || '';
+  var params = CMD_PARAMS[action] || {};
+  var reqId = uid()+'-'+uid();
+  document.getElementById('req-id').textContent = reqId.substr(0,9)+'…';
+  var extras = Object.entries(params).map(([k,v])=>{
+    var val = typeof v==='string' ? '<span class="s">'+v+'</span>' : '<span class="n">'+v+'</span>';
+    return '  <span class="k">"'+k+'"</span>: '+val;
+  }).join(',<br>');
+  el.innerHTML = '{\n  <span class="k">"request_id"</span>: <span class="s">"<span id="req-id">'+reqId.substr(0,9)+'…</span>"</span>'
+    + (extras ? ',<br>'+extras : '') + '\n}';
+}
+
+function sendCommand() {
+  var topic = 'lucid/agents/' + pubCrumbs.join('/');
+  if (pubCrumbs.length < 2) { alert('Select at least an agent and command.'); return; }
+  // Flash send button
+  var btn = document.querySelector('.send-btn');
+  btn.style.filter = 'brightness(1.4)';
+  btn.textContent = '✓ Sent';
+  setTimeout(function(){
+    btn.style.filter = '';
+    btn.textContent = 'Send ↑';
+  }, 800);
+  // Show result toast
+  showToast('✓ Published to '+topic);
+}
+
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:var(--radius-sm);padding:0.5rem 1rem;font-size:0.78rem;color:var(--green);z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.4)';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.remove(); }, 2500);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+renderTree();
+renderViewers();
+updateSuggestions();
+
+// Auto-open north/status and north/telemetry/cpu for demo
+setTimeout(function(){ openViewer('north','status'); }, 300);
+setTimeout(function(){ openViewer('north','telemetry/cpu'); }, 500);
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LUCID Command Sender</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080812; color: #e0e0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* NAV */
+  .nav { height: 44px; background: #0f0f1e; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; padding: 0 16px; gap: 24px; flex-shrink: 0; }
+  .nav-brand { font-size: 13px; font-weight: 700; color: #6c63ff; letter-spacing: 0.05em; }
+  .nav-tab { font-size: 12px; color: #555; padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+  .nav-tab.active { color: #a0a0c8; background: #1a1a2e; }
+  .conn-pill { margin-left: auto; display: flex; align-items: center; gap: 6px; background: #12121e; border: 1px solid #1e1e30; border-radius: 20px; padding: 4px 12px; font-size: 11px; }
+  .dot-g { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+  .conn-text { color: #888; }
+
+  /* MAIN AREA */
+  .workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  /* LEFT: Topic Tree */
+  .tree-panel { width: 220px; flex-shrink: 0; background: #0d0d1a; border-right: 1px solid #1a1a2e; display: flex; flex-direction: column; }
+  .panel-hdr { height: 36px; display: flex; align-items: center; padding: 0 12px; gap: 8px; border-bottom: 1px solid #1a1a2e; font-size: 11px; color: #555; font-weight: 600; letter-spacing: 0.05em; }
+  .panel-hdr span { color: #6c63ff; }
+  .tree-search { margin: 8px; background: #13131f; border: 1px solid #1e1e30; border-radius: 5px; padding: 5px 9px; font-size: 11px; color: #888; display: flex; align-items: center; gap: 6px; }
+  .tree-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .t-row { height: 24px; display: flex; align-items: center; padding: 0 8px; gap: 6px; font-size: 11px; color: #666; cursor: pointer; user-select: none; border-radius: 4px; margin: 1px 5px; }
+  .t-row:hover { background: #13131f; color: #a0a0c8; }
+  .t-row.open { color: #a0a0c8; }
+  .t-row.selected { background: #1e1e35; color: #c0b8ff; }
+  .t-row.l1 { padding-left: 16px; }
+  .t-row.l2 { padding-left: 26px; }
+  .t-row.l3 { padding-left: 36px; }
+  .t-dot { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .t-dot.orange { background: #f59e0b; }
+  .t-dot.dim { background: #333; }
+  .t-badge { margin-left: auto; font-size: 9px; background: #1e1e30; color: #555; border-radius: 3px; padding: 1px 4px; }
+
+  /* RIGHT: Topic viewers (vertical splits) */
+  .viewers { flex: 1; display: flex; overflow: hidden; }
+  .viewer { flex: 1; border-right: 1px solid #1a1a2e; display: flex; flex-direction: column; min-width: 0; }
+  .viewer:last-child { border-right: none; }
+  .viewer-hdr { height: 36px; background: #0d0d1a; border-bottom: 1px solid #1a1a2e; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
+  .viewer-topic { font-size: 11px; color: #a0a0c8; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .viewer-topic em { color: #6c63ff; font-style: normal; }
+  .viewer-close { margin-left: auto; font-size: 14px; color: #444; cursor: pointer; flex-shrink: 0; }
+  .viewer-close:hover { color: #888; }
+  .viewer-body { flex: 1; overflow-y: auto; padding: 6px; }
+  .msg { background: #0f0f1c; border: 1px solid #1a1a28; border-radius: 5px; margin-bottom: 5px; padding: 7px 10px; font-family: monospace; font-size: 11px; }
+  .msg-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .msg-time { color: #444; font-size: 10px; }
+  .msg-qos { font-size: 9px; background: #1a1a2e; color: #555; border-radius: 2px; padding: 1px 4px; }
+  .msg-retained { font-size: 9px; background: #1a2a1a; color: #22c55e88; border-radius: 2px; padding: 1px 4px; }
+  .msg-body { color: #8080c0; line-height: 1.5; }
+  .msg-body .key { color: #7070d0; }
+  .msg-body .str { color: #22c55e; }
+  .msg-body .num { color: #f59e0b; }
+  .msg-body .new { animation: flash 0.5s ease; }
+  .msg.latest { border-color: #2a2a45; }
+
+  /* Empty state */
+  .viewer-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #333; }
+  .viewer-empty .icon { font-size: 28px; }
+  .viewer-empty p { font-size: 12px; }
+  .viewer-empty small { font-size: 10px; color: #2a2a3a; }
+
+  /* Add split button */
+  .add-split { width: 36px; flex-shrink: 0; background: #0a0a15; border-left: 1px solid #1a1a2e; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #2a2a3a; font-size: 18px; transition: color 0.2s; }
+  .add-split:hover { color: #6c63ff; background: #0d0d1e; }
+
+  /* PUBLISH BUTTON (floating) */
+  .publish-fab { position: absolute; bottom: 20px; right: 20px; height: 40px; background: #6c63ff; border-radius: 20px; display: flex; align-items: center; gap: 8px; padding: 0 18px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; box-shadow: 0 4px 20px #6c63ff44; z-index: 10; transition: transform 0.15s, box-shadow 0.15s; user-select: none; }
+  .publish-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px #6c63ff66; }
+  .publish-fab .fab-icon { font-size: 14px; }
+
+  /* PUBLISHER DRAWER */
+  .drawer { position: absolute; bottom: 0; left: 0; right: 0; height: 0; background: #0f0f1e; border-top: 1px solid #6c63ff44; z-index: 20; transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
+  .drawer.open { height: 260px; }
+  .drawer-hdr { height: 40px; display: flex; align-items: center; padding: 0 16px; gap: 12px; border-bottom: 1px solid #1a1a2e; flex-shrink: 0; }
+  .drawer-title { font-size: 12px; font-weight: 600; color: #a0a0c8; }
+  .drawer-close { margin-left: auto; font-size: 18px; color: #444; cursor: pointer; }
+  .drawer-close:hover { color: #888; }
+  .drawer-body { padding: 12px 16px; }
+
+  /* Topic input bar */
+  .topic-bar { display: flex; align-items: center; background: #13131f; border: 1px solid #6c63ff; border-radius: 7px; padding: 0 12px; height: 38px; gap: 4px; margin-bottom: 10px; }
+  .topic-prefix { font-size: 11px; color: #444; font-family: monospace; white-space: nowrap; }
+  .crumb { background: #252538; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #a0a0c8; font-family: monospace; white-space: nowrap; }
+  .crumb-sep { color: #333; font-size: 12px; }
+  .topic-cursor { width: 80px; background: transparent; border: none; outline: none; font-size: 12px; color: #6c63ff; font-family: monospace; caret-color: #6c63ff; }
+
+  /* Autocomplete dropdown */
+  .ac-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .ac-chip { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 5px; padding: 4px 10px; font-size: 11px; color: #888; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: background 0.15s; font-family: monospace; }
+  .ac-chip:hover, .ac-chip.hi { background: #252538; color: #c0b8ff; border-color: #6c63ff66; }
+  .ac-chip .cd { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; }
+  .ac-chip .cd.o { background: #f59e0b; }
+
+  /* Payload + send row */
+  .bottom-row { display: flex; gap: 10px; align-items: flex-start; }
+  .payload-box { flex: 1; background: #13131f; border: 1px solid #1e1e30; border-radius: 6px; padding: 8px 10px; font-size: 11px; font-family: monospace; color: #8080c0; line-height: 1.5; min-height: 48px; cursor: text; }
+  .send-btn { height: 48px; background: #6c63ff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; padding: 0 20px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .send-btn:hover { background: #7c73ff; }
+
+  @keyframes flash { 0% { background: #6c63ff22; } 100% { background: transparent; } }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-brand">LUCID</div>
+  <div class="nav-tab">Fleet</div>
+  <div class="nav-tab">Experiments</div>
+  <div class="nav-tab active">MQTT</div>
+  <div class="nav-tab">Users</div>
+  <div class="conn-pill">
+    <div class="dot-g"></div>
+    <span class="conn-text">mqtt://10.205.10.16:8083 · north_agent</span>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- TREE -->
+  <div class="tree-panel">
+    <div class="panel-hdr"><span>📡</span> Topics</div>
+    <div class="tree-search">🔍 <span style="color:#444">filter topics…</span></div>
+    <div class="tree-body">
+      <div class="t-row open">▼ lucid/agents/</div>
+      <div class="t-row l1 open">▼ <div class="t-dot"></div> north</div>
+      <div class="t-row l2">metadata <div class="t-badge">R</div></div>
+      <div class="t-row l2 selected">● status <div class="t-badge">R</div></div>
+      <div class="t-row l2">state <div class="t-badge">R</div></div>
+      <div class="t-row l2">▼ telemetry/</div>
+      <div class="t-row l3"><div class="t-dot"></div> cpu</div>
+      <div class="t-row l3"><div class="t-dot"></div> memory</div>
+      <div class="t-row l2">▼ components/</div>
+      <div class="t-row l3">▶ led-strip/</div>
+      <div class="t-row l3">▶ cpu-monitor/</div>
+      <div class="t-row l2" style="color:#444">cmd/ →</div>
+      <div class="t-row l1 open" style="margin-top:4px">▼ <div class="t-dot orange"></div> south</div>
+      <div class="t-row l2">status <div class="t-badge">R</div></div>
+      <div class="t-row l2">▶ telemetry/</div>
+      <div class="t-row l1" style="color:#555">▶ <div class="t-dot dim"></div> east</div>
+      <div class="t-row l1" style="color:#555">▶ <div class="t-dot dim"></div> west</div>
+    </div>
+  </div>
+
+  <!-- VIEWERS -->
+  <div class="viewers">
+
+    <!-- Viewer 1: north/status -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-topic">lucid/agents/<em>north</em>/status</div>
+        <div class="viewer-close">✕</div>
+      </div>
+      <div class="viewer-body">
+        <div class="msg latest">
+          <div class="msg-meta"><span class="msg-time">12:04:02</span><span class="msg-qos">QoS 1</span><span class="msg-retained">retained</span></div>
+          <div class="msg-body"><span class="key">"status"</span>: <span class="str">"online"</span>,<br><span class="key">"uptime_s"</span>: <span class="num">3842</span>,<br><span class="key">"ts"</span>: <span class="num">1706000242</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:02:01</span><span class="msg-qos">QoS 1</span></div>
+          <div class="msg-body"><span class="key">"status"</span>: <span class="str">"online"</span>,<br><span class="key">"uptime_s"</span>: <span class="num">3721</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer 2: north/telemetry/cpu -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-topic">lucid/agents/<em>north</em>/telemetry/cpu</div>
+        <div class="viewer-close">✕</div>
+      </div>
+      <div class="viewer-body">
+        <div class="msg latest">
+          <div class="msg-meta"><span class="msg-time">12:04:03</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">34.2</span>,<br><span class="key">"ts"</span>: <span class="num">1706000243</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:02</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">31.8</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:01</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">38.1</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:00</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">29.5</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer 3: empty / placeholder -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-topic" style="color:#333">— empty pane —</div>
+      </div>
+      <div class="viewer-empty">
+        <div class="icon">📭</div>
+        <p>Click a topic in the tree</p>
+        <small>Opens live message stream here</small>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- + split button -->
+  <div class="add-split" title="Add split">+</div>
+
+  <!-- PUBLISH FAB -->
+  <div class="publish-fab" onclick="openDrawer()">
+    <span class="fab-icon">⚡</span>
+    Publish
+  </div>
+
+  <!-- PUBLISHER DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-hdr">
+      <div class="drawer-title">⚡ Smart Publisher</div>
+      <div class="drawer-close" onclick="closeDrawer()">✕</div>
+    </div>
+    <div class="drawer-body">
+      <!-- Topic bar -->
+      <div class="topic-bar">
+        <span class="topic-prefix">lucid/agents/</span>
+        <div class="crumb">north</div>
+        <span class="crumb-sep">/</span>
+        <div class="crumb">cmd</div>
+        <span class="crumb-sep">/</span>
+        <input class="topic-cursor" placeholder="action…" autofocus />
+      </div>
+      <!-- Autocomplete chips -->
+      <div class="ac-row">
+        <div class="ac-chip hi"><div class="cd"></div> restart</div>
+        <div class="ac-chip"><div class="cd"></div> shutdown</div>
+        <div class="ac-chip"><div class="cd"></div> reload-config</div>
+        <div class="ac-chip"><div class="cd o"></div> set-log-level</div>
+        <div class="ac-chip" style="color:#444;border-style:dashed">components/led-strip/cmd/…</div>
+      </div>
+      <!-- Payload + send -->
+      <div class="bottom-row">
+        <div class="payload-box"><span class="key">"request_id"</span>: <span class="str">"a3f9-…"</span><span style="color:#444">,</span><br><span class="key">"confirm"</span>: <span style="color:#f59e0b">true</span></div>
+        <div class="send-btn">Send ↑</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.querySelector('.publish-fab').style.display = 'none';
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.querySelector('.publish-fab').style.display = 'flex';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{"type":"server-started","port":52325,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:52325","screen_dir":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content","state_dir":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/state"}
+{"type":"screen-added","file":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content/full-v3.html"}
+{"type":"screen-updated","file":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content/full-v3.html"}
+{"type":"screen-updated","file":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content/full-v3.html"}
+{"type":"screen-updated","file":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content/full-v3.html"}
+{"type":"screen-updated","file":"/Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/.superpowers/brainstorm/210-1776268097/content/full-v3.html"}
+{"type":"server-stopped","reason":"idle timeout"}

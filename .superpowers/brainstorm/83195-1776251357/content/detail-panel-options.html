@@ -1,0 +1,157 @@
+<h2>Right panel — how much component detail?</h2>
+<p class="subtitle">You've selected an agent on the left. What do you see on the right?</p>
+
+<div class="cards">
+
+  <!-- Option A: Compact — status + 2-3 key values -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:12px;">
+          <!-- Agent header -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+            <span style="font-size:13px;font-weight:700;color:#60a5fa;">rosbot-01</span>
+            <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+          </div>
+          <div style="font-size:8px;color:#8494ab;margin-bottom:10px;">pi-01.local · 192.168.1.10 · uptime 4d 2h</div>
+          <!-- Components: compact rows -->
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;padding:6px 8px;background:#141c2e;border-radius:6px;border:1px solid #283044;gap:8px;">
+              <span style="color:#e2e8f0;font-size:9px;font-weight:600;width:80px;flex-shrink:0;">led-strip</span>
+              <span style="color:#4ade80;font-size:8px;">● running</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto;">effect: pulse · 80%</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:6px 8px;background:#141c2e;border-radius:6px;border:1px solid #283044;gap:8px;">
+              <span style="color:#e2e8f0;font-size:9px;font-weight:600;width:80px;flex-shrink:0;">cpu-metrics</span>
+              <span style="color:#4ade80;font-size:8px;">● running</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto;">cpu: 34% · temp: 52°C</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:6px 8px;background:#141c2e;border-radius:6px;border:1px solid #283044;gap:8px;">
+              <span style="color:#e2e8f0;font-size:9px;font-weight:600;width:80px;flex-shrink:0;">ros-bridge</span>
+              <span style="color:#facc15;font-size:8px;">● idle</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto;">—</span>
+            </div>
+            <div style="display:flex;align-items:center;padding:6px 8px;background:#141c2e;border-radius:6px;border:1px solid #283044;gap:8px;opacity:.5;">
+              <span style="color:#e2e8f0;font-size:9px;font-weight:600;width:80px;flex-shrink:0;">gps</span>
+              <span style="color:#f87171;font-size:8px;">● stopped</span>
+              <span style="color:#64748b;font-size:8px;margin-left:auto;">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Compact rows</h3>
+      <p>One line per component: name · status · 2-3 key values on the right. Dense, fits many components without scrolling.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Component cards with all state fields -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:12px;">
+          <!-- Agent header -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+            <span style="font-size:13px;font-weight:700;color:#60a5fa;">rosbot-01</span>
+            <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+          </div>
+          <div style="font-size:8px;color:#8494ab;margin-bottom:10px;">pi-01.local · 192.168.1.10 · uptime 4d 2h</div>
+          <!-- Component cards -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="color:#e2e8f0;font-size:9px;font-weight:600;">led-strip</span>
+                <span style="color:#4ade80;font-size:8px;">● running</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;font-size:8px;">
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">effect</span><span style="color:#e2e8f0">pulse</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">brightness</span><span style="color:#e2e8f0">80%</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">color</span><span style="color:#e2e8f0">#3b82f6</span></div>
+              </div>
+            </div>
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="color:#e2e8f0;font-size:9px;font-weight:600;">cpu-metrics</span>
+                <span style="color:#4ade80;font-size:8px;">● running</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;font-size:8px;">
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">cpu</span><span style="color:#e2e8f0">34%</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">temp</span><span style="color:#e2e8f0">52°C</span></div>
+                <div style="display:flex;justify-content:space-between;"><span style="color:#8494ab">mem</span><span style="color:#e2e8f0">41%</span></div>
+              </div>
+            </div>
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="color:#e2e8f0;font-size:9px;font-weight:600;">ros-bridge</span>
+                <span style="color:#facc15;font-size:8px;">● idle</span>
+              </div>
+              <div style="font-size:8px;color:#64748b;">no state data</div>
+            </div>
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:8px;opacity:.5;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                <span style="color:#e2e8f0;font-size:9px;font-weight:600;">gps</span>
+                <span style="color:#f87171;font-size:8px;">● stopped</span>
+              </div>
+              <div style="font-size:8px;color:#64748b;">no state data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Component cards with full state</h3>
+      <p>Each component gets its own card showing all live state key-value pairs. 2-column grid. More space, more data — scroll if many components.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Agent header + split: agent meta left, component cards right -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:12px;">
+          <!-- Agent header row -->
+          <div style="display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid #283044;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:700;color:#60a5fa;">rosbot-01</span>
+            <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+            <span style="color:#8494ab;font-size:8px;margin-left:auto">pi-01.local · 4d 2h · 2s ago</span>
+          </div>
+          <!-- Two columns: agent meta | components -->
+          <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;">
+            <!-- Left: agent meta -->
+            <div style="font-size:8px;display:flex;flex-direction:column;gap:3px;">
+              <div style="color:#8494ab;letter-spacing:.05em;text-transform:uppercase;font-size:7px;margin-bottom:2px">Agent</div>
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <div><span style="color:#8494ab">ip</span><br><span style="color:#e2e8f0">192.168.1.10</span></div>
+                <div style="margin-top:3px;"><span style="color:#8494ab">os</span><br><span style="color:#e2e8f0">Raspberry Pi OS</span></div>
+                <div style="margin-top:3px;"><span style="color:#8494ab">arch</span><br><span style="color:#e2e8f0">aarch64</span></div>
+                <div style="margin-top:3px;"><span style="color:#8494ab">version</span><br><span style="color:#e2e8f0">1.4.2</span></div>
+              </div>
+            </div>
+            <!-- Right: components -->
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <div style="color:#8494ab;letter-spacing:.05em;text-transform:uppercase;font-size:7px;margin-bottom:2px">Components</div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:5px;padding:5px 7px;font-size:8px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#e2e8f0;font-weight:600;">led-strip</span><span style="color:#4ade80;">● running</span></div>
+                <div style="color:#8494ab;">effect: pulse · brightness: 80%</div>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:5px;padding:5px 7px;font-size:8px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="color:#e2e8f0;font-weight:600;">cpu-metrics</span><span style="color:#4ade80;">● running</span></div>
+                <div style="color:#8494ab;">cpu: 34% · temp: 52°C · mem: 41%</div>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:5px;padding:5px 7px;font-size:8px;opacity:.6;">
+                <div style="display:flex;justify-content:space-between;"><span style="color:#e2e8f0;font-weight:600;">ros-bridge</span><span style="color:#facc15;">● idle</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Agent meta + component list side-by-side</h3>
+      <p>Right panel splits: agent metadata on the left, component list on the right. Everything visible at once without scrolling.</p>
+    </div>
+  </div>
+
+</div>
+<p class="subtitle" style="margin-top:1rem">Pick one, or mix elements from different options.</p>

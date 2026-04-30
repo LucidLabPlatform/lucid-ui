@@ -1,0 +1,201 @@
+<h2>Command Sender — Page Layout</h2>
+<p class="subtitle">Which overall structure fits the workflow best?</p>
+
+<style>
+  .layout-cards { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+  .layout-card { border: 1.5px solid #2a2a3a; border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.2s; }
+  .layout-card:hover { border-color: #6c63ff; }
+  .layout-card.selected { border-color: #6c63ff; box-shadow: 0 0 0 2px rgba(108,99,255,0.3); }
+  .layout-card-header { padding: 12px 16px; background: #1a1a2e; display: flex; align-items: center; gap: 10px; }
+  .layout-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #6c63ff; text-transform: uppercase; }
+  .layout-name { font-size: 15px; font-weight: 600; color: #e8e8f0; }
+  .layout-desc { font-size: 13px; color: #888; margin-left: auto; }
+  .layout-preview { background: #0d0d1a; padding: 14px; }
+
+  /* Shared wireframe styles */
+  .w-bar { height: 32px; background: #1e1e30; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; gap: 8px; font-size: 11px; color: #666; }
+  .w-bar-dot { width: 8px; height: 8px; border-radius: 50%; background: #6c63ff; }
+  .w-status-green { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .w-pane { background: #13131f; border-radius: 6px; border: 1px solid #222234; }
+  .w-header { height: 28px; background: #1a1a2e; border-radius: 6px 6px 0 0; border-bottom: 1px solid #222234; display: flex; align-items: center; padding: 0 10px; font-size: 11px; color: #555; gap: 6px; }
+  .w-row { height: 22px; margin: 4px 8px; border-radius: 4px; background: #1c1c2e; display: flex; align-items: center; padding: 0 8px; gap: 6px; font-size: 10px; color: #666; }
+  .w-row.active { background: #252538; color: #a0a0c8; }
+  .w-row.indent { margin-left: 20px; }
+  .w-row.indent2 { margin-left: 32px; }
+  .w-topic-bar { height: 38px; background: #1a1a2e; border-radius: 6px; border: 1px solid #6c63ff; display: flex; align-items: center; padding: 0 12px; font-size: 12px; color: #6c63ff; gap: 6px; margin-bottom: 8px; }
+  .w-topic-crumb { background: #252538; border-radius: 4px; padding: 2px 7px; font-size: 11px; color: #a0a0c8; }
+  .w-autocomplete { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 6px; padding: 4px; margin-bottom: 8px; }
+  .w-ac-item { height: 24px; border-radius: 4px; padding: 0 8px; display: flex; align-items: center; font-size: 11px; color: #888; gap: 6px; }
+  .w-ac-item.hi { background: #252538; color: #a0a0c8; }
+  .w-ac-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .w-ac-dot.orange { background: #f59e0b; }
+  .w-payload { background: #1a1a2e; border-radius: 6px; border: 1px solid #2a2a3e; padding: 10px; font-size: 10px; color: #666; font-family: monospace; line-height: 1.6; margin-bottom: 8px; }
+  .w-btn { height: 32px; background: #6c63ff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 600; }
+  .w-tab-row { display: flex; gap: 4px; margin-bottom: 10px; }
+  .w-tab { height: 28px; padding: 0 12px; border-radius: 6px 6px 0 0; font-size: 11px; display: flex; align-items: center; color: #555; background: #1a1a2e; border: 1px solid #222234; border-bottom: none; }
+  .w-tab.active { color: #a0a0c8; background: #13131f; border-color: #2a2a3e; }
+  .w-log-row { height: 18px; margin: 3px 8px; border-radius: 3px; display: flex; align-items: center; font-size: 10px; color: #555; gap: 6px; font-family: monospace; }
+  .w-log-row .ts { color: #333; }
+  .w-log-row .dir { color: #6c63ff; }
+  .w-log-row .topic { color: #22c55e; }
+
+  .pros-cons-inline { display: flex; gap: 10px; padding: 10px 14px 12px; background: #0d0d1a; }
+  .pros-inline { flex: 1; }
+  .cons-inline { flex: 1; }
+  .pros-inline h5, .cons-inline h5 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px; }
+  .pros-inline h5 { color: #22c55e; }
+  .cons-inline h5 { color: #ef4444; }
+  .pros-inline li, .cons-inline li { font-size: 11px; color: #888; margin-bottom: 3px; list-style: none; padding-left: 12px; position: relative; }
+  .pros-inline li::before { content: "+"; position: absolute; left: 0; }
+  .pros-inline li::before { color: #22c55e; }
+  .cons-inline li::before { content: "−"; color: #ef4444; }
+</style>
+
+<div class="layout-cards">
+
+  <!-- Option A: Split Pane -->
+  <div class="layout-card option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="layout-card-header">
+      <div class="letter">A</div>
+      <div>
+        <div class="layout-label">Recommended</div>
+        <div class="layout-name">Split Pane — Explorer + Publisher side by side</div>
+      </div>
+    </div>
+    <div class="layout-preview">
+      <!-- Connection bar -->
+      <div class="w-bar" style="margin-bottom:10px">
+        <div class="w-status-green"></div>
+        <span style="color:#a0a0c8;font-size:11px">mqtt://10.205.10.16:8083</span>
+        <span style="color:#22c55e;font-size:10px">● Connected</span>
+        <span style="margin-left:auto;font-size:10px;color:#555">emqx_user</span>
+      </div>
+      <!-- Two panes -->
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:8px">
+        <!-- Left: Topic Tree -->
+        <div class="w-pane">
+          <div class="w-header"><span>📡</span> Topic Explorer</div>
+          <div class="w-row active"><span>▶</span> lucid/agents/</div>
+          <div class="w-row indent active"><span>▼</span> north/</div>
+          <div class="w-row indent2">metadata</div>
+          <div class="w-row indent2 active">status</div>
+          <div class="w-row indent2">state</div>
+          <div class="w-row indent2">cmd/…</div>
+          <div class="w-row indent"><span>▶</span> south/</div>
+          <div class="w-row indent"><span>▶</span> east/</div>
+          <div class="w-row indent"><span>▶</span> west/</div>
+          <div style="height:8px"></div>
+        </div>
+        <!-- Right: Publisher -->
+        <div class="w-pane">
+          <div class="w-header"><span>⚡</span> Smart Publisher</div>
+          <div style="padding:8px">
+            <div class="w-topic-bar">
+              <div class="w-topic-crumb">lucid</div>
+              <span style="color:#444">/</span>
+              <div class="w-topic-crumb">agents</div>
+              <span style="color:#444">/</span>
+              <div class="w-topic-crumb">north</div>
+              <span style="color:#444">/</span>
+              <span style="color:#6c63ff">cmd/</span>
+              <span style="color:#6c63ff;animation:blink 1s infinite">|</span>
+            </div>
+            <div class="w-autocomplete">
+              <div class="w-ac-item hi"><div class="w-ac-dot"></div> restart</div>
+              <div class="w-ac-item"><div class="w-ac-dot"></div> shutdown</div>
+              <div class="w-ac-item"><div class="w-ac-dot orange"></div> components/led-strip/cmd/…</div>
+            </div>
+            <div class="w-payload">{"request_id": "auto-generated"}</div>
+            <div class="w-btn">Send Command</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons-inline">
+      <div class="pros-inline"><h5>Pros</h5><ul><li>See tree & build topic simultaneously</li><li>Click tree node → auto-fills publisher</li><li>Feels like MQTT Explorer</li></ul></div>
+      <div class="cons-inline"><h5>Cons</h5><ul><li>Needs wide screen for best experience</li></ul></div>
+    </div>
+  </div>
+
+  <!-- Option B: Focus Mode -->
+  <div class="layout-card option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="layout-card-header">
+      <div class="letter">B</div>
+      <div>
+        <div class="layout-name">Publisher-First — Full-width smart bar, tree as drawer</div>
+      </div>
+    </div>
+    <div class="layout-preview">
+      <div class="w-bar" style="margin-bottom:10px">
+        <div class="w-status-green"></div>
+        <span style="color:#a0a0c8;font-size:11px">mqtt://10.205.10.16:8083</span>
+        <span style="color:#22c55e;font-size:10px">● Connected</span>
+      </div>
+      <div class="w-pane" style="padding:10px;margin-bottom:8px">
+        <div class="w-topic-bar" style="margin-bottom:10px">
+          <div class="w-topic-crumb">lucid</div><span style="color:#444">/</span>
+          <div class="w-topic-crumb">agents</div><span style="color:#444">/</span>
+          <span style="color:#888;font-size:11px">start typing…</span>
+          <span style="margin-left:auto;font-size:10px;color:#555;cursor:pointer">🌳 Browse</span>
+        </div>
+        <div class="w-autocomplete" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px">
+          <div style="background:#252538;border-radius:4px;padding:6px;font-size:11px;color:#a0a0c8;text-align:center">north</div>
+          <div style="background:#1c1c2e;border-radius:4px;padding:6px;font-size:11px;color:#666;text-align:center">south</div>
+          <div style="background:#1c1c2e;border-radius:4px;padding:6px;font-size:11px;color:#666;text-align:center">east</div>
+          <div style="background:#1c1c2e;border-radius:4px;padding:6px;font-size:11px;color:#666;text-align:center">west</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="w-pane"><div class="w-header">Payload</div><div class="w-payload" style="margin:8px">{"request_id": "…"}</div></div>
+        <div class="w-pane">
+          <div class="w-header">Recent Commands</div>
+          <div class="w-log-row" style="margin:4px 8px"><span class="ts">12:01</span><span class="dir">→</span><span class="topic">north/cmd/restart</span></div>
+          <div class="w-log-row" style="margin:4px 8px"><span class="ts">11:58</span><span class="dir">→</span><span class="topic">south/cmd/shutdown</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons-inline">
+      <div class="pros-inline"><h5>Pros</h5><ul><li>Publisher is dominant — clear primary action</li><li>Works on any screen width</li><li>Chip-style autocomplete feels fast</li></ul></div>
+      <div class="cons-inline"><h5>Cons</h5><ul><li>Tree is hidden behind a drawer</li><li>Can't see live values while composing</li></ul></div>
+    </div>
+  </div>
+
+  <!-- Option C: Tabbed -->
+  <div class="layout-card option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="layout-card-header">
+      <div class="letter">C</div>
+      <div>
+        <div class="layout-name">Tabbed — Explorer tab | Publisher tab | History tab</div>
+      </div>
+    </div>
+    <div class="layout-preview">
+      <div class="w-bar" style="margin-bottom:10px">
+        <div class="w-status-green"></div>
+        <span style="color:#a0a0c8;font-size:11px">mqtt://10.205.10.16:8083</span>
+        <span style="color:#22c55e;font-size:10px">● Connected</span>
+      </div>
+      <div class="w-tab-row">
+        <div class="w-tab">📡 Explorer</div>
+        <div class="w-tab active">⚡ Publisher</div>
+        <div class="w-tab">📋 History</div>
+      </div>
+      <div class="w-pane" style="padding:10px">
+        <div class="w-topic-bar">
+          <div class="w-topic-crumb">lucid/agents/north/cmd/restart</div>
+        </div>
+        <div class="w-payload">{"request_id": "auto-generated"}<br>// all params for this command</div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:8px">
+          <div class="w-pane" style="padding:6px;font-size:10px;color:#555">Modify payload…</div>
+          <div class="w-btn" style="padding:0 20px">Send</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros-cons-inline">
+      <div class="pros-inline"><h5>Pros</h5><ul><li>Cleanest, most focused UX per tab</li><li>History is a first-class view</li></ul></div>
+      <div class="cons-inline"><h5>Cons</h5><ul><li>Context switching between tree and publisher</li><li>Loses the "explorer while composing" feel</li></ul></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Click your preferred layout above, then let me know in the terminal.</p>

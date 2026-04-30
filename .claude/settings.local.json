@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls:*)",
+      "Bash(ls -la /Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/app/web/static/*.js /Users/farahorfaly/Desktop/LUCID/lucid-central-command/lucid-ui/app/web/templates/*.html)"
+    ]
+  }
+}

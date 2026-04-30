@@ -206,11 +206,10 @@ function actionBadge(action) {
 }
 
 function renderAuthLog() {
-  // Only show denied/rejected entries (authn_log contains successful logins too)
-  const denied = _authLogEntries.filter(e => (e.result || '').toLowerCase() === 'deny');
-  const entries = denied.filter(e => _authLogFilter === 'all' || e.type === _authLogFilter);
+  if (!authLogWrap) return;
+  const entries = _authLogEntries.filter(e => _authLogFilter === 'all' || e.type === _authLogFilter);
   if (!entries.length) {
-    authLogWrap.innerHTML = '<div class="empty">No entries</div>';
+    authLogWrap.innerHTML = '<div class="empty">No denied entries</div>';
     return;
   }
   authLogWrap.innerHTML = `
@@ -236,10 +235,11 @@ function renderAuthLog() {
 }
 
 async function loadAuthLog() {
+  if (!authLogWrap) return;
   authLogWrap.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const res = await fetch('/api/auth-log?limit=200');
-    if (!res.ok) throw new Error(res.status);
+    const res = await fetch('/api/auth-log?limit=200&denied_only=true');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     _authLogEntries = await res.json();
     renderAuthLog();
   } catch (e) {
@@ -255,8 +255,9 @@ document.querySelectorAll('[data-logfilter]').forEach(btn => {
   });
 });
 
-document.getElementById('btn-refresh-log').addEventListener('click', loadAuthLog);
+const btnRefreshLog = document.getElementById('btn-refresh-log');
+if (btnRefreshLog) btnRefreshLog.addEventListener('click', loadAuthLog);
 
 loadUsers();
 loadSyncHealth();
-loadAuthLog();
+if (authLogWrap) loadAuthLog();

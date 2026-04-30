@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LUCID — MQTT Command Sender</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:            #111318;
+    --surface:       #1a1d27;
+    --surface-2:     #22262f;
+    --surface-hover: #2a2e3a;
+    --border:        #2e3340;
+    --border-subtle: #252930;
+    --text:          #e2e8f0;
+    --muted:         #8494ab;
+    --subtle:        #94a3b8;
+    --accent:        #7c9cff;
+    --accent-dim:    rgba(124,156,255,0.08);
+    --green:         #4ade80;
+    --red:           #f87171;
+    --yellow:        #facc15;
+    --radius:        10px;
+    --radius-sm:     6px;
+    --font-mono:     "JetBrains Mono","Fira Code",ui-monospace,monospace;
+    --transition:    150ms ease;
+  }
+  html { zoom: 1.1; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    font-size: 14px; line-height: 1.55;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ── Nav ── */
+  .topnav {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 1.5rem;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; z-index: 100;
+  }
+  .brand { font-weight: 700; font-size: 1.05rem; color: var(--accent); letter-spacing: 0.08em; margin-right: 0.5rem; }
+  .nav-tab { color: var(--muted); font-size: 0.85rem; font-weight: 500; padding: 0.3rem 0.65rem; border-radius: var(--radius-sm); }
+  .nav-tab.active { color: var(--text); font-weight: 600; background: var(--surface-2); }
+  .nav-spacer { flex: 1; }
+
+  /* Connection pill */
+  .conn-pill {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+    padding: 0.25rem 0.75rem; font-size: 0.75rem; color: var(--muted);
+  }
+  .ws-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .ws-dot-connected { background: var(--green); box-shadow: 0 0 5px rgba(74,222,128,0.4); }
+
+  /* ── Workspace ── */
+  .workspace { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  /* ── Tree panel ── */
+  .tree-panel {
+    width: 230px; flex-shrink: 0;
+    background: var(--bg); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  .panel-hdr {
+    height: 38px; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0 0.85rem; border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--muted);
+  }
+  .panel-hdr-accent { color: var(--accent); }
+  .tree-search {
+    margin: 0.5rem; padding: 0.3rem 0.65rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 0.4rem;
+  }
+  .tree-body { flex: 1; overflow-y: auto; padding: 0.25rem 0; }
+
+  .t-row {
+    height: 26px; display: flex; align-items: center; gap: 0.4rem;
+    padding: 0 0.6rem; font-size: 0.78rem; font-family: var(--font-mono);
+    color: var(--muted); cursor: pointer; border-radius: var(--radius-sm);
+    margin: 1px 0.3rem; transition: background var(--transition);
+  }
+  .t-row:hover { background: var(--surface-hover); color: var(--text); }
+  .t-row.open { color: var(--subtle); }
+  .t-row.sel { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(124,156,255,0.15); }
+  .t-row.l1 { padding-left: 1.2rem; }
+  .t-row.l2 { padding-left: 1.9rem; }
+  .t-row.l3 { padding-left: 2.6rem; }
+  .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .dot-g { background: var(--green); box-shadow: 0 0 4px rgba(74,222,128,0.5); }
+  .dot-y { background: var(--yellow); }
+  .dot-d { background: #374151; }
+  .t-badge {
+    margin-left: auto; font-size: 0.6rem; font-weight: 600;
+    background: var(--surface-2); color: var(--muted); border-radius: 3px; padding: 0 4px;
+  }
+
+  /* ── Viewers area ── */
+  .viewers { flex: 1; display: flex; overflow: hidden; }
+
+  .viewer {
+    flex: 1; border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; min-width: 0;
+    background: var(--bg);
+  }
+  .viewer:last-child { border-right: none; }
+
+  .viewer-hdr {
+    height: 38px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 0.85rem; gap: 0.5rem; flex-shrink: 0;
+  }
+  .viewer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .viewer-topic {
+    font-size: 0.72rem; font-family: var(--font-mono); color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+  }
+  .viewer-topic em { color: var(--accent); font-style: normal; font-weight: 600; }
+  .viewer-close { color: var(--border); font-size: 0.9rem; cursor: pointer; flex-shrink: 0; }
+  .viewer-close:hover { color: var(--muted); }
+
+  .viewer-body { flex: 1; overflow-y: auto; padding: 0.5rem; }
+
+  .msg {
+    background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); margin-bottom: 0.35rem; padding: 0.5rem 0.65rem;
+    font-family: var(--font-mono); font-size: 0.72rem;
+  }
+  .msg.latest { border-color: var(--border); }
+  .msg-meta { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+  .msg-time { color: var(--muted); font-size: 0.68rem; }
+  .msg-qos {
+    font-size: 0.6rem; background: var(--surface-2);
+    color: var(--muted); border-radius: 3px; padding: 0 4px;
+  }
+  .msg-retained {
+    font-size: 0.6rem; background: rgba(74,222,128,0.08);
+    color: var(--green); border-radius: 3px; padding: 0 4px;
+  }
+  .msg-body { color: var(--subtle); line-height: 1.6; }
+  .key { color: var(--accent); }
+  .str { color: var(--green); }
+  .num { color: var(--yellow); }
+
+  .viewer-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0.5rem;
+    color: var(--border);
+  }
+  .viewer-empty .icon { font-size: 24px; }
+  .viewer-empty p { font-size: 0.78rem; color: var(--muted); }
+  .viewer-empty small { font-size: 0.68rem; }
+
+  /* + add split */
+  .add-split {
+    width: 32px; flex-shrink: 0;
+    background: var(--bg); border-left: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--border); font-size: 16px;
+    transition: color var(--transition), background var(--transition);
+  }
+  .add-split:hover { color: var(--accent); background: var(--surface); }
+
+  /* ── Publish FAB ── */
+  .publish-fab {
+    position: absolute; bottom: 1.25rem; right: 1.25rem;
+    height: 38px;
+    background: var(--accent); color: #0f1117;
+    border-radius: 999px; padding: 0 1.1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; z-index: 10;
+    box-shadow: 0 4px 20px rgba(124,156,255,0.3);
+    transition: transform var(--transition), box-shadow var(--transition);
+    user-select: none;
+  }
+  .publish-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(124,156,255,0.45); }
+
+  /* ── Publisher drawer ── */
+  .drawer {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    z-index: 20; overflow: hidden;
+    transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .drawer.open { height: 252px; }
+
+  .drawer-hdr {
+    height: 40px; display: flex; align-items: center; padding: 0 1.25rem;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    background: var(--surface-2);
+  }
+  .drawer-title { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+  .drawer-badge {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--accent);
+    background: var(--accent-dim); border-radius: 4px;
+    padding: 0.1rem 0.45rem; margin-left: 0.5rem;
+  }
+  .drawer-close {
+    margin-left: auto; font-size: 1rem; color: var(--muted); cursor: pointer;
+    padding: 0.2rem 0.35rem; border-radius: var(--radius-sm);
+  }
+  .drawer-close:hover { color: var(--text); background: var(--surface-hover); }
+
+  .drawer-body { padding: 0.85rem 1.25rem; display: flex; flex-direction: column; gap: 0.65rem; }
+
+  /* Topic input bar */
+  .topic-bar {
+    display: flex; align-items: center; gap: 0.3rem;
+    background: var(--bg); border: 1px solid var(--accent);
+    border-radius: var(--radius-sm); padding: 0 0.75rem; height: 36px;
+    box-shadow: 0 0 0 2px rgba(124,156,255,0.08);
+  }
+  .topic-prefix { font-size: 0.75rem; color: var(--border); font-family: var(--font-mono); white-space: nowrap; }
+  .crumb {
+    background: var(--surface-2); border-radius: 4px;
+    padding: 0.1rem 0.5rem; font-size: 0.72rem;
+    color: var(--text); font-family: var(--font-mono); white-space: nowrap;
+  }
+  .crumb-sep { color: var(--border); font-size: 0.85rem; }
+  .topic-input {
+    background: transparent; border: none; outline: none;
+    font-size: 0.78rem; color: var(--accent); font-family: var(--font-mono);
+    caret-color: var(--accent); min-width: 80px;
+  }
+  .topic-input::placeholder { color: var(--muted); }
+
+  /* Autocomplete chips */
+  .ac-row { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+  .ac-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+  .ac-chip {
+    display: flex; align-items: center; gap: 0.3rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.2rem 0.6rem;
+    font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--subtle); cursor: pointer;
+    transition: background var(--transition), border-color var(--transition);
+  }
+  .ac-chip:hover, .ac-chip.hi {
+    background: var(--accent-dim); border-color: rgba(124,156,255,0.3); color: var(--accent);
+  }
+  .ac-chip .cd { width: 5px; height: 5px; border-radius: 50%; }
+  .ac-chip .cd-g { background: var(--green); }
+  .ac-chip .cd-y { background: var(--yellow); }
+  .ac-chip.ghost { border-style: dashed; color: var(--muted); }
+  .ac-chip.ghost:hover { color: var(--subtle); }
+
+  /* Payload + send row */
+  .bottom-row { display: flex; gap: 0.65rem; align-items: flex-start; }
+  .payload-box {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.45rem 0.65rem;
+    font-size: 0.72rem; font-family: var(--font-mono);
+    color: var(--subtle); line-height: 1.6; min-height: 52px; cursor: text;
+  }
+  .send-btn {
+    height: 52px; background: var(--accent); color: #0f1117;
+    border-radius: var(--radius-sm); padding: 0 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: filter var(--transition);
+  }
+  .send-btn:hover { filter: brightness(1.12); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+  <span class="brand">LUCID</span>
+  <a class="nav-tab">Fleet</a>
+  <a class="nav-tab">Experiments</a>
+  <a class="nav-tab active">MQTT</a>
+  <a class="nav-tab">Users</a>
+  <div class="nav-spacer"></div>
+  <div class="conn-pill">
+    <div class="ws-dot ws-dot-connected"></div>
+    <span>mqtt://10.205.10.16:8083 · north_agent</span>
+  </div>
+</nav>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- TREE -->
+  <div class="tree-panel">
+    <div class="panel-hdr"><span class="panel-hdr-accent">📡</span> Topics</div>
+    <div class="tree-search">🔍 <span>filter…</span></div>
+    <div class="tree-body">
+      <div class="t-row open">▼ lucid/agents/</div>
+      <div class="t-row l1 open">▼ <div class="t-dot dot-g"></div> north</div>
+      <div class="t-row l2">metadata <span class="t-badge">R</span></div>
+      <div class="t-row l2 sel">● status <span class="t-badge">R</span></div>
+      <div class="t-row l2">state <span class="t-badge">R</span></div>
+      <div class="t-row l2">▼ telemetry/</div>
+      <div class="t-row l3"><div class="t-dot dot-g"></div> cpu</div>
+      <div class="t-row l3"><div class="t-dot dot-g"></div> memory</div>
+      <div class="t-row l2">▼ components/</div>
+      <div class="t-row l3">▶ led-strip/</div>
+      <div class="t-row l3">▶ cpu-monitor/</div>
+      <div class="t-row l2" style="color:var(--border)">cmd/ →</div>
+      <div class="t-row l1" style="margin-top:2px">▼ <div class="t-dot dot-y"></div> south</div>
+      <div class="t-row l2">status <span class="t-badge">R</span></div>
+      <div class="t-row l2">▶ telemetry/</div>
+      <div class="t-row l1" style="color:var(--border)">▶ <div class="t-dot dot-d"></div> east</div>
+      <div class="t-row l1" style="color:var(--border)">▶ <div class="t-dot dot-d"></div> west</div>
+    </div>
+  </div>
+
+  <!-- VIEWERS -->
+  <div class="viewers">
+
+    <!-- Viewer 1: north/status -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-dot"></div>
+        <div class="viewer-topic">lucid/agents/<em>north</em>/status</div>
+        <div class="viewer-close">✕</div>
+      </div>
+      <div class="viewer-body">
+        <div class="msg latest">
+          <div class="msg-meta">
+            <span class="msg-time">12:04:02</span>
+            <span class="msg-qos">QoS 1</span>
+            <span class="msg-retained">retained</span>
+          </div>
+          <div class="msg-body">
+            <span class="key">"status"</span>: <span class="str">"online"</span>,<br>
+            <span class="key">"uptime_s"</span>: <span class="num">3842</span>,<br>
+            <span class="key">"ts"</span>: <span class="num">1706000242</span>
+          </div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:02:01</span><span class="msg-qos">QoS 1</span></div>
+          <div class="msg-body"><span class="key">"status"</span>: <span class="str">"online"</span>,<br><span class="key">"uptime_s"</span>: <span class="num">3721</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:00:00</span><span class="msg-qos">QoS 1</span></div>
+          <div class="msg-body"><span class="key">"status"</span>: <span class="str">"starting"</span>,<br><span class="key">"uptime_s"</span>: <span class="num">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer 2: north/telemetry/cpu -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-dot"></div>
+        <div class="viewer-topic">lucid/agents/<em>north</em>/telemetry/cpu</div>
+        <div class="viewer-close">✕</div>
+      </div>
+      <div class="viewer-body">
+        <div class="msg latest">
+          <div class="msg-meta"><span class="msg-time">12:04:03</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">34.2</span>,<br><span class="key">"ts"</span>: <span class="num">1706000243</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:02</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">31.8</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:01</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">38.1</span></div>
+        </div>
+        <div class="msg">
+          <div class="msg-meta"><span class="msg-time">12:04:00</span><span class="msg-qos">QoS 0</span></div>
+          <div class="msg-body"><span class="key">"cpu_percent"</span>: <span class="num">29.5</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Viewer 3: empty -->
+    <div class="viewer">
+      <div class="viewer-hdr">
+        <div class="viewer-topic" style="color:var(--border)">— empty pane —</div>
+      </div>
+      <div class="viewer-empty">
+        <div class="icon">📭</div>
+        <p>Click a topic in the tree</p>
+        <small style="color:var(--border)">to open its live message stream</small>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- + add split -->
+  <div class="add-split" title="Add pane">+</div>
+
+  <!-- PUBLISH FAB -->
+  <div class="publish-fab" id="fab" onclick="openDrawer()">
+    ⚡ Publish
+  </div>
+
+  <!-- PUBLISHER DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-hdr">
+      <span class="drawer-title">Smart Publisher</span>
+      <span class="drawer-badge">MQTT</span>
+      <span class="drawer-close" onclick="closeDrawer()">✕</span>
+    </div>
+    <div class="drawer-body">
+
+      <!-- Topic bar -->
+      <div class="topic-bar">
+        <span class="topic-prefix">lucid/agents/</span>
+        <div class="crumb">north</div>
+        <span class="crumb-sep">/</span>
+        <div class="crumb">cmd</div>
+        <span class="crumb-sep">/</span>
+        <input class="topic-input" placeholder="action…" />
+      </div>
+
+      <!-- Autocomplete -->
+      <div class="ac-row">
+        <span class="ac-label">suggestions</span>
+        <div class="ac-chip hi"><div class="cd cd-g"></div> restart</div>
+        <div class="ac-chip"><div class="cd cd-g"></div> shutdown</div>
+        <div class="ac-chip"><div class="cd cd-g"></div> reload-config</div>
+        <div class="ac-chip"><div class="cd cd-y"></div> set-log-level</div>
+        <div class="ac-chip ghost">components/led-strip/cmd/…</div>
+      </div>
+
+      <!-- Payload + send -->
+      <div class="bottom-row">
+        <div class="payload-box">
+          <span class="key">"request_id"</span>: <span class="str">"a3f9-7c2d-…"</span><span style="color:var(--border)">,</span><br>
+          <span style="color:var(--muted)">// add params here</span>
+        </div>
+        <div class="send-btn">Send ↑</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('fab').style.display = 'none';
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('fab').style.display = 'flex';
+}
+</script>
+</body>
+</html>

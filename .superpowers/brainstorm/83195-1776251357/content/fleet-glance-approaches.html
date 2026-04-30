@@ -1,0 +1,168 @@
+<h2>Which approach gives you the best fleet glance?</h2>
+<p class="subtitle">All three keep the existing table — the question is what goes above it</p>
+
+<div class="cards">
+
+  <!-- Option A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:14px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <!-- Stat tiles -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:9px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Total</div>
+            <div style="font-size:22px;font-weight:700;color:#e2e8f0;">17</div>
+          </div>
+          <div style="background:#1a2036;border:1px solid #1a3a1a;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:9px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Online</div>
+            <div style="font-size:22px;font-weight:700;color:#4ade80;">13</div>
+          </div>
+          <div style="background:#1a2036;border:1px solid #3a1a1a;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:9px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Offline</div>
+            <div style="font-size:22px;font-weight:700;color:#f87171;">3</div>
+          </div>
+          <div style="background:#1a2036;border:1px solid #3a2a0a;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:9px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Error</div>
+            <div style="font-size:22px;font-weight:700;color:#facc15;">1</div>
+          </div>
+        </div>
+        <!-- Table preview -->
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;gap:0;font-size:9px;color:#8494ab;padding:6px 10px;border-bottom:1px solid #283044;">
+            <span>AGENT</span><span>STATUS</span><span>LAST SEEN</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#e2e8f0;border-bottom:1px solid #1e2a3a;">
+            <span style="color:#60a5fa">rosbot-01</span>
+            <span><span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span></span>
+            <span style="color:#8494ab">2s ago</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#e2e8f0;border-bottom:1px solid #1e2a3a;">
+            <span style="color:#60a5fa">rosbot-02</span>
+            <span><span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span></span>
+            <span style="color:#8494ab">4s ago</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#64748b;opacity:.6;border-bottom:1px solid #1e2a3a;">
+            <span>rosbot-03</span>
+            <span><span style="background:#450a0a;color:#f87171;padding:1px 5px;border-radius:4px;font-size:8px">offline</span></span>
+            <span>12m ago</span>
+          </div>
+          <div style="padding:4px 10px;font-size:8px;color:#8494ab;text-align:center">… 14 more rows</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Stat tiles + table</h3>
+      <p>4 big-number tiles (total / online / offline / error) above the existing table. Instant health check, then drill into rows.</p>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:14px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <!-- Dot grid header -->
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+          <div style="font-size:9px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Fleet · 17 agents</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;">
+            <div title="rosbot-01" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-02" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-03" style="width:14px;height:14px;border-radius:3px;background:#f87171;cursor:pointer"></div>
+            <div title="rosbot-04" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-05" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-06" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-07" style="width:14px;height:14px;border-radius:3px;background:#facc15;cursor:pointer"></div>
+            <div title="rosbot-08" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-09" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-10" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-11" style="width:14px;height:14px;border-radius:3px;background:#f87171;cursor:pointer"></div>
+            <div title="rosbot-12" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-13" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="rosbot-14" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="pi-sensor-01" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="pi-sensor-02" style="width:14px;height:14px;border-radius:3px;background:#4ade80;cursor:pointer"></div>
+            <div title="pi-sensor-03" style="width:14px;height:14px;border-radius:3px;background:#f87171;cursor:pointer"></div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:8px;font-size:8px;color:#8494ab;">
+            <span><span style="display:inline-block;width:8px;height:8px;background:#4ade80;border-radius:2px;margin-right:3px"></span>13 online</span>
+            <span><span style="display:inline-block;width:8px;height:8px;background:#f87171;border-radius:2px;margin-right:3px"></span>3 offline</span>
+            <span><span style="display:inline-block;width:8px;height:8px;background:#facc15;border-radius:2px;margin-right:3px"></span>1 error</span>
+          </div>
+        </div>
+        <!-- Table preview -->
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;gap:0;font-size:9px;color:#8494ab;padding:6px 10px;border-bottom:1px solid #283044;">
+            <span>AGENT</span><span>STATUS</span><span>LAST SEEN</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#e2e8f0;border-bottom:1px solid #1e2a3a;">
+            <span style="color:#60a5fa">rosbot-01</span>
+            <span><span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span></span>
+            <span style="color:#8494ab">2s ago</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#64748b;opacity:.6;">
+            <span>rosbot-03</span>
+            <span><span style="background:#450a0a;color:#f87171;padding:1px 5px;border-radius:4px;font-size:8px">offline</span></span>
+            <span>12m ago</span>
+          </div>
+          <div style="padding:4px 10px;font-size:8px;color:#8494ab;text-align:center">… more rows</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Status dot grid + table</h3>
+      <p>One colored square per agent at the top — green/red/yellow at a glance. Hover to see name, click to jump to row. Legend shows counts.</p>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:14px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <!-- Combined: stat bar + progress bar -->
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:16px;">
+          <div style="flex:0 0 auto;">
+            <div style="font-size:24px;font-weight:700;color:#4ade80;">76<span style="font-size:12px;color:#8494ab;font-weight:400">%</span></div>
+            <div style="font-size:8px;color:#8494ab;letter-spacing:.06em;text-transform:uppercase">Fleet health</div>
+          </div>
+          <div style="flex:1;">
+            <div style="height:6px;background:#283044;border-radius:3px;overflow:hidden;margin-bottom:6px;">
+              <div style="height:100%;width:76%;background:linear-gradient(90deg,#4ade80,#22c55e);border-radius:3px;"></div>
+            </div>
+            <div style="display:flex;gap:10px;font-size:8px;">
+              <span style="color:#4ade80">● 13 online</span>
+              <span style="color:#f87171">● 3 offline</span>
+              <span style="color:#facc15">● 1 error</span>
+            </div>
+          </div>
+          <div style="flex:0 0 auto;text-align:right;">
+            <div style="font-size:14px;font-weight:600;color:#e2e8f0;">17</div>
+            <div style="font-size:8px;color:#8494ab;">total agents</div>
+          </div>
+        </div>
+        <!-- Table preview (same as before) -->
+        <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;gap:0;font-size:9px;color:#8494ab;padding:6px 10px;border-bottom:1px solid #283044;">
+            <span>AGENT</span><span>STATUS</span><span>LAST SEEN</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#e2e8f0;border-bottom:1px solid #1e2a3a;">
+            <span style="color:#60a5fa">rosbot-01</span>
+            <span><span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span></span>
+            <span style="color:#8494ab">2s ago</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 70px 80px;padding:5px 10px;font-size:9px;color:#64748b;opacity:.6;">
+            <span>rosbot-03</span>
+            <span><span style="background:#450a0a;color:#f87171;padding:1px 5px;border-radius:4px;font-size:8px">offline</span></span>
+            <span>12m ago</span>
+          </div>
+          <div style="padding:4px 10px;font-size:8px;color:#8494ab;text-align:center">… more rows</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Health bar + table</h3>
+      <p>A single summary strip: fleet health % with a progress bar, online/offline/error counts inline. Compact — one row above the table.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:1rem">Click to select your preference, or describe what's missing.</p>

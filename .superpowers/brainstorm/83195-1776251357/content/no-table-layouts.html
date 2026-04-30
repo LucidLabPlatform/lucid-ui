@@ -1,0 +1,219 @@
+<h2>Non-table layouts — agents + their components</h2>
+<p class="subtitle">15+ agents, component info visible. Which structure feels right?</p>
+
+<div class="cards">
+
+  <!-- Option A: Card grid -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+
+          <!-- Agent card 1 -->
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+              <div style="font-size:10px;font-weight:700;color:#60a5fa;">rosbot-01</div>
+              <span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span>
+            </div>
+            <div style="font-size:8px;color:#8494ab;margin-bottom:8px;">pi-01.local · 4d 2h</div>
+            <div style="border-top:1px solid #283044;padding-top:6px;display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">led-strip</span>
+                <span style="color:#4ade80;">running · pulse</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">cpu-metrics</span>
+                <span style="color:#4ade80;">running · 34%</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">ros-bridge</span>
+                <span style="color:#facc15;">idle</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Agent card 2 -->
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+              <div style="font-size:10px;font-weight:700;color:#60a5fa;">rosbot-02</div>
+              <span style="background:#14532d;color:#4ade80;padding:1px 5px;border-radius:4px;font-size:8px">online</span>
+            </div>
+            <div style="font-size:8px;color:#8494ab;margin-bottom:8px;">pi-02.local · 2d 7h</div>
+            <div style="border-top:1px solid #283044;padding-top:6px;display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">led-strip</span>
+                <span style="color:#4ade80;">running · rainbow</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">cpu-metrics</span>
+                <span style="color:#4ade80;">running · 71%</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:8px;">
+                <span style="color:#94a3b8;">ros-bridge</span>
+                <span style="color:#f87171;">stopped</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Agent card 3 - offline -->
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px;opacity:.5;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+              <div style="font-size:10px;font-weight:700;color:#e2e8f0;">rosbot-03</div>
+              <span style="background:#450a0a;color:#f87171;padding:1px 5px;border-radius:4px;font-size:8px">offline</span>
+            </div>
+            <div style="font-size:8px;color:#8494ab;margin-bottom:8px;">pi-03.local · 12m ago</div>
+            <div style="border-top:1px solid #283044;padding-top:6px;font-size:8px;color:#64748b;">no component data</div>
+          </div>
+
+        </div>
+        <div style="font-size:8px;color:#8494ab;text-align:center;margin-top:8px;">… 14 more agent cards</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Agent cards grid</h3>
+      <p>One card per agent in a responsive grid. Each card shows agent info at the top, components listed below with their live state/value. Scannable, no clicks needed.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Vertical list items (Django changelist feel) -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 12px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <span style="font-size:11px;font-weight:700;color:#60a5fa;">rosbot-01</span>
+              <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto">pi-01.local · 4d 2h · 2s ago</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">led-strip</span>
+                <span style="color:#4ade80;margin-left:6px;">● running</span>
+                <span style="color:#8494ab;margin-left:4px;">pulse · 80%</span>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">cpu-metrics</span>
+                <span style="color:#4ade80;margin-left:6px;">● running</span>
+                <span style="color:#8494ab;margin-left:4px;">34% · 52°C</span>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">ros-bridge</span>
+                <span style="color:#facc15;margin-left:6px;">● idle</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 12px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <span style="font-size:11px;font-weight:700;color:#60a5fa;">rosbot-02</span>
+              <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto">pi-02.local · 2d 7h · 4s ago</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">led-strip</span>
+                <span style="color:#4ade80;margin-left:6px;">● running</span>
+                <span style="color:#8494ab;margin-left:4px;">rainbow · 60%</span>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">cpu-metrics</span>
+                <span style="color:#4ade80;margin-left:6px;">● running</span>
+                <span style="color:#8494ab;margin-left:4px;">71% · 61°C</span>
+              </div>
+              <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:4px 8px;font-size:8px;">
+                <span style="color:#8494ab;">ros-bridge</span>
+                <span style="color:#f87171;margin-left:6px;">● stopped</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px 12px;opacity:.5;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;font-weight:700;color:#e2e8f0;">rosbot-03</span>
+              <span style="background:#450a0a;color:#f87171;padding:1px 6px;border-radius:4px;font-size:8px">offline</span>
+              <span style="color:#8494ab;font-size:8px;margin-left:auto">pi-03.local · 12m ago</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — List with inline component chips</h3>
+      <p>Each agent is a row/block. Agent info on the first line, components as pill-chips below — each chip shows name, status dot, and live value. Compact, scrollable, information-dense.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Two-panel -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d1017;padding:12px;border-radius:8px;font-family:system-ui,sans-serif;display:flex;gap:8px;height:180px;">
+        <!-- Left: agent list -->
+        <div style="width:120px;flex-shrink:0;background:#1a2036;border:1px solid #283044;border-radius:8px;overflow:hidden;">
+          <div style="font-size:8px;color:#8494ab;letter-spacing:.05em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid #283044;">Agents</div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;background:#1e2744;border-left:2px solid #60a5fa;">
+            <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#60a5fa;font-weight:600">rosbot-01</span>
+          </div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;">
+            <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#94a3b8;">rosbot-02</span>
+          </div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;opacity:.5;">
+            <span style="width:6px;height:6px;background:#f87171;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#94a3b8;">rosbot-03</span>
+          </div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;">
+            <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#94a3b8;">rosbot-04</span>
+          </div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;">
+            <span style="width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#94a3b8;">rosbot-05</span>
+          </div>
+          <div style="padding:5px 8px;font-size:9px;display:flex;align-items:center;gap:6px;">
+            <span style="width:6px;height:6px;background:#facc15;border-radius:50%;display:inline-block;flex-shrink:0"></span>
+            <span style="color:#94a3b8;">sensor-01</span>
+          </div>
+        </div>
+        <!-- Right: selected agent detail -->
+        <div style="flex:1;background:#1a2036;border:1px solid #283044;border-radius:8px;padding:10px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:12px;font-weight:700;color:#60a5fa;">rosbot-01</span>
+            <span style="background:#14532d;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:8px">online</span>
+          </div>
+          <div style="font-size:8px;color:#8494ab;margin-bottom:8px;">pi-01.local · 192.168.1.10 · 4d 2h uptime</div>
+          <div style="font-size:8px;color:#8494ab;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px">Components</div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:6px 8px;">
+              <div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px;">
+                <span style="color:#e2e8f0;font-weight:600;">led-strip</span>
+                <span style="color:#4ade80;">● running</span>
+              </div>
+              <div style="display:flex;gap:12px;font-size:8px;color:#8494ab;">
+                <span>effect: pulse</span><span>brightness: 80%</span>
+              </div>
+            </div>
+            <div style="background:#141c2e;border:1px solid #283044;border-radius:6px;padding:6px 8px;">
+              <div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px;">
+                <span style="color:#e2e8f0;font-weight:600;">cpu-metrics</span>
+                <span style="color:#4ade80;">● running</span>
+              </div>
+              <div style="display:flex;gap:12px;font-size:8px;color:#8494ab;">
+                <span>cpu: 34%</span><span>temp: 52°C</span><span>mem: 41%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Two-panel (agent list + detail)</h3>
+      <p>Left: scrollable agent list with status dots. Right: full detail for the selected agent — components with all their live values. Focused view, one agent at a time.</p>
+    </div>
+  </div>
+
+</div>
+<p class="subtitle" style="margin-top:1rem">Click your pick, or tell me what's still off.</p>

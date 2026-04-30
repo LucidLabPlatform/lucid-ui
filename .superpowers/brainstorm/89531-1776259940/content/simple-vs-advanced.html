@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LUCID — Simple + Advanced</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0d1017; --surface: #1a2036; --surface2: #141c2e;
+  --surface-hover: #1e2744; --border: #283044; --border2: #1e2a3a;
+  --text: #e2e8f0; --muted: #8494ab;
+  --accent: #60a5fa; --green: #4ade80; --red: #f87171;
+  --yellow: #facc15; --orange: #fb923c;
+  --radius: 8px; --radius-sm: 5px;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+body { font-family: system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:13px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+.topnav { display:flex; align-items:center; gap:.65rem; padding:0 1.25rem; height:44px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.brand { font-weight:700; color:var(--accent); letter-spacing:.05em; font-size:.9rem; }
+.nav-sep { color:var(--muted); font-size:.8rem; }
+.nav-links { display:flex; gap:2px; margin-left:.5rem; }
+.nav-link { color:var(--muted); font-size:.78rem; padding:.28rem .65rem; border-radius:var(--radius-sm); cursor:pointer; }
+.nav-link.active { background:var(--border); color:var(--text); }
+.nav-tools { color:var(--muted); font-size:.78rem; padding:.28rem .65rem; border-radius:var(--radius-sm); cursor:pointer; border:1px solid var(--border); }
+.ws-badge { margin-left:auto; font-size:.7rem; font-weight:600; padding:.18rem .55rem; border-radius:999px; background:#14532d; color:var(--green); }
+
+.fleet-layout { display:flex; flex:1; overflow:hidden; }
+
+/* Sidebar */
+.fleet-sidebar { width:195px; flex-shrink:0; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; background:#111827; }
+.sidebar-header { padding:.7rem 1rem .5rem; font-size:.67rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+.sidebar-count { font-size:.68rem; color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0; }
+.sidebar-list { flex:1; overflow-y:auto; padding:.3rem 0; }
+.sidebar-item { display:flex; align-items:center; gap:.55rem; padding:.5rem 1rem; cursor:pointer; border-left:2px solid transparent; }
+.sidebar-item:hover { background:var(--surface-hover); }
+.sidebar-item.active { background:#1e2a44; border-left-color:var(--accent); }
+.status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-online  { background:var(--green); box-shadow:0 0 5px rgba(74,222,128,.5); }
+.dot-error   { background:var(--orange); }
+.dot-unknown { background:#374151; }
+.sidebar-agent-name { font-size:.83rem; color:var(--text); font-weight:500; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sidebar-item.active .sidebar-agent-name { color:var(--accent); }
+.sidebar-item.stale .sidebar-agent-name { color:var(--muted); }
+.sidebar-sep { margin:.35rem 1rem; border:none; border-top:1px solid var(--border); }
+.sidebar-clean-btn { margin:.3rem .75rem .5rem; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); padding:.3rem .6rem; font-size:.68rem; color:var(--muted); cursor:pointer; width:calc(100% - 1.5rem); text-align:left; }
+.sidebar-clean-btn:hover { color:var(--red); border-color:var(--red); }
+
+/* Right panel */
+.fleet-detail { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+.agent-header { padding:.75rem 1.25rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:.75rem; flex-shrink:0; background:var(--surface); }
+.agent-name-large { font-size:1.05rem; font-weight:700; }
+.status-badge { font-size:.7rem; font-weight:600; padding:.16rem .6rem; border-radius:999px; }
+.badge-online { background:#14532d; color:var(--green); }
+.badge-error  { background:#431407; color:var(--orange); }
+.agent-meta-bar { font-size:.73rem; color:var(--muted); margin-left:.5rem; }
+.adv-toggle { margin-left:auto; display:flex; align-items:center; gap:.5rem; font-size:.75rem; color:var(--muted); cursor:pointer; user-select:none; }
+.adv-toggle input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
+
+/* Tab bar */
+.agent-tabs { display:flex; gap:0; padding:0 1.25rem; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+.tab-btn { font-size:.79rem; color:var(--muted); padding:.58rem .9rem; cursor:pointer; border-bottom:2px solid transparent; user-select:none; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+.tab-pane { display:none; flex:1; overflow:hidden; flex-direction:column; }
+.tab-pane.active { display:flex; }
+
+/* ── Overview tab ── */
+.overview-body { flex:1; overflow-y:auto; padding:1rem 1.25rem; display:flex; flex-direction:column; gap:.75rem; }
+
+/* Simple component card */
+.comp-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.comp-card.comp-error { border-color:#3a2010; }
+
+.comp-simple-row {
+  display:flex; align-items:center; gap:.85rem;
+  padding:.65rem .9rem;
+}
+.comp-icon { width:34px; height:34px; border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+.comp-icon.ok    { background:#14532d30; }
+.comp-icon.err   { background:#43140730; }
+.comp-icon.warn  { background:#2a2a0a30; }
+.comp-simple-name { font-size:.88rem; font-weight:600; color:var(--text); }
+.comp-simple-sub  { font-size:.72rem; color:var(--muted); margin-top:2px; }
+.comp-simple-status { margin-left:auto; font-size:.72rem; font-weight:600; padding:.2rem .65rem; border-radius:999px; flex-shrink:0; }
+.s-running { background:#14532d; color:var(--green); }
+.s-error   { background:#431407; color:var(--orange); }
+.s-idle    { background:#2a2a0a; color:var(--yellow); }
+
+/* Action buttons on cards */
+.comp-actions { display:flex; gap:.45rem; padding:.55rem .9rem; border-top:1px solid var(--border2); background:var(--surface2); flex-wrap:wrap; }
+.act-btn { font-size:.73rem; padding:.3rem .7rem; border-radius:var(--radius-sm); border:1px solid var(--border); background:none; color:var(--text); cursor:pointer; font-family:inherit; }
+.act-btn:hover { background:var(--surface-hover); }
+.act-btn.act-primary { background:var(--accent); color:#0d1017; border-color:var(--accent); font-weight:600; }
+.act-btn.act-danger  { border-color:#7f1d1d; color:var(--red); }
+.act-btn.act-danger:hover { background:#450a0a; }
+
+/* Advanced section inside overview (hidden by default) */
+.comp-advanced { border-top:1px solid var(--border2); display:none; }
+.comp-advanced.visible { display:block; }
+.comp-state-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); }
+.comp-kv { padding:.38rem .85rem; border-right:1px solid var(--border2); border-bottom:1px solid var(--border2); }
+.comp-k { font-size:.65rem; color:var(--muted); margin-bottom:2px; }
+.comp-v { font-size:.77rem; color:var(--text); font-family:var(--font-mono); }
+.comp-v.warn { color:var(--yellow); }
+.comp-v.good { color:var(--green); }
+.comp-v.null { color:#475569; }
+.caps-pills { display:flex; flex-wrap:wrap; gap:.3rem; padding:.45rem .85rem; border-top:1px solid var(--border2); }
+.cap-pill { font-size:.65rem; padding:.15rem .5rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); font-family:var(--font-mono); }
+.data-age { font-size:.63rem; color:#475569; padding:.3rem .85rem; font-style:italic; border-top:1px solid var(--border2); }
+
+/* Agent info card (advanced only) */
+.agent-info-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:none; }
+.agent-info-card.visible { display:block; }
+.info-card-title { font-size:.63rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); padding:.5rem .85rem; border-bottom:1px solid var(--border); background:var(--surface2); }
+.kv-table { width:100%; border-collapse:collapse; }
+.kv-table tr:not(:last-child) td { border-bottom:1px solid var(--border2); }
+.kv-table td { padding:.38rem .85rem; font-size:.77rem; }
+.kv-key { color:var(--muted); width:45%; }
+.kv-val { color:var(--text); font-family:var(--font-mono); font-size:.73rem; }
+
+/* Logs tab */
+.log-toolbar { display:flex; align-items:center; gap:.75rem; padding:.55rem 1.25rem; border-bottom:1px solid var(--border); flex-shrink:0; background:var(--surface); }
+.log-toolbar-label { font-size:.74rem; color:var(--muted); }
+.btn-sm { font-size:.71rem; padding:.22rem .6rem; border-radius:var(--radius-sm); border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer; }
+.btn-sm:hover { background:var(--surface-hover); color:var(--text); }
+.log-feed { flex:1; overflow-y:auto; padding:.5rem 1.25rem; font-family:var(--font-mono); font-size:.75rem; }
+.log-line { display:flex; gap:.75rem; padding:.18rem 0; border-bottom:1px solid #0d131d; }
+.log-ts { color:#475569; flex-shrink:0; width:80px; }
+.log-level { flex-shrink:0; width:40px; font-weight:600; }
+.log-level.INFO  { color:#60a5fa; }
+.log-level.WARN  { color:var(--yellow); }
+.log-level.ERROR { color:var(--red); }
+.log-level.DEBUG { color:#475569; }
+.log-comp { color:var(--muted); flex-shrink:0; width:85px; overflow:hidden; text-overflow:ellipsis; }
+.log-msg { color:var(--text); word-break:break-all; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">LUCID</span>
+  <span class="nav-sep">Central Command</span>
+  <div class="nav-links">
+    <span class="nav-link active">Fleet</span>
+    <span class="nav-link">Experiments</span>
+    <span class="nav-link">AI Assistant</span>
+    <span class="nav-tools">Tools ▾</span>
+  </div>
+  <span class="ws-badge">⬤ live</span>
+</nav>
+
+<div class="fleet-layout">
+  <aside class="fleet-sidebar">
+    <div class="sidebar-header">Fleet <span class="sidebar-count">8 online</span></div>
+    <div class="sidebar-list">
+      <div class="sidebar-item active"><div class="status-dot dot-error"></div><span class="sidebar-agent-name">rosbot</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">led_truss</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">north</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">south</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">east</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">west</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">optitrack</span></div>
+      <div class="sidebar-item"><div class="status-dot dot-online"></div><span class="sidebar-agent-name">socrates</span></div>
+      <hr class="sidebar-sep">
+      <div class="sidebar-item stale"><div class="status-dot dot-unknown"></div><span class="sidebar-agent-name">$(led_agent_id)</span></div>
+      <div class="sidebar-item stale"><div class="status-dot dot-unknown"></div><span class="sidebar-agent-name">Farah</span></div>
+      <div class="sidebar-item stale"><div class="status-dot dot-unknown"></div><span class="sidebar-agent-name">optitrack-01</span></div>
+      <button class="sidebar-clean-btn">✕ Clean up stale (3)</button>
+    </div>
+  </aside>
+
+  <div class="fleet-detail">
+    <div class="agent-header">
+      <span class="agent-name-large">rosbot</span>
+      <span class="status-badge badge-online">online</span>
+      <span class="agent-meta-bar">uptime 4d 17h &nbsp;·&nbsp; <span style="color:var(--yellow)">last seen 8s ago</span></span>
+      <label class="adv-toggle">
+        <input type="checkbox" id="adv-toggle" onchange="toggleAdvanced(this.checked)">
+        Advanced
+      </label>
+    </div>
+
+    <div class="agent-tabs">
+      <span class="tab-btn active" onclick="switchTab('overview')">Overview</span>
+      <span class="tab-btn" onclick="switchTab('logs')">Logs</span>
+    </div>
+
+    <!-- Overview tab -->
+    <div class="tab-pane active" id="tab-overview">
+      <div class="overview-body">
+
+        <!-- Agent info (advanced only) -->
+        <div class="agent-info-card" id="agent-info-card">
+          <div class="info-card-title">Agent</div>
+          <table class="kv-table">
+            <tr><td class="kv-key">platform</td><td class="kv-val">Linux / x86_64</td></tr>
+            <tr><td class="kv-key">version</td><td class="kv-val">2.1.0</td></tr>
+            <tr><td class="kv-key">heartbeat</td><td class="kv-val">30s</td></tr>
+            <tr><td class="kv-key">first seen</td><td class="kv-val">Apr 8</td></tr>
+          </table>
+        </div>
+
+        <!-- exec component -->
+        <div class="comp-card">
+          <div class="comp-simple-row">
+            <div class="comp-icon ok">⚙️</div>
+            <div>
+              <div class="comp-simple-name">exec</div>
+              <div class="comp-simple-sub">No active runs</div>
+            </div>
+            <span class="comp-simple-status s-running">running</span>
+          </div>
+          <div class="comp-actions">
+            <button class="act-btn act-primary">▶ Run</button>
+            <button class="act-btn">⏹ Stop</button>
+            <button class="act-btn">Ping</button>
+            <button class="act-btn act-danger">Reset</button>
+          </div>
+          <div class="comp-advanced" id="adv-exec">
+            <div class="comp-state-grid">
+              <div class="comp-kv"><div class="comp-k">active runs</div><div class="comp-v">0</div></div>
+              <div class="comp-kv"><div class="comp-k">run count</div><div class="comp-v">0</div></div>
+              <div class="comp-kv"><div class="comp-k">max timeout</div><div class="comp-v">300s</div></div>
+              <div class="comp-kv"><div class="comp-k">allow list</div><div class="comp-v good">open</div></div>
+            </div>
+            <div class="caps-pills">
+              <span class="cap-pill">reset</span>
+              <span class="cap-pill">ping</span>
+              <span class="cap-pill">run</span>
+              <span class="cap-pill">stop</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ros_bridge component -->
+        <div class="comp-card comp-error">
+          <div class="comp-simple-row">
+            <div class="comp-icon err">🔴</div>
+            <div>
+              <div class="comp-simple-name">ros_bridge</div>
+              <div class="comp-simple-sub" style="color:var(--orange)">ROS master not reachable — state 2d old</div>
+            </div>
+            <span class="comp-simple-status s-error">error</span>
+          </div>
+          <div class="comp-actions">
+            <button class="act-btn act-primary">▶ Start Launch</button>
+            <button class="act-btn">⏹ Stop Launch</button>
+            <button class="act-btn">⏺ Start Bag</button>
+            <button class="act-btn">⏹ Stop Bag</button>
+          </div>
+          <div class="comp-advanced" id="adv-ros">
+            <div class="comp-state-grid">
+              <div class="comp-kv"><div class="comp-k">roslaunch</div><div class="comp-v warn">idle</div></div>
+              <div class="comp-kv"><div class="comp-k">rosbag</div><div class="comp-v">idle</div></div>
+              <div class="comp-kv"><div class="comp-k">publishers</div><div class="comp-v">1</div></div>
+              <div class="comp-kv"><div class="comp-k">subscriptions</div><div class="comp-v">9</div></div>
+              <div class="comp-kv"><div class="comp-k">range/fl</div><div class="comp-v">0.292 m</div></div>
+              <div class="comp-kv"><div class="comp-k">range/fr</div><div class="comp-v">8.191 m</div></div>
+              <div class="comp-kv"><div class="comp-k">range/rl</div><div class="comp-v">0.239 m</div></div>
+              <div class="comp-kv"><div class="comp-k">range/rr</div><div class="comp-v">0.291 m</div></div>
+            </div>
+            <div class="caps-pills">
+              <span class="cap-pill">roslaunch_start</span>
+              <span class="cap-pill">roslaunch_stop</span>
+              <span class="cap-pill">rosbag_start</span>
+              <span class="cap-pill">rosbag_stop</span>
+            </div>
+            <div class="data-age">state last updated 2d ago</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Logs tab -->
+    <div class="tab-pane" id="tab-logs">
+      <div class="log-toolbar">
+        <span class="log-toolbar-label">Live feed — last 500 lines</span>
+        <button class="btn-sm">Clear</button>
+        <button class="btn-sm">Pause</button>
+      </div>
+      <div class="log-feed">
+        <div class="log-line"><span class="log-ts">11:30:41</span><span class="log-level INFO">INFO</span><span class="log-comp">ros_bridge</span><span class="log-msg">Heartbeat sent — uptime 410289s</span></div>
+        <div class="log-line"><span class="log-ts">11:30:11</span><span class="log-level INFO">INFO</span><span class="log-comp">agent</span><span class="log-msg">Status published: state=online uptime_s=410289</span></div>
+        <div class="log-line"><span class="log-ts">11:29:42</span><span class="log-level WARN">WARN</span><span class="log-comp">ros_bridge</span><span class="log-msg">ROS node not responding — retrying in 30s</span></div>
+        <div class="log-line"><span class="log-ts">11:29:12</span><span class="log-level ERROR">ERROR</span><span class="log-comp">ros_bridge</span><span class="log-msg">Failed to connect to ROS master at http://localhost:11311</span></div>
+        <div class="log-line"><span class="log-ts">11:28:41</span><span class="log-level INFO">INFO</span><span class="log-comp">exec</span><span class="log-msg">Idle — no active runs</span></div>
+        <div class="log-line"><span class="log-ts">11:27:11</span><span class="log-level DEBUG">DEBUG</span><span class="log-comp">agent</span><span class="log-msg">Config heartbeat_s=30 loaded from /etc/lucid/agent.env</span></div>
+        <div class="log-line"><span class="log-ts">11:26:42</span><span class="log-level INFO">INFO</span><span class="log-comp">ros_bridge</span><span class="log-msg">Subscribed to /range/fl /range/fr /range/rl /range/rr</span></div>
+        <div class="log-line"><span class="log-ts">11:25:11</span><span class="log-level INFO">INFO</span><span class="log-comp">agent</span><span class="log-msg">Component ros_bridge registered — state=error</span></div>
+        <div class="log-line"><span class="log-ts">11:24:01</span><span class="log-level INFO">INFO</span><span class="log-comp">agent</span><span class="log-msg">MQTT connected to emqx:1883</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function toggleAdvanced(on) {
+  document.querySelectorAll('.comp-advanced').forEach(el => el.classList.toggle('visible', on));
+  document.getElementById('agent-info-card').classList.toggle('visible', on);
+}
+</script>
+</body>
+</html>

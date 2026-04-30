@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LUCID Central Command</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1017;--surface:#1a2036;--s2:#141c2e;--s-hover:#1e2744;
+  --border:#283044;--b2:#1e2a3a;
+  --text:#e2e8f0;--muted:#8494ab;
+  --accent:#60a5fa;--green:#4ade80;--red:#f87171;--yellow:#facc15;--orange:#fb923c;
+  --r:8px;--rs:5px;--mono:"JetBrains Mono",ui-monospace,monospace;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Nav ── */
+.topnav{display:flex;align-items:center;gap:.6rem;padding:0 1.25rem;height:44px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:200}
+.brand{font-weight:700;color:var(--accent);letter-spacing:.05em;font-size:.9rem;cursor:pointer}
+.nav-sep{color:var(--muted);font-size:.8rem}
+.nav-links{display:flex;gap:2px;margin-left:.5rem}
+.nl{color:var(--muted);font-size:.78rem;padding:.28rem .65rem;border-radius:var(--rs);cursor:pointer;user-select:none}
+.nl:hover{background:var(--border);color:var(--text)}
+.nl.on{background:var(--border);color:var(--text)}
+.ntw{position:relative}
+.nt{color:var(--muted);font-size:.78rem;padding:.28rem .65rem;border-radius:var(--rs);cursor:pointer;border:1px solid var(--border);user-select:none}
+.nt:hover,.nt.open{background:var(--border);color:var(--text)}
+.tdd{display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;min-width:140px;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.tdd.open{display:block}
+.tdi{display:block;padding:.45rem .9rem;font-size:.78rem;color:var(--muted);cursor:pointer}
+.tdi:hover{background:var(--s-hover);color:var(--text)}
+.ws{margin-left:auto;font-size:.7rem;font-weight:600;padding:.18rem .55rem;border-radius:999px;background:#14532d;color:var(--green)}
+
+/* ── Pages ── */
+.page{display:none;flex:1;overflow:hidden;flex-direction:column}
+.page.active{display:flex}
+
+/* ═══ FLEET ═══ */
+.fl{display:flex;flex:1;overflow:hidden}
+.sb{width:190px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:#111827}
+.sb-hdr{padding:.65rem 1rem .45rem;font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.sb-cnt{font-size:.68rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
+.sb-list{flex:1;overflow-y:auto;padding:.25rem 0}
+.si{display:flex;align-items:center;gap:.5rem;padding:.48rem 1rem;cursor:pointer;border-left:2px solid transparent}
+.si:hover{background:var(--s-hover)}
+.si.on{background:#1e2a44;border-left-color:var(--accent)}
+.sd{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sd-ok{background:var(--green);box-shadow:0 0 5px rgba(74,222,128,.45)}
+.sd-warn{background:var(--orange);box-shadow:0 0 5px rgba(251,146,60,.45)}
+.sd-off{background:#374151}
+.sn{font-size:.82rem;color:var(--text);font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si.on .sn{color:var(--accent)}
+.si.stale .sn{color:var(--muted)}
+.sb-sep{margin:.3rem 1rem;border:none;border-top:1px solid var(--border)}
+.sb-clean{margin:.25rem .7rem .45rem;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:.28rem .55rem;font-size:.67rem;color:var(--muted);cursor:pointer;width:calc(100% - 1.4rem);text-align:left}
+.sb-clean:hover{color:var(--red);border-color:var(--red)}
+
+/* ── Right panel ── */
+.detail{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.85rem}
+.ahdr{padding:.7rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem;flex-shrink:0;background:var(--surface)}
+.aname{font-size:1.05rem;font-weight:700}
+.badge{font-size:.69rem;font-weight:600;padding:.15rem .58rem;border-radius:999px;flex-shrink:0}
+.b-online{background:#14532d;color:var(--green)}
+.b-error{background:#431407;color:var(--orange)}
+.b-running{background:#14532d;color:var(--green)}
+.b-idle{background:#1c2015;color:var(--yellow)}
+.hmeta{font-size:.72rem;color:var(--muted);margin-left:.25rem}
+.adv-toggle{margin-left:auto;display:flex;align-items:center;gap:.45rem;font-size:.74rem;color:var(--muted);cursor:pointer;user-select:none}
+.adv-toggle input{accent-color:var(--accent);width:13px;height:13px;cursor:pointer}
+
+/* ── Component list (the entire basic view) ── */
+.comp-scroll{flex:1;overflow-y:auto;padding:.85rem 1.25rem;display:flex;flex-direction:column;gap:.7rem}
+
+/* Agent info (advanced) */
+.ainfo{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;display:none}
+.ainfo.show{display:block}
+.ainfo-title{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:.48rem .85rem;border-bottom:1px solid var(--border);background:var(--s2)}
+.kv{width:100%;border-collapse:collapse}
+.kv tr:not(:last-child) td{border-bottom:1px solid var(--b2)}
+.kv td{padding:.36rem .85rem;font-size:.76rem}
+.kk{color:var(--muted);width:42%}
+.kvl{color:var(--text);font-family:var(--mono);font-size:.72rem}
+
+/* Component card */
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cc.err{border-color:#3a2010}
+
+.cc-row{display:flex;align-items:center;gap:.8rem;padding:.6rem .9rem}
+.cc-icon{width:32px;height:32px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.cc-icon.ok{background:rgba(74,222,128,.1)}
+.cc-icon.er{background:rgba(251,146,60,.1)}
+.cc-txt{flex:1;min-width:0}
+.cc-name{font-size:.85rem;font-weight:600}
+.cc-sub{font-size:.72rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc-sub.w{color:var(--orange)}
+
+.cc-acts{display:flex;gap:.4rem;padding:.5rem .9rem;border-top:1px solid var(--b2);background:var(--s2);flex-wrap:wrap}
+.ab{font-size:.72rem;padding:.28rem .65rem;border-radius:var(--rs);border:1px solid var(--border);background:none;color:var(--text);cursor:pointer;font-family:inherit;white-space:nowrap}
+.ab:hover{background:var(--s-hover)}
+.ab.p{background:var(--accent);color:#0d1017;border-color:var(--accent);font-weight:600}
+.ab.p:hover{opacity:.88}
+.ab.d{border-color:#7f1d1d50;color:var(--red)}
+.ab.d:hover{background:#3b0d0d}
+
+/* Advanced section per component */
+.cc-adv{display:none;border-top:1px solid var(--b2)}
+.cc-adv.show{display:block}
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr))}
+.sg-kv{padding:.38rem .85rem;border-right:1px solid var(--b2);border-bottom:1px solid var(--b2)}
+.sg-k{font-size:.64rem;color:var(--muted);margin-bottom:2px}
+.sg-v{font-size:.76rem;color:var(--text);font-family:var(--mono)}
+.sg-v.good{color:var(--green)}.sg-v.bad{color:var(--red)}.sg-v.warn{color:var(--yellow)}.sg-v.dim{color:#475569}
+.pills{display:flex;flex-wrap:wrap;gap:.28rem;padding:.42rem .85rem;border-top:1px solid var(--b2)}
+.pill{font-size:.64rem;padding:.13rem .48rem;border-radius:999px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-family:var(--mono)}
+.data-age{font-size:.62rem;color:#4b5563;padding:.28rem .85rem;font-style:italic;border-top:1px solid var(--b2)}
+
+/* Advanced: Logs section at bottom */
+.logs-section{display:none;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.logs-section.show{display:flex;flex-direction:column;max-height:240px}
+.logs-hdr{display:flex;align-items:center;gap:.7rem;padding:.48rem .85rem;border-bottom:1px solid var(--border);background:var(--s2);flex-shrink:0}
+.logs-hdr-title{font-size:.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.btn-sm{font-size:.68rem;padding:.18rem .52rem;border-radius:var(--rs);border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer}
+.btn-sm:hover{background:var(--s-hover);color:var(--text)}
+.lf-wrap{flex:1;overflow-y:auto}
+.lf{padding:.4rem .85rem;font-family:var(--mono);font-size:.73rem}
+.ll{display:flex;gap:.65rem;padding:.15rem 0;border-bottom:1px solid #0d131d}
+.lt{color:#374151;flex-shrink:0;width:76px}
+.lv{flex-shrink:0;width:40px;font-weight:600}
+.lv.INFO{color:#60a5fa}.lv.WARN{color:var(--yellow)}.lv.ERROR{color:var(--red)}.lv.DEBUG{color:#374151}
+.lc{color:var(--muted);flex-shrink:0;width:80px;overflow:hidden;text-overflow:ellipsis}
+.lm{color:var(--text);word-break:break-all}
+
+/* ═══ EXPERIMENTS ═══ */
+.pg-hdr{display:flex;align-items:center;gap:1rem;padding:.9rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0}
+.pg-title{font-size:1.05rem;font-weight:700}
+.pg-sub{color:var(--muted);font-size:.78rem}
+.btn-o{font-size:.74rem;padding:.3rem .82rem;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);cursor:pointer;background:none;margin-left:auto}
+.btn-o:hover{background:var(--s-hover);color:var(--text)}
+.exp-lay{display:flex;flex:1;overflow:hidden}
+.exp-col{flex:1;overflow-y:auto;padding:1rem 1.25rem;display:flex;flex-direction:column;gap:.55rem}
+.exp-col+.exp-col{border-left:1px solid var(--border)}
+.exp-col-t{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding-bottom:.45rem;border-bottom:1px solid var(--border);margin-bottom:.1rem}
+.ec{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .9rem;cursor:pointer}
+.ec:hover{border-color:var(--accent)}
+.ec-n{font-size:.84rem;font-weight:600;margin-bottom:.22rem}
+.ec-d{font-size:.74rem;color:var(--muted);margin-bottom:.48rem;line-height:1.45}
+.ec-tags{display:flex;gap:.3rem;flex-wrap:wrap}
+.ec-tag{font-size:.64rem;padding:.15rem .5rem;background:var(--s2);border:1px solid var(--border);border-radius:999px;color:var(--muted)}
+.rc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.6rem .9rem;display:flex;align-items:center;gap:.7rem;cursor:pointer}
+.rc:hover{border-color:var(--accent)}
+.rc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.rc-n{font-size:.81rem;font-weight:500;flex:1}
+.rc-det{font-size:.7rem;color:var(--muted);margin-top:1px}
+.rc-m{font-size:.71rem;color:var(--muted);text-align:right;white-space:nowrap}
+
+/* ═══ AI ═══ */
+.ai-lay{display:flex;flex:1;overflow:hidden}
+.ai-sb{width:210px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;background:#111827}
+.ai-sb-h{padding:.65rem 1rem .45rem;font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ai-new{font-size:.67rem;padding:.18rem .52rem;background:var(--accent);color:#0d1017;border:none;border-radius:var(--rs);cursor:pointer;font-weight:600}
+.ai-sl{flex:1;overflow-y:auto;padding:.25rem 0}
+.ai-s{padding:.48rem 1rem;cursor:pointer;border-left:2px solid transparent}
+.ai-s:hover{background:var(--s-hover)}
+.ai-s.on{background:#1e2a44;border-left-color:var(--accent)}
+.ai-sn{font-size:.79rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-sm{font-size:.67rem;color:var(--muted);margin-top:2px}
+.ai-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.ai-chat{flex:1;overflow-y:auto;padding:1.2rem;display:flex;flex-direction:column;gap:.8rem}
+.msg{display:flex;gap:.7rem;max-width:82%}
+.msg.u{align-self:flex-end;flex-direction:row-reverse}
+.msg-av{width:27px;height:27px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;margin-top:2px}
+.msg.a .msg-av{background:var(--s2);color:var(--accent);border:1px solid var(--border)}
+.msg.u .msg-av{background:var(--accent);color:#0d1017}
+.msg-b{padding:.6rem .85rem;border-radius:var(--r);font-size:.81rem;line-height:1.55}
+.msg.a .msg-b{background:var(--surface);border:1px solid var(--border)}
+.msg.u .msg-b{background:var(--accent);color:#0d1017}
+.ai-in{padding:.7rem 1.2rem;border-top:1px solid var(--border);display:flex;gap:.7rem;background:var(--surface);flex-shrink:0}
+.ai-inp{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .85rem;color:var(--text);font-size:.81rem;outline:none;font-family:inherit;resize:none}
+.ai-inp:focus{border-color:var(--accent)}
+.ai-send{background:var(--accent);border:none;border-radius:var(--r);padding:.5rem .88rem;color:#0d1017;font-weight:600;cursor:pointer;font-size:.81rem}
+
+/* ═══ TOOLS PAGES ═══ */
+.tp{flex:1;overflow-y:auto;padding:1.4rem}
+.tp h2{font-size:1.05rem;font-weight:700;margin-bottom:1.2rem}
+.dt{width:100%;border-collapse:collapse;font-size:.77rem}
+.dt th{text-align:left;padding:.42rem .72rem;font-size:.63rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--s2);border-bottom:1px solid var(--border)}
+.dt td{padding:.4rem .72rem;border-bottom:1px solid var(--b2)}
+.dt tr:hover td{background:var(--s-hover)}
+.dt td:first-child{color:var(--accent);font-family:var(--mono);font-size:.73rem}
+.rb{font-size:.64rem;padding:.13rem .52rem;border-radius:999px}
+.rb-a{background:#14532d20;color:var(--green);border:1px solid #14532d60}
+.rb-c{background:#1e3a5f20;color:var(--accent);border:1px solid #1e3a5f60}
+.tt{font-family:var(--mono);font-size:.77rem;line-height:1.9}
+.tt-a{color:var(--accent);font-weight:600}
+.tt-t{color:var(--muted);padding-left:2rem}
+.tt-cmd{color:var(--yellow);padding-left:3.5rem}
+.tt-c{color:#94a3b8;padding-left:1.5rem}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand" onclick="go('fleet')">LUCID</span>
+  <span class="nav-sep">Central Command</span>
+  <div class="nav-links">
+    <span class="nl on" id="n-fleet" onclick="go('fleet')">Fleet</span>
+    <span class="nl" id="n-experiments" onclick="go('experiments')">Experiments</span>
+    <span class="nl" id="n-ai" onclick="go('ai')">AI Assistant</span>
+    <div class="ntw">
+      <span class="nt" id="tbtn" onclick="document.getElementById('tdd').classList.toggle('open');this.classList.toggle('open')">Tools ▾</span>
+      <div class="tdd" id="tdd">
+        <span class="tdi" onclick="go('topic-tree')">Topic Tree</span>
+        <span class="tdi" onclick="go('users')">Users</span>
+        <span class="tdi" onclick="go('auth-log')">Auth Log</span>
+        <span class="tdi" onclick="go('schema')">Schema</span>
+      </div>
+    </div>
+  </div>
+  <span class="ws">⬤ live</span>
+</nav>
+
+<!-- ═══ FLEET ═══ -->
+<div class="page active" id="p-fleet">
+<div class="fl">
+  <aside class="sb">
+    <div class="sb-hdr">Fleet <span class="sb-cnt" id="sb-cnt">8 online</span></div>
+    <div class="sb-list" id="sb-list"></div>
+  </aside>
+  <div class="detail" id="detail">
+    <div class="empty" id="empty-msg">← Select an agent</div>
+    <div id="panel" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+      <div class="ahdr">
+        <span class="aname" id="h-name"></span>
+        <span class="badge" id="h-badge"></span>
+        <span class="hmeta" id="h-meta"></span>
+        <label class="adv-toggle"><input type="checkbox" id="adv-chk" onchange="setAdv(this.checked)"> Advanced</label>
+      </div>
+      <div class="comp-scroll" id="comp-scroll"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ EXPERIMENTS ═══ -->
+<div class="page" id="p-experiments">
+<div class="pg-hdr"><div><div class="pg-title">Experiments</div><div class="pg-sub">Templates · Run history</div></div><button class="btn-o">+ New Template</button></div>
+<div class="exp-lay">
+  <div class="exp-col">
+    <div class="exp-col-t">Templates</div>
+    <div class="ec"><div class="ec-n">Foraging — GAMA Single Run</div><div class="ec-d">Launch ROSbot foraging with OptiTrack tracking and LED feedback.</div><div class="ec-tags"><span class="ec-tag">rosbot</span><span class="ec-tag">optitrack</span><span class="ec-tag">led_truss</span></div></div>
+    <div class="ec"><div class="ec-n">LED Truss — Effect Sequence</div><div class="ec-d">Run a timed sequence of LED effects across the truss strip.</div><div class="ec-tags"><span class="ec-tag">led_truss</span><span class="ec-tag">led_strip</span></div></div>
+    <div class="ec"><div class="ec-n">Projection — NDI Handoff</div><div class="ec-d">Coordinate NDI stream handoff across projector nodes with power sequencing.</div><div class="ec-tags"><span class="ec-tag">north</span><span class="ec-tag">south</span><span class="ec-tag">east</span><span class="ec-tag">west</span></div></div>
+  </div>
+  <div class="exp-col">
+    <div class="exp-col-t">Recent Runs</div>
+    <div class="rc"><div class="rc-dot" style="background:var(--green)"></div><div><div class="rc-n">Foraging — GAMA Single Run</div><div class="rc-det">6 steps · completed</div></div><div class="rc-m">Apr 13<br><span style="color:var(--green)">completed</span></div></div>
+    <div class="rc"><div class="rc-dot" style="background:var(--red)"></div><div><div class="rc-n">Foraging — GAMA Single Run</div><div class="rc-det">failed at step 3</div></div><div class="rc-m">Apr 12<br><span style="color:var(--red)">failed</span></div></div>
+    <div class="rc"><div class="rc-dot" style="background:var(--green)"></div><div><div class="rc-n">LED Truss — Effect Sequence</div><div class="rc-det">4 steps · completed</div></div><div class="rc-m">Apr 10<br><span style="color:var(--green)">completed</span></div></div>
+    <div class="rc"><div class="rc-dot" style="background:var(--green)"></div><div><div class="rc-n">Projection — NDI Handoff</div><div class="rc-det">8 steps · completed</div></div><div class="rc-m">Apr 9<br><span style="color:var(--green)">completed</span></div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ AI ═══ -->
+<div class="page" id="p-ai">
+<div class="ai-lay">
+  <div class="ai-sb"><div class="ai-sb-h">Sessions <button class="ai-new">+ New</button></div><div class="ai-sl">
+    <div class="ai-s on"><div class="ai-sn">Rosbot status check</div><div class="ai-sm">Today · 4 messages</div></div>
+    <div class="ai-s"><div class="ai-sn">LED effect sequence</div><div class="ai-sm">Apr 13 · 7 messages</div></div>
+    <div class="ai-s"><div class="ai-sn">Foraging experiment setup</div><div class="ai-sm">Apr 12 · 12 messages</div></div>
+  </div></div>
+  <div class="ai-main">
+    <div class="ai-chat">
+      <div class="msg a"><div class="msg-av">L</div><div class="msg-b">Hello! 8 agents are online. How can I help?</div></div>
+      <div class="msg u"><div class="msg-av">F</div><div class="msg-b">What's wrong with rosbot?</div></div>
+      <div class="msg a"><div class="msg-av">L</div><div class="msg-b"><strong>rosbot</strong> is online (uptime 4d 17h) but <strong>ros_bridge</strong> is in error — the ROS master is unreachable. State data is 2 days old.<br><br>Try <strong>Start Launch</strong> on the ros_bridge to restart it.</div></div>
+    </div>
+    <div class="ai-in"><textarea class="ai-inp" rows="1" placeholder="Ask about your fleet…"></textarea><button class="ai-send">Send</button></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══ TOPIC TREE ═══ -->
+<div class="page" id="p-topic-tree"><div class="tp"><h2>MQTT Topic Tree</h2><div class="tt">
+  <div class="tt-a">lucid/agents/rosbot/</div><div class="tt-t">metadata · status · state · cfg · logs</div><div class="tt-cmd">cmd/ping · cmd/restart · cmd/reload-components</div><div class="tt-c">components/exec/ · components/ros_bridge/</div><br>
+  <div class="tt-a">lucid/agents/led_truss/</div><div class="tt-c">components/led_strip/</div><div class="tt-cmd">cmd/set-color · cmd/effect/glow · cmd/effect/wave · cmd/effect/rainbow · cmd/clear</div><br>
+  <div class="tt-a">lucid/agents/north/ · south/ · east/ · west/</div><div class="tt-c">components/ndi/ · components/projector/</div><div class="tt-cmd">cmd/receive/start · cmd/power/on · cmd/power/off · cmd/input/hdmi1</div><br>
+  <div class="tt-a">lucid/agents/optitrack/</div><div class="tt-c">components/ros_bridge/</div><br>
+  <div class="tt-a">lucid/agents/socrates/</div><div class="tt-c">components/viz/</div><div class="tt-cmd">cmd/start-arena · cmd/stop-arena · cmd/start-touchdesigner · cmd/stop-touchdesigner</div>
+</div></div></div>
+
+<!-- ═══ USERS ═══ -->
+<div class="page" id="p-users"><div class="tp"><h2>Users</h2><table class="dt"><thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Last seen</th></tr></thead><tbody>
+  <tr><td>central-command</td><td><span class="rb rb-c">central-command</span></td><td>Apr 8</td><td>now</td></tr>
+  <tr><td>rosbot</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>8s ago</td></tr>
+  <tr><td>led_truss</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>11s ago</td></tr>
+  <tr><td>north</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>14s ago</td></tr>
+  <tr><td>south</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>9s ago</td></tr>
+  <tr><td>east</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>22s ago</td></tr>
+  <tr><td>west</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>5s ago</td></tr>
+  <tr><td>optitrack</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>2s ago</td></tr>
+  <tr><td>socrates</td><td><span class="rb rb-a">agent</span></td><td>Apr 8</td><td>19s ago</td></tr>
+</tbody></table></div></div>
+
+<!-- ═══ AUTH LOG ═══ -->
+<div class="page" id="p-auth-log"><div class="tp"><h2>Auth Log</h2><table class="dt"><thead><tr><th>Time</th><th>Type</th><th>Username</th><th>Result</th></tr></thead><tbody>
+  <tr><td>11:30:41</td><td>authn</td><td>optitrack</td><td style="color:var(--green)">allow</td></tr>
+  <tr><td>11:30:19</td><td>authn</td><td>rosbot</td><td style="color:var(--green)">allow</td></tr>
+  <tr><td>11:30:14</td><td>authn</td><td>socrates</td><td style="color:var(--green)">allow</td></tr>
+  <tr><td>11:21:41</td><td>authn</td><td>north</td><td style="color:var(--green)">allow</td></tr>
+  <tr><td>09:14:02</td><td>authz</td><td>rosbot</td><td style="color:var(--red)">deny</td></tr>
+</tbody></table></div></div>
+
+<!-- ═══ SCHEMA ═══ -->
+<div class="page" id="p-schema"><div class="tp"><h2>Database Schema</h2><table class="dt"><thead><tr><th>Table</th><th>Key columns</th><th>Purpose</th></tr></thead><tbody>
+  <tr><td>agents</td><td>agent_id, first_seen_ts, last_seen_ts</td><td>Agent registry</td></tr>
+  <tr><td>agent_status</td><td>state, uptime_s</td><td>Latest heartbeat</td></tr>
+  <tr><td>agent_metadata</td><td>version, platform, architecture</td><td>Static info</td></tr>
+  <tr><td>components</td><td>agent_id, component_id</td><td>Component registry</td></tr>
+  <tr><td>component_status</td><td>state</td><td>Live status</td></tr>
+  <tr><td>component_state</td><td>payload (JSONB)</td><td>State data</td></tr>
+  <tr><td>logs</td><td>agent_id, component_id, payload</td><td>Log stream</td></tr>
+  <tr><td>commands</td><td>request_id, action, result_ok</td><td>Command audit</td></tr>
+  <tr><td>experiment_templates</td><td>name, definition (JSONB)</td><td>Experiments</td></tr>
+  <tr><td>experiment_runs</td><td>template_id, status</td><td>Run history</td></tr>
+</tbody></table></div></div>
+
+<script>
+const A=[
+  {id:'rosbot',status:'online',platform:'Linux',arch:'x86_64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'8s ago',
+    logs:[
+      {t:'11:30:41',l:'INFO',c:'ros_bridge',m:'Heartbeat sent — uptime 410289s'},
+      {t:'11:30:11',l:'INFO',c:'agent',m:'Status published: state=online'},
+      {t:'11:29:42',l:'WARN',c:'ros_bridge',m:'ROS node not responding — retrying in 30s'},
+      {t:'11:29:12',l:'ERROR',c:'ros_bridge',m:'Failed to connect to ROS master at http://localhost:11311'},
+      {t:'11:28:41',l:'INFO',c:'exec',m:'Idle — no active runs'},
+      {t:'11:27:11',l:'DEBUG',c:'agent',m:'Config heartbeat_s=30 loaded'},
+      {t:'11:26:42',l:'INFO',c:'ros_bridge',m:'Subscribed to /range/fl /range/fr /range/rl /range/rr'},
+      {t:'11:24:01',l:'INFO',c:'agent',m:'MQTT connected to emqx:1883'},
+    ],
+    comps:[
+      {id:'exec',s:'running',ico:'⚙️',ic:'ok',sum:'No active runs',
+        acts:[{l:'▶ Run',c:'p'},{l:'⏹ Stop'},{l:'Ping'},{l:'Reset',c:'d'}],
+        kv:{'active runs':0,'run count':0,'max timeout':'300s','allow list':'open'},
+        vc:{'allow list':'good'},caps:['reset','ping','run','stop']},
+      {id:'ros_bridge',s:'error',ico:'🔴',ic:'er',err:1,sum:'ROS master not reachable — state 2d old',sw:1,
+        acts:[{l:'▶ Start Launch',c:'p'},{l:'⏹ Stop Launch'},{l:'⏺ Start Bag'},{l:'⏹ Stop Bag'}],
+        kv:{'roslaunch':'idle','rosbag':'idle','publishers':1,'subscriptions':9,'range/fl':'0.292 m','range/fr':'8.191 m','range/rl':'0.239 m','range/rr':'0.291 m'},
+        vc:{'roslaunch':'warn'},caps:['roslaunch_start','roslaunch_stop','rosbag_start','rosbag_stop'],age:'state last updated 2d ago'}
+    ]},
+  {id:'led_truss',status:'online',platform:'Linux',arch:'aarch64',version:'2.1.0',uptime:'6d 13h',firstSeen:'Apr 8',hb:30,ls:'11s ago',
+    logs:[{t:'11:30:40',l:'INFO',c:'led_strip',m:'Heartbeat sent'},{t:'11:28:00',l:'INFO',c:'led_strip',m:'Effect cleared — LEDs off'}],
+    comps:[
+      {id:'led_strip',s:'running',ico:'💡',ic:'ok',sum:'1790 LEDs · Brightness: 125 · Effect: none',
+        acts:[{l:'Glow',c:'p'},{l:'Wave'},{l:'Rainbow'},{l:'Sparkle'},{l:'Set Color'},{l:'Clear',c:'d'}],
+        kv:{'led count':1790,'brightness':125,'strip1 pin':18,'strip2 pin':13,'strip1 count':896,'strip2 count':894,'current effect':'none','hw initialized':'true'},
+        vc:{'current effect':'dim','hw initialized':'good'},caps:['set-color','effect/glow','effect/wave','effect/rainbow','effect/sparkle','clear']}
+    ]},
+  {id:'north',status:'online',platform:'Linux',arch:'aarch64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'14s ago',
+    logs:[{t:'11:30:39',l:'INFO',c:'ndi',m:'Heartbeat sent'},{t:'11:22:05',l:'INFO',c:'projector',m:'Power on — projector responding'}],
+    comps:[
+      {id:'ndi',s:'running',ico:'📡',ic:'ok',sum:'Idle — not receiving or sending',
+        acts:[{l:'▶ Start Receive',c:'p'},{l:'⏹ Stop Receive'},{l:'▶ Start Send'},{l:'⏹ Stop Send'}],
+        kv:{'send active':'false','receive active':'false','send stream':'lucid-ndi','receive stream':'ROBOTICSS-MAC-PRO.LOCAL (north)'},
+        vc:{'send active':'dim','receive active':'dim'},caps:['receive/start','receive/stop','send/start','send/stop']},
+      {id:'projector',s:'running',ico:'🎥',ic:'ok',sum:'Connected · /dev/ttyUSB0',
+        acts:[{l:'⚡ Power On',c:'p'},{l:'⏻ Power Off',c:'d'},{l:'HDMI 1'},{l:'HDMI 2'}],
+        kv:{'connected':'true','serial port':'/dev/ttyUSB0','helper':'available'},
+        vc:{'connected':'good','helper':'good'},caps:['power/on','power/off','input/hdmi1','input/hdmi2','keystone/set']}
+    ]},
+  {id:'south',status:'online',platform:'Linux',arch:'aarch64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'9s ago',
+    logs:[{t:'11:30:38',l:'INFO',c:'agent',m:'Status published: state=online'}],
+    comps:[
+      {id:'ndi',s:'running',ico:'📡',ic:'ok',sum:'Idle — not receiving or sending',
+        acts:[{l:'▶ Start Receive',c:'p'},{l:'⏹ Stop Receive'},{l:'▶ Start Send'},{l:'⏹ Stop Send'}],
+        kv:{'send active':'false','receive active':'false','send stream':'lucid-ndi','receive stream':'ROBOTICSS-MAC-PRO.LOCAL (south)'},
+        vc:{'send active':'dim','receive active':'dim'},caps:['receive/start','receive/stop','send/start','send/stop']},
+      {id:'projector',s:'running',ico:'🎥',ic:'ok',sum:'Connected · /dev/ttyUSB0',
+        acts:[{l:'⚡ Power On',c:'p'},{l:'⏻ Power Off',c:'d'},{l:'HDMI 1'},{l:'HDMI 2'}],
+        kv:{'connected':'true','serial port':'/dev/ttyUSB0','helper':'available'},
+        vc:{'connected':'good','helper':'good'},caps:['power/on','power/off','input/hdmi1','input/hdmi2']}
+    ]},
+  {id:'east',status:'online',platform:'Linux',arch:'aarch64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'22s ago',
+    logs:[{t:'11:30:37',l:'INFO',c:'agent',m:'Status published: state=online'}],
+    comps:[
+      {id:'ndi',s:'running',ico:'📡',ic:'ok',sum:'Idle — not receiving or sending',
+        acts:[{l:'▶ Start Receive',c:'p'},{l:'⏹ Stop Receive'},{l:'▶ Start Send'},{l:'⏹ Stop Send'}],
+        kv:{'send active':'false','receive active':'false','send stream':'lucid-ndi','receive stream':'ROBOTICSS-MAC-PRO.LOCAL (east)'},
+        vc:{'send active':'dim','receive active':'dim'},caps:['receive/start','receive/stop','send/start','send/stop']},
+      {id:'projector',s:'running',ico:'🎥',ic:'ok',sum:'Connected · /dev/ttyUSB0',
+        acts:[{l:'⚡ Power On',c:'p'},{l:'⏻ Power Off',c:'d'},{l:'HDMI 1'},{l:'HDMI 2'}],
+        kv:{'connected':'true','serial port':'/dev/ttyUSB0','helper':'available'},
+        vc:{'connected':'good','helper':'good'},caps:['power/on','power/off','input/hdmi1','input/hdmi2']}
+    ]},
+  {id:'west',status:'online',platform:'Linux',arch:'aarch64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'5s ago',
+    logs:[{t:'11:30:36',l:'INFO',c:'agent',m:'Status published: state=online'}],
+    comps:[
+      {id:'ndi',s:'running',ico:'📡',ic:'ok',sum:'Idle — not receiving or sending',
+        acts:[{l:'▶ Start Receive',c:'p'},{l:'⏹ Stop Receive'},{l:'▶ Start Send'},{l:'⏹ Stop Send'}],
+        kv:{'send active':'false','receive active':'false','send stream':'lucid-ndi','receive stream':'ROBOTICSS-MAC-PRO.LOCAL (west)'},
+        vc:{'send active':'dim','receive active':'dim'},caps:['receive/start','receive/stop','send/start','send/stop']},
+      {id:'projector',s:'running',ico:'🎥',ic:'ok',sum:'Connected · /dev/ttyUSB0',
+        acts:[{l:'⚡ Power On',c:'p'},{l:'⏻ Power Off',c:'d'},{l:'HDMI 1'},{l:'HDMI 2'}],
+        kv:{'connected':'true','serial port':'/dev/ttyUSB0','helper':'available'},
+        vc:{'connected':'good','helper':'good'},caps:['power/on','power/off','input/hdmi1','input/hdmi2']}
+    ]},
+  {id:'optitrack',status:'online',platform:'Linux',arch:'x86_64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'2s ago',
+    logs:[{t:'11:30:40',l:'INFO',c:'ros_bridge',m:'Heartbeat sent'},{t:'11:28:55',l:'INFO',c:'ros_bridge',m:'ROS master connected'}],
+    comps:[
+      {id:'ros_bridge',s:'running',ico:'🟢',ic:'ok',sum:'ROS master connected · 1 subscription',
+        acts:[{l:'▶ Start Launch',c:'p'},{l:'⏹ Stop Launch'},{l:'⏺ Start Bag'},{l:'⏹ Stop Bag'}],
+        kv:{'roslaunch':'idle','rosbag':'idle','publishers':0,'subscriptions':1},
+        vc:{'roslaunch':'dim'},caps:['roslaunch_start','roslaunch_stop','rosbag_start','rosbag_stop']}
+    ]},
+  {id:'socrates',status:'online',platform:'Darwin',arch:'x86_64',version:'2.1.0',uptime:'4d 17h',firstSeen:'Apr 8',hb:30,ls:'19s ago',
+    logs:[{t:'11:30:41',l:'INFO',c:'viz',m:'Heartbeat sent'},{t:'09:15:02',l:'INFO',c:'viz',m:'Arena process stopped — PID 4821 exited'}],
+    comps:[
+      {id:'viz',s:'running',ico:'🖥️',ic:'ok',sum:'Arena: off · TouchDesigner: off',
+        acts:[{l:'▶ Start Arena',c:'p'},{l:'⏹ Stop Arena'},{l:'▶ Start TD'},{l:'⏹ Stop TD'},{l:'↺ Restart',c:'d'}],
+        kv:{'arena':'not running','arena pid':'null','touchdesigner':'not running','td pid':'null'},
+        vc:{'arena':'dim','arena pid':'dim','touchdesigner':'dim','td pid':'dim'},caps:['start-arena','stop-arena','start-touchdesigner','stop-touchdesigner','restart']}
+    ]},
+];
+const STALE=['$(led_agent_id)','Farah','optitrack-01'];
+let sel=null,adv=false;
+
+function renderSB(){
+  let h='';
+  A.forEach(a=>{
+    const hasErr=a.comps.some(c=>c.err);
+    h+=`<div class="si${a.id===sel?' on':''}" onclick="pick('${a.id}')"><div class="sd ${hasErr?'sd-warn':'sd-ok'}"></div><span class="sn">${a.id}</span></div>`;
+  });
+  h+='<hr class="sb-sep">';
+  STALE.forEach(s=>{h+=`<div class="si stale"><div class="sd sd-off"></div><span class="sn">${s}</span></div>`;});
+  h+=`<button class="sb-clean">✕ Clean up stale (${STALE.length})</button>`;
+  document.getElementById('sb-list').innerHTML=h;
+}
+
+function pick(id){
+  sel=id;renderSB();
+  const a=A.find(x=>x.id===id);if(!a)return;
+  document.getElementById('empty-msg').style.display='none';
+  document.getElementById('panel').style.display='flex';
+  document.getElementById('adv-chk').checked=adv;
+  document.getElementById('h-name').textContent=a.id;
+  const b=document.getElementById('h-badge');b.textContent=a.status;b.className='badge b-'+a.status;
+  document.getElementById('h-meta').innerHTML=`uptime ${a.uptime} · <span style="color:var(--yellow)">last seen ${a.ls}</span>`;
+
+  let html='';
+  // Agent info (advanced)
+  html+=`<div class="ainfo${adv?' show':''}"><div class="ainfo-title">Agent</div><table class="kv">
+    <tr><td class="kk">platform</td><td class="kvl">${a.platform} / ${a.arch}</td></tr>
+    <tr><td class="kk">version</td><td class="kvl">${a.version}</td></tr>
+    <tr><td class="kk">heartbeat</td><td class="kvl">${a.hb}s</td></tr>
+    <tr><td class="kk">first seen</td><td class="kvl">${a.firstSeen}</td></tr>
+  </table></div>`;
+
+  // Components
+  a.comps.forEach(c=>{
+    const kvHtml=Object.entries(c.kv).map(([k,v])=>{
+      const cls=(c.vc||{})[k]||'';return`<div class="sg-kv"><div class="sg-k">${k}</div><div class="sg-v ${cls}">${v}</div></div>`;
+    }).join('');
+    const pillsHtml=(c.caps||[]).map(p=>`<span class="pill">${p}</span>`).join('');
+    const ageHtml=c.age?`<div class="data-age">${c.age}</div>`:'';
+    const actHtml=(c.acts||[]).map(b=>`<button class="ab${b.c?' '+b.c:''}">${b.l}</button>`).join('');
+    html+=`<div class="cc${c.err?' err':''}">
+      <div class="cc-row">
+        <div class="cc-icon ${c.ic}">${c.ico}</div>
+        <div class="cc-txt"><div class="cc-name">${c.id}</div><div class="cc-sub${c.sw?' w':''}">${c.sum}</div></div>
+        <span class="badge b-${c.s}">${c.s}</span>
+      </div>
+      <div class="cc-acts">${actHtml}</div>
+      <div class="cc-adv${adv?' show':''}">
+        <div class="sg">${kvHtml}</div>
+        <div class="pills">${pillsHtml}</div>
+        ${ageHtml}
+      </div>
+    </div>`;
+  });
+
+  // Logs (advanced)
+  const logsHtml=(a.logs||[]).map(l=>
+    `<div class="ll"><span class="lt">${l.t}</span><span class="lv ${l.l}">${l.l}</span><span class="lc">${l.c}</span><span class="lm">${l.m}</span></div>`
+  ).join('');
+  html+=`<div class="logs-section${adv?' show':''}">
+    <div class="logs-hdr"><span class="logs-hdr-title">Logs</span><button class="btn-sm">Clear</button><button class="btn-sm">Pause</button></div>
+    <div class="lf-wrap"><div class="lf">${logsHtml}</div></div>
+  </div>`;
+
+  document.getElementById('comp-scroll').innerHTML=html;
+}
+
+function setAdv(on){
+  adv=on;
+  document.querySelectorAll('.cc-adv').forEach(e=>e.classList.toggle('show',on));
+  document.querySelectorAll('.ainfo').forEach(e=>e.classList.toggle('show',on));
+  document.querySelectorAll('.logs-section').forEach(e=>e.classList.toggle('show',on));
+}
+
+const PAGES=['fleet','experiments','ai','topic-tree','users','auth-log','schema'];
+const NM={'fleet':'n-fleet','experiments':'n-experiments','ai':'n-ai'};
+function go(p){
+  PAGES.forEach(x=>document.getElementById('p-'+x)?.classList.toggle('active',x===p));
+  Object.entries(NM).forEach(([k,id])=>document.getElementById(id)?.classList.toggle('on',k===p));
+  document.getElementById('tdd').classList.remove('open');
+  document.getElementById('tbtn').classList.remove('open');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ntw')){document.getElementById('tdd').classList.remove('open');document.getElementById('tbtn').classList.remove('open')}});
+
+renderSB();pick('rosbot');
+</script>
+</body>
+</html>
