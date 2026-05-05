@@ -42,6 +42,21 @@
     return div.innerHTML;
   }
 
+  function renderMarkdownInto(el, text) {
+    if (!el) return;
+    el.classList.add("ai-md");
+    if (typeof window.marked !== "undefined" && typeof window.DOMPurify !== "undefined") {
+      try {
+        const html = window.marked.parse(text || "", { breaks: true, gfm: true });
+        el.innerHTML = window.DOMPurify.sanitize(html);
+        return;
+      } catch (e) {
+        // fall through to plain text
+      }
+    }
+    el.textContent = text || "";
+  }
+
   // ─── Transcript rendering ────────────────────────────────────────
 
   function clearTranscript() {
@@ -153,14 +168,17 @@
               break;
             case "token":
               assistantText += evt.content || "";
+              // Streaming: textContent during the stream is fastest and
+              // safe; we re-render as markdown on `done`.
               contentEl.textContent = assistantText;
               els.transcript.scrollTop = els.transcript.scrollHeight;
               break;
             case "done":
               if (evt.response) {
                 assistantText = evt.response;
-                contentEl.textContent = assistantText;
               }
+              renderMarkdownInto(contentEl, assistantText);
+              els.transcript.scrollTop = els.transcript.scrollHeight;
               break;
             case "error":
               addError(evt.message || "AI error");
@@ -301,16 +319,18 @@
       if (!resp.ok) return;
       const data = await resp.json();
       const turns = (data && data.turns) || [];
-      for (const t of turns) addBubble(t.role, t.content);
-      if (turns.length === 0) autoGreeting();
+      for (const t of turns) {
+        const div = addBubble(t.role, "");
+        const c = div.querySelector(".ai-bubble-content");
+        if (t.role === "assistant") {
+          renderMarkdownInto(c, t.content || "");
+        } else {
+          c.textContent = t.content || "";
+        }
+      }
     } catch {
-      autoGreeting();
+      // History fetch failed — leave transcript empty.
     }
-  }
-
-  function autoGreeting() {
-    // Prime the conversation with a fleet summary.
-    sendMessage("Give me a quick summary of the fleet right now.", { silent: false });
   }
 
   function switchSession(id) {
