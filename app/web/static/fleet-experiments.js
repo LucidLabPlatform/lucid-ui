@@ -116,15 +116,12 @@
 
     templatesEl.innerHTML = html;
 
-    // Wire Edit buttons
+    // Wire Edit buttons — navigate to full-page editor
     templatesEl.querySelectorAll('.exp-edit-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         var id = btn.dataset.id;
-        var tpl = templates.find(function (t) { return t.id === id; });
-        if (tpl && window.TemplateEditor) {
-          TemplateEditor.open(tpl, function () { loadData(); });
-        }
+        if (id) window.location.href = '/experiments/' + encodeURIComponent(id) + '/edit';
       });
     });
 
@@ -211,9 +208,23 @@
   var newTplBtn = document.getElementById('exp-new-tpl-btn');
   if (newTplBtn) {
     newTplBtn.addEventListener('click', function () {
-      if (window.TemplateEditor) {
-        TemplateEditor.open(null, function () { loadData(); });
+      var id = (window.prompt('New template ID (lowercase-with-dashes):') || '').trim();
+      if (!id) return;
+      if (!/^[a-z0-9][a-z0-9_\-]*$/.test(id)) {
+        L.toast({ message: 'Invalid id. Use lowercase letters, digits, dash, underscore.', type: 'error' });
+        return;
       }
+      var stub = { id: id, name: id, version: '1.0.0', description: '', parameters: {}, steps: [], tags: [] };
+      L.apiFetch('/api/experiments/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stub)
+      }).then(function (res) {
+        if (!res.ok) throw new Error('Create failed (' + res.status + ')');
+        window.location.href = '/experiments/' + encodeURIComponent(id) + '/edit';
+      }).catch(function (e) {
+        L.toast({ message: e.message, type: 'error' });
+      });
     });
   }
 

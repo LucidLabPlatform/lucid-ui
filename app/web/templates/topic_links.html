@@ -47,6 +47,9 @@ async function loadLinks() {
   const resp = await fetch('/api/topic-links');
   const links = await resp.json();
   const wrap = tlEl('tl-table-wrap');
+  if (window.LUCID && window.LUCID.cmdLog && window.LUCID.cmdLog.refreshTopicLinks) {
+    window.LUCID.cmdLog.refreshTopicLinks();
+  }
   if (!links.length) {
     wrap.innerHTML = '<div class="empty">No topic links yet.</div>';
     return;

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ template_id }} · Experiments · LUCID{% endblock %}
+{% block subnav %}
+<div class="subnav">
+  <a href="/experiments" class="bc-view">Templates</a>
+  <a href="/experiments/runs" class="bc-view">Runs</a>
+  <nav class="breadcrumbs">
+    <a href="/experiments" class="bc-link">Experiments</a>
+    <span class="bc-sep">&gt;</span>
+    <a href="/experiments/{{ template_id }}" class="bc-link">{{ template_id }}</a>
+    <span class="bc-sep">&gt;</span>
+    <span class="bc-current">Edit</span>
+  </nav>
+</div>
+{% endblock %}
+{% block page_data %}
+<script>LUCID.templateId = "{{ template_id }}";</script>
+{% endblock %}
+{% block content %}
+<div class="te2-container" id="te2-container">
+  <div class="te2-graph-area" id="te2-graph-area">
+    <div class="te2-graph-header">
+      <span class="te2-graph-title" id="te2-graph-title">Steps</span>
+      <div class="te2-toolbar">
+        <span class="te2-dirty-dot" id="te2-dirty-dot" hidden title="Unsaved changes"></span>
+        <div class="te2-add-wrap">
+          <button class="act act-quick" id="te2-add-btn">+ Add step</button>
+          <div class="te2-add-popover" id="te2-add-popover" hidden></div>
+        </div>
+        <button class="act act-quick" id="te2-expand-all-btn">Expand all</button>
+        <button class="act act-quick" id="te2-collapse-all-btn">Collapse all</button>
+        <button class="act act-quick" id="te2-discard-btn">Discard</button>
+        <button class="act act-primary" id="te2-save-btn">Save</button>
+      </div>
+    </div>
+    <div class="te2-graph-body" id="te2-graph-body">
+      <svg id="te2-svg-main" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+  <aside class="te2-drawer te2-drawer-step" id="te2-step-drawer" hidden>
+    <div class="te2-drawer-header" id="te2-step-header"></div>
+    <div class="te2-drawer-body" id="te2-step-body"></div>
+    <div class="te2-drawer-footer" id="te2-step-footer"></div>
+  </aside>
+  <aside class="te2-drawer te2-drawer-settings" id="te2-settings-drawer">
+    <div class="te2-drawer-header" id="te2-settings-header"></div>
+    <div class="te2-drawer-body" id="te2-settings-body"></div>
+    <div class="te2-drawer-footer" id="te2-settings-footer"></div>
+  </aside>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/fleet-template-edit.js"></script>
+{% endblock %}

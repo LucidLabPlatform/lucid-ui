@@ -59,9 +59,9 @@
     headerEl.innerHTML = html;
 
     var editBtn = document.getElementById('tpl-edit-btn');
-    if (editBtn && window.TemplateEditor) {
+    if (editBtn) {
       editBtn.addEventListener('click', function () {
-        TemplateEditor.open(template, function () { loadData(); });
+        window.location.href = '/experiments/' + encodeURIComponent(templateId) + '/edit';
       });
     }
 

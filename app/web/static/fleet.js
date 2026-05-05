@@ -37,6 +37,7 @@
   var RENDER_INTERVAL_MS = 1000;
   var CACHE_KEY = 'lucid_agents';
   var CATALOG_CACHE_KEY = 'lucid_catalogs';
+  L.CMD_TIMEOUT_MS = 15000;          // max wait for evt/*/result before logging timeout
 
   // ── Restore from cache for instant render ─────────────────────────
   try {
@@ -138,8 +139,16 @@
       if (!ok) {
         // HTTP dispatch failed — log immediately (no WS result will arrive)
         if (typeof L.cmdLog !== 'undefined') L.cmdLog.addEntry(entry, null);
+      } else if (entry.request_id) {
+        // No-response timeout: if the agent never publishes evt/*/result for
+        // this request, surface a clear "no response" entry after CMD_TIMEOUT_MS.
+        entry._timeoutHandle = setTimeout(function () {
+          if (entry.result_received) return;
+          if (typeof L.cmdLog !== 'undefined') {
+            L.cmdLog.addEntry(entry, null, { timeout: true });
+          }
+        }, L.CMD_TIMEOUT_MS);
       }
-      // If ok: the WS evt/*/result handler logs the result
 
       return entry;
     } catch (e) {
@@ -358,6 +367,10 @@
           matchEntry.result_ts = evt.ts;
           matchEntry.result_elapsed = matchEntry.ts
             ? (new Date(evt.ts) - new Date(matchEntry.ts)) : null;
+          if (matchEntry._timeoutHandle) {
+            clearTimeout(matchEntry._timeoutHandle);
+            matchEntry._timeoutHandle = null;
+          }
         }
         L._cmdResultListeners.forEach(function (fn) {
           try { fn(matchEntry, evt); } catch (_) {}

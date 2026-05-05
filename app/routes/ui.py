@@ -124,6 +124,14 @@ def experiment_run_config(request: Request, template_id: str):
     return templates.TemplateResponse(request=request, name="experiment_run_config.html", context=ctx)
 
 
+@router.get("/experiments/{template_id}/edit", response_class=HTMLResponse)
+def experiment_template_edit(request: Request, template_id: str):
+    ctx = _ctx(request, page_id="experiment_template_edit", template_id=template_id)
+    if ctx is None:
+        return require_login(request)
+    return templates.TemplateResponse(request=request, name="experiment_template_edit.html", context=ctx)
+
+
 @router.get("/experiments/{template_id}", response_class=HTMLResponse)
 def experiment_template(request: Request, template_id: str):
     ctx = _ctx(request, page_id="experiment_template", template_id=template_id)
