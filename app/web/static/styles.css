@@ -1015,13 +1015,66 @@ details.payload-group:not([open]) .payload-group-label::before { transform: rota
 }
 
 /* Experiment timeline */
-.exp-timeline { display: flex; flex-direction: column; gap: 0.1rem; }
+.exp-progress {
+  margin: 0 0 0.9rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.exp-progress-bar {
+  height: 6px;
+  background: var(--surface);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.45rem;
+}
+.exp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  transition: width 0.3s ease;
+}
+.exp-progress-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.exp-progress-count { color: var(--text); font-weight: 600; }
+.exp-progress-running { color: var(--accent); }
+.exp-progress-failed { color: var(--red); }
+.exp-progress-skipped { color: var(--subtle); }
+
+.exp-timeline { display: flex; flex-direction: column; gap: 0.15rem; }
 .exp-tl-step {
   display: flex; gap: 0.5rem; padding: 0.4rem 0.5rem; border-radius: var(--radius-sm);
   transition: background var(--transition);
+  align-items: flex-start;
 }
 .exp-tl-step:hover { background: var(--surface); }
-.exp-tl-icon { width: 1.2rem; text-align: center; font-size: 0.85rem; flex-shrink: 0; }
+.exp-tl-num {
+  flex-shrink: 0;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.exp-step-completed .exp-tl-num { color: var(--green); border-color: rgba(46, 204, 113, 0.4); }
+.exp-step-running .exp-tl-num { color: var(--accent); border-color: rgba(124, 156, 255, 0.55); }
+.exp-step-failed .exp-tl-num { color: var(--red); border-color: rgba(248, 113, 113, 0.5); }
+.exp-step-skipped .exp-tl-num { color: var(--subtle); }
+.exp-tl-icon { width: 1.2rem; text-align: center; font-size: 0.85rem; flex-shrink: 0; line-height: 1.6rem; }
 .exp-tl-body { flex: 1; }
 .exp-tl-header { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .exp-tl-name { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 600; }

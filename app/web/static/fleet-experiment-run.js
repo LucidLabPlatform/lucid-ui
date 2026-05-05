@@ -49,7 +49,14 @@
       if (res.ok) {
         var data = await res.json();
         run = data;
-        steps = data.steps || [];
+        steps = (data.steps || []).slice().sort(function (a, b) {
+          // Primary sort: step_index ascending. Fall back to id, then started_at.
+          var ai = (typeof a.step_index === 'number') ? a.step_index : 1e9;
+          var bi = (typeof b.step_index === 'number') ? b.step_index : 1e9;
+          if (ai !== bi) return ai - bi;
+          if (a.id != null && b.id != null) return a.id - b.id;
+          return 0;
+        });
         renderDetail();
       }
     } catch (e) {
@@ -136,7 +143,27 @@
       return;
     }
 
-    var html = '<div class="exp-timeline">';
+    // Progress summary: count steps by status.
+    var counts = { completed: 0, running: 0, failed: 0, pending: 0, skipped: 0 };
+    steps.forEach(function (s) {
+      if (counts[s.status] !== undefined) counts[s.status] += 1;
+      else counts.pending += 1;
+    });
+    var done = counts.completed + counts.skipped + counts.failed;
+    var pct = steps.length ? Math.round((counts.completed / steps.length) * 100) : 0;
+
+    var html = '';
+    html += '<div class="exp-progress">';
+    html += '<div class="exp-progress-bar"><div class="exp-progress-fill" style="width:' + pct + '%"></div></div>';
+    html += '<div class="exp-progress-meta">';
+    html += '<span class="exp-progress-count">' + done + ' / ' + steps.length + ' steps</span>';
+    if (counts.running) html += ' \u00B7 <span class="exp-progress-running">' + counts.running + ' running</span>';
+    if (counts.failed)  html += ' \u00B7 <span class="exp-progress-failed">' + counts.failed + ' failed</span>';
+    if (counts.skipped) html += ' \u00B7 <span class="exp-progress-skipped">' + counts.skipped + ' skipped</span>';
+    html += '</div>';
+    html += '</div>';
+
+    html += '<div class="exp-timeline">';
     steps.forEach(function (step, idx) {
       var statusIcon = '\u25CB'; // pending
       var statusCls = 'exp-step-pending';
@@ -145,11 +172,13 @@
       else if (step.status === 'failed') { statusIcon = '\u2717'; statusCls = 'exp-step-failed'; }
       else if (step.status === 'skipped') { statusIcon = '\u2014'; statusCls = 'exp-step-skipped'; }
 
+      var stepNum = (typeof step.step_index === 'number') ? (step.step_index + 1) : (idx + 1);
       html += '<div class="exp-tl-step ' + statusCls + '" data-step-name="' + L.escAttr(step.step_name || '') + '">';
+      html += '<div class="exp-tl-num">' + stepNum + '</div>';
       html += '<div class="exp-tl-icon">' + statusIcon + '</div>';
       html += '<div class="exp-tl-body">';
       html += '<div class="exp-tl-header">';
-      html += '<span class="exp-tl-name">' + L.esc(step.step_name || 'Step ' + (idx + 1)) + '</span>';
+      html += '<span class="exp-tl-name">' + L.esc(step.step_name || 'Step ' + stepNum) + '</span>';
       if (step.action) {
         html += '<span class="exp-tl-action">';
         if (step.agent_id) html += L.esc(step.agent_id);
