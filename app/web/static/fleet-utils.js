@@ -128,7 +128,7 @@
       if (id === types[i] || id.indexOf(types[i]) !== -1) return types[i];
     }
     // Secondary signal: capabilities
-    if (capabilities && capabilities.length) {
+    if (Array.isArray(capabilities) && capabilities.length) {
       var caps = capabilities.join(' ');
       if (caps.indexOf('set-color') !== -1 || caps.indexOf('set-brightness') !== -1) return 'led_strip';
       if (caps.indexOf('roslaunch') !== -1) return 'ros_bridge';
